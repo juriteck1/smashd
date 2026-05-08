@@ -7,25 +7,10 @@
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Inter',system-ui,sans-serif;background:#fff;color:#0A0A0A;-webkit-font-smoothing:antialiased}
+    body{font-family:system-ui,sans-serif;background:#f8faf9;color:#2C2C2A}
     input,textarea,select,button{font-family:inherit}
-    ::selection{background:#0A2A1E;color:#fff}
-    ::-webkit-scrollbar{width:4px}
-    ::-webkit-scrollbar-thumb{background:#e0e0e0;border-radius:2px}
-
-    @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-    .fade-up{animation:fadeUp .5s ease forwards}
-    .fade-in{animation:fadeIn .3s ease forwards}
-
-    .card-hover{transition:transform .2s ease,box-shadow .2s ease}
-    .card-hover:hover{transform:translateY(-4px);box-shadow:0 20px 60px rgba(0,0,0,.1)}
-    .btn-hover{transition:all .15s ease}
-    .btn-hover:hover{transform:translateY(-1px)}
-    .btn-hover:active{transform:translateY(0)}
   </style>
 </head>
 <body>
@@ -35,122 +20,125 @@ const { useState, useEffect, useRef } = React;
 
 const SB_URL = "https://gcnmgtwbouakwaufqswh.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjbm1ndHdib3Vha3dhdWZxc3doIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTk4NDQsImV4cCI6MjA5MzgzNTg0NH0.qtHQ4si2Ybsriiaaj9F-1Z6WeN52sZ1ry7T7VpcIMpM";
-let _token = SB_KEY;
-const getToken=()=>_token;
-const setToken=(t)=>{_token=t||SB_KEY};
-const clearToken=()=>{_token=SB_KEY};
 
-// Design tokens
-const D = {
-  black:"#0A0A0A",
-  white:"#FFFFFF",
-  green:"#0A2A1E",
-  greenMid:"#1A5C3A",
-  greenLight:"#F0F7F4",
-  greenAccent:"#00C46A",
-  orange:"#E8470A",
-  gray50:"#FAFAFA",
-  gray100:"#F5F5F5",
-  gray200:"#E8E8E8",
-  gray400:"#9A9A9A",
-  gray600:"#5A5A5A",
-  gray800:"#2A2A2A",
-  red:"#E8290A",
-  redLight:"#FFF0EE",
+// Token en mémoire (évite blocage localStorage)
+let _token = SB_KEY;
+const getToken = () => _token;
+const setToken = (t) => { _token = t || SB_KEY; };
+const clearToken = () => { _token = SB_KEY; };
+
+const C = {
+  p:"#1D9E75",pd:"#0F6E56",pl:"#E1F5EE",
+  a:"#D85A30",al:"#FAECE7",
+  bg:"#f8faf9",w:"#fff",
+  g:"#888780",gl:"#F1EFE8",
+  t:"#2C2C2A",m:"#5F5E5A",b:"#e0ede8",
+  err:"#E24B4A",errl:"#FCEBEB",
+  warn:"#BA7517",warnl:"#FAEEDA",
+  info:"#185FA5",infol:"#E6F1FB",
 };
 
-const CATS = ["Tennis","Padel","Badminton","Squash","Ping-Pong","Pickleball"];
-const CAT_COLORS = {
-  Tennis: "#0A2A1E",
-  Padel: "#1A3A5C",
-  Badminton: "#2A1A5C",
-  Squash: "#5C1A1A",
-  "Ping-Pong": "#1A5C3A",
-  Pickleball: "#5C3A1A",
+const CATS = ["Tennis","Padel","Badminton","Squash","Ping-Pong","Pickleball","Raquetball","Pelote basque"];
+const ICONS = {Tennis:"🎾",Padel:"🟩",Badminton:"🏸",Squash:"🎯","Ping-Pong":"🏓",Pickleball:"🏅",Raquetball:"🔵","Pelote basque":"⚪"};
+const BRANDS = {
+  Tennis:["Wilson","Babolat","Head","Yonex","Prince","Dunlop","Tecnifibre"],
+  Padel:["Head","Bullpadel","Nox","Adidas","Wilson","Babolat"],
+  Badminton:["Yonex","Victor","Li-Ning","Carlton","Forza"],
+  Squash:["Dunlop","Head","Wilson","Tecnifibre","Prince"],
+  "Ping-Pong":["Butterfly","Donic","Tibhar","Stiga","Joola"],
+  Pickleball:["Selkirk","Engage","Paddletek","Head"],
+  Raquetball:["Head","Wilson","Ektelon"],
+  "Pelote basque":["Autre"]
 };
 const STATES = ["Neuf avec étiquette","Neuf sans étiquette","Très bon état","Bon état","Acceptable"];
 const SHIPPING = [
-  {id:"mondial",label:"Mondial Relay",price:3.99,delay:"3-5 jours"},
-  {id:"colissimo",label:"Colissimo",price:5.49,delay:"2-3 jours"},
+  {id:"mondial",label:"Mondial Relay",price:3.99,delay:"3-5j"},
+  {id:"colissimo",label:"Colissimo",price:5.49,delay:"2-3j"},
   {id:"chrono",label:"Chronopost",price:7.99,delay:"24h"},
-  {id:"main",label:"Remise en main propre",price:0,delay:"À convenir"},
+  {id:"main",label:"Remise en main propre",price:0,delay:"À convenir"}
 ];
-const BRANDS = {
-  Tennis:["Wilson","Babolat","Head","Yonex","Prince","Dunlop","Tecnifibre","Autre"],
-  Padel:["Head","Bullpadel","Nox","Adidas","Wilson","Babolat","Autre"],
-  Badminton:["Yonex","Victor","Li-Ning","Carlton","Forza","Autre"],
-  Squash:["Dunlop","Head","Wilson","Tecnifibre","Prince","Autre"],
-  "Ping-Pong":["Butterfly","Donic","Tibhar","Stiga","Joola","Autre"],
-  Pickleball:["Selkirk","Engage","Paddletek","Head","Autre"],
+
+const TR = {
+  FR:{search:"Rechercher raquette, marque…",sell:"+ Vendre",login:"Connexion",register:"S'inscrire",account:"Mon compte",hero1:"Achetez & vendez vos",hero2:"équipements de raquette",hero3:"Marketplace éco-responsable · Simple · Sécurisé",join:"Rejoindre SMASHD",pro:"Vendeur Pro 🏪",eco:"🌿 Marketplace éco-responsable",noItems:"Aucune annonce pour l'instant",beFirst:"Soyez le premier à vendre sur SMASHD !",publish:"Publier une annonce"},
+  EN:{search:"Search racket, brand…",sell:"+ Sell",login:"Login",register:"Sign up",account:"My account",hero1:"Buy & sell your",hero2:"racket sports gear",hero3:"Eco-friendly marketplace · Simple · Secure",join:"Join SMASHD",pro:"Pro Seller 🏪",eco:"🌿 Eco-friendly marketplace",noItems:"No listings yet",beFirst:"Be the first to sell on SMASHD!",publish:"Post a listing"}
 };
 
 // API
-const sbApi=async(path,opts={})=>{
-  const res=await fetch(`${SB_URL}/rest/v1/${path}`,{
+const sbApi = async (path, opts={}) => {
+  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
     headers:{"apikey":SB_KEY,"Authorization":`Bearer ${getToken()}`,"Content-Type":"application/json","Prefer":opts.prefer||"return=representation",...(opts.headers||{})},
     ...opts
   });
   if(!res.ok){const e=await res.json();throw new Error(e.message||"Erreur")}
   const tx=await res.text();return tx?JSON.parse(tx):[];
 };
-const sbAuth=async(ep,body)=>{
-  const res=await fetch(`${SB_URL}/auth/v1/${ep}`,{method:"POST",headers:{"apikey":SB_KEY,"Content-Type":"application/json"},body:JSON.stringify(body)});
-  const d=await res.json();
-  if(d.error||d.error_description)throw new Error(d.error_description||d.error);
+
+const sbAuth = async (ep, body) => {
+  const res = await fetch(`${SB_URL}/auth/v1/${ep}`,{method:"POST",headers:{"apikey":SB_KEY,"Content-Type":"application/json"},body:JSON.stringify(body)});
+  const d = await res.json();
+  if(d.error||d.error_description) throw new Error(d.error_description||d.error);
   return d;
 };
-const uploadPhoto=async(file)=>{
-  const ext=file.name.split('.').pop();
-  const name=`${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const res=await fetch(`${SB_URL}/storage/v1/object/smashd-photos/${name}`,{
-    method:"POST",headers:{"apikey":SB_KEY,"Authorization":`Bearer ${getToken()}`,"Content-Type":file.type},body:file
+
+const uploadPhoto = async (file) => {
+  const ext = file.name.split('.').pop();
+  const name = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const res = await fetch(`${SB_URL}/storage/v1/object/smashd-photos/${name}`,{
+    method:"POST",
+    headers:{"apikey":SB_KEY,"Authorization":`Bearer ${getToken()}`,"Content-Type":file.type},
+    body:file
   });
-  if(!res.ok)throw new Error("Erreur upload");
+  if(!res.ok) throw new Error("Erreur upload");
   return `${SB_URL}/storage/v1/object/public/smashd-photos/${name}`;
 };
 
-// SVG Icons — no emoji
-const IconSearch=()=><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>;
-const IconPlus=()=><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>;
-const IconArrow=()=><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>;
-const IconHeart=({filled})=><svg width="18" height="18" viewBox="0 0 24 24" fill={filled?"currentColor":"none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>;
-const IconUser=()=><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
-const IconX=()=><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>;
-const IconCheck=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>;
-const IconLeaf=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>;
-const IconShield=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
-const IconTruck=()=><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
-const IconChevron=({dir="right"})=><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{transform:dir==="down"?"rotate(90deg)":dir==="left"?"rotate(180deg)":"none"}}><path d="M9 18l6-6-6-6"/></svg>;
-const IconGrid=()=><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>;
-const IconStar=()=><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>;
-
-// UI Components
-const Logo=({size=22,dark=false})=>(
-  <span style={{fontWeight:900,fontSize:size,letterSpacing:"-1px",color:dark?D.white:D.black,cursor:"pointer"}}>
-    SMASH<span style={{color:D.orange}}>D</span>
+// UI
+const Logo = ({size=20}) => (
+  <span style={{fontWeight:900,fontSize:size,letterSpacing:"-0.5px",cursor:"pointer"}}>
+    SMASH<span style={{color:C.a}}>D</span>
   </span>
 );
 
-const Toast=({msg,type})=>(
-  <div style={{position:"fixed",bottom:32,left:"50%",transform:"translateX(-50%)",background:type==="error"?D.red:D.green,color:D.white,borderRadius:100,padding:"14px 28px",fontSize:14,fontWeight:600,zIndex:9999,boxShadow:"0 8px 32px rgba(0,0,0,.2)",whiteSpace:"nowrap"}}>
-    {msg}
+const Toast = ({msg,type}) => (
+  <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:type==="error"?C.err:C.p,color:"#fff",borderRadius:24,padding:"12px 24px",fontSize:14,fontWeight:600,zIndex:9999,whiteSpace:"nowrap",boxShadow:"0 4px 20px rgba(0,0,0,0.15)"}}>
+    {type==="error"?"❌":"✅"} {msg}
   </div>
 );
 
-const Pill=({label,active,onClick,color})=>(
-  <button onClick={onClick} className="btn-hover"
-    style={{borderRadius:100,padding:"8px 20px",fontSize:13,fontWeight:600,cursor:"pointer",border:`1.5px solid ${active?(color||D.green):D.gray200}`,background:active?(color||D.green):D.white,color:active?D.white:D.gray600,transition:"all .15s"}}>
-    {label}
-  </button>
-);
-
-const StateTag=({state})=>{
-  const map={"Neuf avec étiquette":D.green,"Neuf sans étiquette":D.greenMid,"Très bon état":D.gray800,"Bon état":D.gray600,"Acceptable":D.gray400};
-  return <span style={{fontSize:11,fontWeight:700,color:map[state]||D.gray400,letterSpacing:".5px",textTransform:"uppercase"}}>{state}</span>;
+const Badge = ({label,color="green"}) => {
+  const m={green:[C.pl,C.pd],orange:[C.warnl,C.warn],gray:[C.gl,C.m],blue:[C.infol,C.info],red:[C.errl,C.err]};
+  const [bg,tx]=m[color]||m.green;
+  return <span style={{background:bg,color:tx,fontSize:11,fontWeight:700,borderRadius:6,padding:"3px 9px",whiteSpace:"nowrap"}}>{label}</span>;
 };
 
+const Btn = ({onClick,children,style={},disabled=false,variant="primary"}) => {
+  const v={primary:{background:disabled?"#9FE1CB":C.p,color:"#fff",border:"none"},outline:{background:C.w,color:C.p,border:`2px solid ${C.p}`},ghost:{background:C.gl,color:C.t,border:"none"},danger:{background:C.errl,color:C.err,border:`1px solid ${C.err}`}};
+  return <button onClick={onClick} disabled={disabled} style={{borderRadius:24,padding:"10px 20px",fontSize:14,fontWeight:700,cursor:disabled?"not-allowed":"pointer",...v[variant],...style}}>{children}</button>;
+};
+
+const Input = ({label,type="text",value,onChange,placeholder,error,required}) => (
+  <div style={{marginBottom:14}}>
+    {label&&<label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>{label}{required&&<span style={{color:C.err}}> *</span>}</label>}
+    <input type={type} value={value} onChange={onChange} placeholder={placeholder}
+      style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${error?C.err:C.b}`,fontSize:14,outline:"none",boxSizing:"border-box"}}/>
+    {error&&<div style={{fontSize:12,color:C.err,marginTop:4}}>{error}</div>}
+  </div>
+);
+
+const Card = ({children,style={}}) => (
+  <div style={{background:C.w,border:`1px solid ${C.b}`,borderRadius:14,padding:"20px",...style}}>{children}</div>
+);
+
+const StatCard = ({icon,label,value,color}) => (
+  <Card style={{textAlign:"center"}}>
+    <div style={{fontSize:24,marginBottom:6}}>{icon}</div>
+    <div style={{fontSize:22,fontWeight:900,color:color||C.t}}>{value}</div>
+    <div style={{fontSize:12,color:C.m,marginTop:2}}>{label}</div>
+  </Card>
+);
+
 // ═══════════ APP ═══════════
-function App(){
+function App() {
   const [screen,setScreen]=useState("home");
   const [user,setUser]=useState(null);
   const [profile,setProfile]=useState(null);
@@ -166,16 +154,18 @@ function App(){
   const [filterPrice,setFilterPrice]=useState({min:"",max:""});
   const [selected,setSelected]=useState(null);
   const [dashTab,setDashTab]=useState("overview");
+  const [vacanceMode,setVacanceMode]=useState(false);
   const [lang,setLang]=useState("FR");
-  const [favs,setFavs]=useState({});
+  const T=TR[lang];
 
-  const showToast=(msg,type="success")=>{setToast({msg,type});setTimeout(()=>setToast(null),3000)};
+  const showToast=(msg,type="success")=>{setToast({msg,type});setTimeout(()=>setToast(null),3500)};
   const go=(s,data=null)=>{setScreen(s);if(data)setSelected(data);window.scrollTo(0,0)};
 
   const loadAnnonces=async()=>{
     try{const d=await sbApi("annonces?status=eq.active&order=created_at.desc&limit=50");setAnnonces(d)}
     catch(e){console.error(e)}
   };
+
   const loadMyData=async(uid)=>{
     try{
       const [ann,orders,sales]=await Promise.all([
@@ -186,61 +176,88 @@ function App(){
       setMyAnnonces(ann);setMyOrders(orders);setMySales(sales);
     }catch(e){console.error(e)}
   };
+
   useEffect(()=>{loadAnnonces()},[]);
 
   const login=async(email,pwd)=>{
     setLoading(true);
     try{
       const d=await sbAuth("token?grant_type=password",{email,password:pwd});
-      setToken(d.access_token);setUser(d.user);
+      setToken(d.access_token);
+      setUser(d.user);
       const p=await sbApi(`profiles?id=eq.${d.user.id}`);
       setProfile(p[0]||null);
       await loadMyData(d.user.id);
-      showToast("Bienvenue sur SMASHD");go("home");
-    }catch(e){throw e}finally{setLoading(false)}
+      showToast("Connecté avec succès !");
+      go("home");
+    }catch(e){throw e}
+    finally{setLoading(false)}
   };
+
   const register=async(email,pwd,name,userType,siret,company)=>{
     setLoading(true);
     try{
       const d=await sbAuth("signup",{email,password:pwd});
       if(d.user){
-        if(d.access_token)setToken(d.access_token);
+        if(d.access_token) setToken(d.access_token);
         await sbApi("profiles",{method:"POST",body:JSON.stringify({id:d.user.id,name,email,user_type:userType,siret:siret||null,company:company||null})});
-        setUser(d.user);setProfile({id:d.user.id,name,email,user_type:userType});
-        showToast("Compte créé avec succès");go("home");
+        setUser(d.user);
+        setProfile({id:d.user.id,name,email,user_type:userType});
+        showToast("Bienvenue sur SMASHD ! 🎉");
+        go("home");
       }
-    }catch(e){throw e}finally{setLoading(false)}
+    }catch(e){throw e}
+    finally{setLoading(false)}
   };
-  const logout=()=>{clearToken();setUser(null);setProfile(null);setMyAnnonces([]);setMyOrders([]);setMySales([]);go("home")};
+
+  const logout=()=>{clearToken();setUser(null);setProfile(null);setMyAnnonces([]);setMyOrders([]);setMySales([]);showToast("Déconnecté");go("home")};
 
   const publishAnnonce=async(form)=>{
     if(!user){go("auth");return}
     setLoading(true);
     try{
-      await sbApi("annonces",{method:"POST",body:JSON.stringify({user_id:user.id,...form,status:"active"})});
-      showToast("Annonce publiée");await loadAnnonces();await loadMyData(user.id);
+      await sbApi("annonces",{method:"POST",body:JSON.stringify({
+        user_id:user.id,title:form.title,description:form.description,
+        category:form.category,brand:form.brand,state:form.state,
+        price:parseFloat(form.price),shipping:form.shipping,
+        photo_url:form.photo_url||null,photos:form.photos||[],status:"active"
+      })});
+      showToast("Annonce publiée ! 🎉");
+      await loadAnnonces();
+      await loadMyData(user.id);
       go("dashboard");setDashTab("annonces");
-    }catch(e){showToast("Erreur : "+e.message,"error")}
+    }catch(e){showToast("Erreur publication : "+e.message,"error")}
     finally{setLoading(false)}
   };
+
   const toggleAnnonceStatus=async(id,status)=>{
-    try{await sbApi(`annonces?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({status})});await loadMyData(user.id);await loadAnnonces()}
-    catch(e){showToast("Erreur","error")}
+    try{
+      await sbApi(`annonces?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({status})});
+      await loadMyData(user.id);await loadAnnonces();
+      showToast(status==="active"?"Annonce activée":"Annonce mise en pause");
+    }catch(e){showToast("Erreur","error")}
   };
+
   const deleteAnnonce=async(id)=>{
-    try{await sbApi(`annonces?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({status:"supprimé"})});await loadMyData(user.id);await loadAnnonces()}
-    catch(e){showToast("Erreur","error")}
+    try{
+      await sbApi(`annonces?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({status:"supprimé"})});
+      await loadMyData(user.id);await loadAnnonces();
+      showToast("Annonce supprimée");
+    }catch(e){showToast("Erreur","error")}
   };
+
   const placeOrder=async(annonce,shippingMethod)=>{
-    if(!user){go("auth");return false}
+    if(!user){go("auth");return}
     setLoading(true);
     try{
       const commission=parseFloat((annonce.price*0.08).toFixed(2));
       const gain=parseFloat((annonce.price-commission).toFixed(2));
       await sbApi("commandes",{method:"POST",body:JSON.stringify({annonce_id:annonce.id,buyer_id:user.id,seller_id:annonce.user_id,price:annonce.price,commission,gain,shipping_method:shippingMethod,status:"en attente"})});
       await sbApi(`annonces?id=eq.${annonce.id}`,{method:"PATCH",body:JSON.stringify({status:"vendu"})});
-      showToast("Commande confirmée");await loadAnnonces();await loadMyData(user.id);return true;
-    }catch(e){showToast("Erreur","error");return false}
+      showToast("Commande confirmée ! 🎉");
+      await loadAnnonces();await loadMyData(user.id);
+      return true;
+    }catch(e){showToast("Erreur commande","error");return false}
     finally{setLoading(false)}
   };
 
@@ -252,9 +269,9 @@ function App(){
     .filter(a=>!search||a.title?.toLowerCase().includes(search.toLowerCase())||a.brand?.toLowerCase().includes(search.toLowerCase()));
 
   const wallet=Math.round(mySales.reduce((acc,s)=>acc+(s.gain||0),0)*100)/100;
-  const props={user,profile,loading,showToast,go,login,register,logout,publishAnnonce,toggleAnnonceStatus,deleteAnnonce,placeOrder,myAnnonces,myOrders,mySales,wallet,dashTab,setDashTab,annonces:filtered,allAnnonces:annonces,search,setSearch,filterCat,setFilterCat,filterState,setFilterState,filterPrice,setFilterPrice,selected,loadMyData,lang,setLang,favs,setFavs};
+  const props={user,profile,loading,showToast,go,login,register,logout,publishAnnonce,toggleAnnonceStatus,deleteAnnonce,placeOrder,myAnnonces,myOrders,mySales,wallet,dashTab,setDashTab,vacanceMode,setVacanceMode,annonces:filtered,search,setSearch,filterCat,setFilterCat,filterState,setFilterState,filterPrice,setFilterPrice,selected,loadMyData,lang,setLang,T};
 
-  return(
+  return (
     <div>
       {toast&&<Toast {...toast}/>}
       {screen==="home"&&<Home {...props}/>}
@@ -267,197 +284,111 @@ function App(){
 }
 
 // ═══════════ HOME ═══════════
-function Home({user,profile,annonces,allAnnonces,search,setSearch,filterCat,setFilterCat,filterState,setFilterState,filterPrice,setFilterPrice,go,lang,setLang,favs,setFavs}){
-  const [menuOpen,setMenuOpen]=useState(false);
-  const [scrolled,setScrolled]=useState(false);
-  useEffect(()=>{
-    const h=()=>setScrolled(window.scrollY>20);
-    window.addEventListener("scroll",h);return()=>window.removeEventListener("scroll",h);
-  },[]);
-
-  return(
-    <div style={{minHeight:"100vh",background:D.white}}>
+function Home({user,profile,annonces,search,setSearch,filterCat,setFilterCat,filterState,setFilterState,filterPrice,setFilterPrice,go,lang,setLang,T}) {
+  return (
+    <div style={{minHeight:"100vh",background:C.bg}}>
       {/* NAV */}
-      <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,background:scrolled?"rgba(255,255,255,.95)":"transparent",backdropFilter:scrolled?"blur(20px)":"none",borderBottom:scrolled?`1px solid ${D.gray200}`:"none",transition:"all .3s ease",padding:"0 40px",display:"flex",alignItems:"center",height:64,gap:32}}>
-        <Logo size={22}/>
-        <div style={{flex:1}}/>
-        <div style={{display:"flex",alignItems:"center",gap:8,background:scrolled?D.gray100:"rgba(255,255,255,.15)",borderRadius:100,padding:"8px 16px",backdropFilter:"blur(10px)"}}>
-          <IconSearch/>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={lang==="FR"?"Raquette, marque…":"Racket, brand…"}
-            style={{border:"none",background:"transparent",fontSize:14,outline:"none",width:200,color:scrolled?D.black:D.white}}/>
+      <nav style={{background:C.w,borderBottom:`1px solid ${C.b}`,padding:"0 20px",display:"flex",alignItems:"center",height:58,gap:12,position:"sticky",top:0,zIndex:100}}>
+        <Logo size={20}/>
+        <div style={{flex:1,position:"relative",maxWidth:420,margin:"0 16px"}}>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={T.search}
+            style={{width:"100%",padding:"9px 14px 9px 38px",borderRadius:24,border:`1.5px solid ${C.b}`,fontSize:13,background:C.gl,outline:"none",boxSizing:"border-box"}}/>
+          <span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",color:C.g}}>🔍</span>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div style={{display:"flex",background:"rgba(255,255,255,.15)",backdropFilter:"blur(10px)",borderRadius:100,overflow:"hidden",border:`1px solid rgba(255,255,255,.2)`}}>
+        <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
+          <div style={{display:"flex",background:C.gl,borderRadius:20,overflow:"hidden",border:`1px solid ${C.b}`}}>
             {["FR","EN"].map(l=>(
               <button key={l} onClick={()=>setLang(l)}
-                style={{padding:"6px 14px",fontSize:12,fontWeight:700,border:"none",cursor:"pointer",background:lang===l?D.white:"transparent",color:lang===l?D.black:"rgba(255,255,255,.8)",transition:"all .15s",borderRadius:100}}>
+                style={{padding:"6px 12px",fontSize:12,fontWeight:700,border:"none",cursor:"pointer",background:lang===l?C.p:"transparent",color:lang===l?"#fff":C.g}}>
                 {l}
               </button>
             ))}
           </div>
           {user?(
             <>
-              <button onClick={()=>go("sell")} className="btn-hover"
-                style={{display:"flex",alignItems:"center",gap:6,background:D.orange,color:D.white,border:"none",borderRadius:100,padding:"10px 20px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                <IconPlus/> {lang==="FR"?"Vendre":"Sell"}
-              </button>
-              <button onClick={()=>go("dashboard")} className="btn-hover"
-                style={{width:40,height:40,borderRadius:"50%",background:D.green,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:D.white,fontWeight:700,fontSize:14}}>
-                {profile?.name?.charAt(0)||"?"}
+              <button onClick={()=>go("sell")} style={{background:C.p,color:"#fff",border:"none",borderRadius:24,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer"}}>{T.sell}</button>
+              <button onClick={()=>go("dashboard")} style={{background:C.gl,border:`1px solid ${C.b}`,borderRadius:24,padding:"8px 14px",fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+                <div style={{width:26,height:26,borderRadius:"50%",background:C.pl,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:C.pd}}>
+                  {profile?.name?.charAt(0)||"?"}
+                </div>
+                {profile?.name?.split(" ")[0]||T.account}
               </button>
             </>
           ):(
             <>
-              <button onClick={()=>go("auth")} className="btn-hover"
-                style={{background:"rgba(255,255,255,.15)",color:D.white,border:"1px solid rgba(255,255,255,.3)",borderRadius:100,padding:"10px 20px",fontSize:13,fontWeight:600,cursor:"pointer",backdropFilter:"blur(10px)"}}>
-                {lang==="FR"?"Connexion":"Login"}
-              </button>
-              <button onClick={()=>go("auth")} className="btn-hover"
-                style={{background:D.white,color:D.black,border:"none",borderRadius:100,padding:"10px 20px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                {lang==="FR"?"S'inscrire":"Sign up"}
-              </button>
+              <button onClick={()=>go("auth")} style={{background:"transparent",border:`1px solid ${C.b}`,borderRadius:24,padding:"8px 18px",fontSize:13,fontWeight:600,cursor:"pointer"}}>{T.login}</button>
+              <button onClick={()=>go("auth")} style={{background:C.p,color:"#fff",border:"none",borderRadius:24,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer"}}>{T.register}</button>
             </>
           )}
         </div>
       </nav>
 
       {/* HERO */}
-      <div style={{background:D.green,minHeight:"90vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"120px 40px 80px",textAlign:"center",position:"relative",overflow:"hidden"}}>
-        {/* BG Pattern */}
-        <div style={{position:"absolute",inset:0,opacity:.05,backgroundImage:"radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)",backgroundSize:"60px 60px"}}/>
-
-        <div className="fade-up" style={{animationDelay:".1s"}}>
-          <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(255,255,255,.1)",borderRadius:100,padding:"8px 18px",fontSize:12,fontWeight:600,color:"rgba(255,255,255,.8)",marginBottom:32,border:"1px solid rgba(255,255,255,.15)"}}>
-            <IconLeaf/> {lang==="FR"?"Marketplace éco-responsable":"Eco-friendly marketplace"}
-          </div>
-        </div>
-
-        <h1 className="fade-up" style={{animationDelay:".2s",fontSize:72,fontWeight:900,color:D.white,lineHeight:1.05,letterSpacing:"-2px",maxWidth:800,margin:"0 0 24px"}}>
-          {lang==="FR"?"La seconde main pour les":"The second-hand for"}<br/>
-          <span style={{color:D.greenAccent}}>{lang==="FR"?"sports de raquette":"racket sports"}</span>
-        </h1>
-
-        <p className="fade-up" style={{animationDelay:".3s",fontSize:18,color:"rgba(255,255,255,.7)",maxWidth:520,lineHeight:1.7,margin:"0 0 48px"}}>
-          {lang==="FR"
-            ?"Achetez et vendez vos équipements de tennis, padel, badminton et plus. Simple, sécurisé, éco-responsable."
-            :"Buy and sell your tennis, padel, badminton gear and more. Simple, secure, eco-friendly."}
-        </p>
-
-        <div className="fade-up" style={{animationDelay:".4s",display:"flex",gap:12,flexWrap:"wrap",justifyContent:"center"}}>
-          <button onClick={()=>go("auth")} className="btn-hover"
-            style={{background:D.white,color:D.black,border:"none",borderRadius:100,padding:"16px 36px",fontSize:16,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
-            {lang==="FR"?"Commencer gratuitement":"Get started free"} <IconArrow/>
-          </button>
-          <button onClick={()=>{window.scrollTo({top:600,behavior:"smooth"})}} className="btn-hover"
-            style={{background:"transparent",color:D.white,border:"1.5px solid rgba(255,255,255,.4)",borderRadius:100,padding:"16px 36px",fontSize:16,fontWeight:600,cursor:"pointer"}}>
-            {lang==="FR"?"Voir les annonces":"Browse listings"}
-          </button>
-        </div>
-
-        {/* Stats */}
-        <div className="fade-up" style={{animationDelay:".5s",display:"flex",gap:48,marginTop:72,paddingTop:48,borderTop:"1px solid rgba(255,255,255,.15)",flexWrap:"wrap",justifyContent:"center"}}>
-          {[["4 200+",lang==="FR"?"articles en ligne":"items online"],["1 800+",lang==="FR"?"vendeurs actifs":"active sellers"],["98%",lang==="FR"?"avis positifs":"positive reviews"],["0€",lang==="FR"?"pour s'inscrire":"to sign up"]].map(([v,l])=>(
-            <div key={l} style={{textAlign:"center"}}>
-              <div style={{fontSize:28,fontWeight:900,color:D.white,letterSpacing:"-1px"}}>{v}</div>
-              <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginTop:4}}>{l}</div>
-            </div>
+      <div style={{background:`linear-gradient(135deg,${C.pl},#fff)`,padding:"40px 20px",textAlign:"center"}}>
+        <div style={{display:"inline-block",background:C.pl,color:C.pd,borderRadius:20,padding:"4px 14px",fontSize:12,fontWeight:600,marginBottom:14}}>{T.eco}</div>
+        <h1 style={{fontSize:32,fontWeight:900,margin:"0 0 10px",lineHeight:1.2}}>{T.hero1}<br/><span style={{color:C.p}}>{T.hero2}</span></h1>
+        <p style={{color:C.m,fontSize:14,margin:"0 0 24px"}}>{T.hero3}</p>
+        <div style={{display:"flex",gap:28,justifyContent:"center",flexWrap:"wrap",marginBottom:24}}>
+          {[["🎾","Sports de raquette"],["🌍","FR / EN"],["🔒","Paiement sécurisé"],["🚚","Livraison intégrée"]].map(([i,l])=>(
+            <div key={l} style={{textAlign:"center"}}><div style={{fontSize:20}}>{i}</div><div style={{fontSize:11,color:C.m,marginTop:2}}>{l}</div></div>
           ))}
         </div>
+        {!user&&(
+          <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+            <Btn onClick={()=>go("auth")} style={{padding:"12px 28px",fontSize:15}}>{T.join}</Btn>
+            <Btn onClick={()=>go("auth")} variant="outline" style={{padding:"12px 28px",fontSize:15}}>{T.pro}</Btn>
+          </div>
+        )}
       </div>
 
-      {/* CATEGORIES */}
-      <div style={{padding:"80px 40px 0",maxWidth:1200,margin:"0 auto"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:32}}>
-          <div>
-            <div style={{fontSize:12,fontWeight:700,color:D.gray400,letterSpacing:"2px",textTransform:"uppercase",marginBottom:8}}>
-              {lang==="FR"?"Catégories":"Categories"}
-            </div>
-            <h2 style={{fontSize:36,fontWeight:900,letterSpacing:"-1px"}}>{lang==="FR"?"Votre sport":"Your sport"}</h2>
-          </div>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:12}}>
-          {CATS.map(c=>(
-            <button key={c} onClick={()=>setFilterCat(filterCat===c?"Tous":c)} className="card-hover btn-hover"
-              style={{background:filterCat===c?CAT_COLORS[c]||D.green:D.gray100,borderRadius:16,padding:"28px 20px",cursor:"pointer",textAlign:"left",border:"none",transition:"all .2s"}}>
-              <div style={{fontSize:12,fontWeight:700,color:filterCat===c?"rgba(255,255,255,.6)":D.gray400,letterSpacing:"1px",textTransform:"uppercase",marginBottom:8}}>
-                {allAnnonces.filter(a=>a.category===c).length} {lang==="FR"?"articles":"items"}
-              </div>
-              <div style={{fontSize:16,fontWeight:700,color:filterCat===c?D.white:D.black}}>{c}</div>
-            </button>
-          ))}
-          <button onClick={()=>setFilterCat("Tous")} className="card-hover btn-hover"
-            style={{background:filterCat==="Tous"?D.black:D.gray100,borderRadius:16,padding:"28px 20px",cursor:"pointer",textAlign:"left",border:"none"}}>
-            <div style={{fontSize:12,fontWeight:700,color:filterCat==="Tous"?"rgba(255,255,255,.6)":D.gray400,letterSpacing:"1px",textTransform:"uppercase",marginBottom:8}}>
-              {allAnnonces.length} {lang==="FR"?"articles":"items"}
-            </div>
-            <div style={{fontSize:16,fontWeight:700,color:filterCat==="Tous"?D.white:D.black}}>{lang==="FR"?"Tous les sports":"All sports"}</div>
+      {/* CATS */}
+      <div style={{padding:"16px 20px 0",display:"flex",gap:8,flexWrap:"wrap"}}>
+        {["Tous",...CATS].map(c=>(
+          <button key={c} onClick={()=>setFilterCat(c)}
+            style={{background:filterCat===c?C.p:C.w,color:filterCat===c?"#fff":C.t,border:`1px solid ${filterCat===c?C.p:C.b}`,borderRadius:20,padding:"7px 16px",fontSize:13,cursor:"pointer",fontWeight:filterCat===c?700:400,whiteSpace:"nowrap"}}>
+            {ICONS[c]||""} {c}
           </button>
-        </div>
+        ))}
       </div>
 
       {/* FILTERS */}
-      <div style={{padding:"40px 40px 0",maxWidth:1200,margin:"0 auto",display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+      <div style={{padding:"10px 20px 0",display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
         <select value={filterState} onChange={e=>setFilterState(e.target.value)}
-          style={{padding:"10px 16px",borderRadius:100,border:`1.5px solid ${D.gray200}`,fontSize:13,fontWeight:500,background:D.white,cursor:"pointer",outline:"none",color:D.black}}>
-          <option value="Tous">{lang==="FR"?"Tous les états":"All conditions"}</option>
+          style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${C.b}`,fontSize:13,background:C.w,cursor:"pointer"}}>
+          <option value="Tous">Tous les états</option>
           {STATES.map(s=><option key={s}>{s}</option>)}
         </select>
-        <div style={{display:"flex",gap:8,alignItems:"center",background:D.gray100,borderRadius:100,padding:"4px 16px",border:`1.5px solid ${D.gray200}`}}>
-          <input type="number" value={filterPrice.min} onChange={e=>setFilterPrice(f=>({...f,min:e.target.value}))} placeholder="Min €"
-            style={{width:64,border:"none",background:"transparent",fontSize:13,outline:"none",color:D.black}}/>
-          <span style={{color:D.gray400}}>—</span>
-          <input type="number" value={filterPrice.max} onChange={e=>setFilterPrice(f=>({...f,max:e.target.value}))} placeholder="Max €"
-            style={{width:64,border:"none",background:"transparent",fontSize:13,outline:"none",color:D.black}}/>
-        </div>
-        <span style={{marginLeft:"auto",fontSize:13,color:D.gray400,fontWeight:500}}>{annonces.length} {lang==="FR"?"résultats":"results"}</span>
+        <input type="number" value={filterPrice.min} onChange={e=>setFilterPrice(f=>({...f,min:e.target.value}))} placeholder="Prix min €"
+          style={{width:90,padding:"7px 12px",borderRadius:8,border:`1px solid ${C.b}`,fontSize:13}}/>
+        <input type="number" value={filterPrice.max} onChange={e=>setFilterPrice(f=>({...f,max:e.target.value}))} placeholder="Prix max €"
+          style={{width:90,padding:"7px 12px",borderRadius:8,border:`1px solid ${C.b}`,fontSize:13}}/>
+        <span style={{marginLeft:"auto",fontSize:13,color:C.m}}>{annonces.length} article{annonces.length!==1?"s":""}</span>
       </div>
 
-      {/* LISTINGS GRID */}
-      <div style={{padding:"32px 40px 100px",maxWidth:1200,margin:"0 auto"}}>
+      {/* GRID */}
+      <div style={{padding:"16px 20px 48px"}}>
         {annonces.length===0?(
-          <div style={{textAlign:"center",padding:"100px 0"}}>
-            <div style={{width:80,height:80,background:D.gray100,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 24px"}}>
-              <IconGrid/>
-            </div>
-            <div style={{fontSize:20,fontWeight:700,marginBottom:8}}>{lang==="FR"?"Aucune annonce":"No listings"}</div>
-            <div style={{fontSize:15,color:D.gray400,marginBottom:32}}>{lang==="FR"?"Soyez le premier à vendre sur SMASHD":"Be the first to sell on SMASHD"}</div>
-            {user&&<button onClick={()=>go("sell")} className="btn-hover" style={{background:D.green,color:D.white,border:"none",borderRadius:100,padding:"14px 32px",fontSize:14,fontWeight:700,cursor:"pointer"}}>{lang==="FR"?"Publier une annonce":"Post a listing"}</button>}
+          <div style={{textAlign:"center",padding:"60px 0",color:C.m}}>
+            <div style={{fontSize:56,marginBottom:14}}>🎾</div>
+            <div style={{fontSize:16,fontWeight:700,marginBottom:8}}>{T.noItems}</div>
+            <div style={{fontSize:13,marginBottom:20}}>{T.beFirst}</div>
+            {user&&<Btn onClick={()=>go("sell")}>{T.publish}</Btn>}
           </div>
         ):(
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",gap:20}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:14}}>
             {annonces.map(a=>(
-              <div key={a.id} className="card-hover" onClick={()=>go("article",a)}
-                style={{background:D.white,borderRadius:20,overflow:"hidden",cursor:"pointer",border:`1px solid ${D.gray200}`}}>
-                {/* Photo */}
-                <div style={{background:D.gray100,height:200,display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden"}}>
+              <div key={a.id} onClick={()=>go("article",a)} style={{background:C.w,border:`1px solid ${C.b}`,borderRadius:14,overflow:"hidden",cursor:"pointer"}}>
+                <div style={{background:C.gl,height:160,display:"flex",alignItems:"center",justifyContent:"center",fontSize:60,position:"relative",overflow:"hidden"}}>
                   {a.photo_url
-                    ?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover",transition:"transform .3s"}}/>
-                    :<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
-                      <div style={{width:48,height:48,background:CAT_COLORS[a.category]||D.green,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
-                      </div>
-                      <span style={{fontSize:12,color:D.gray400,fontWeight:500}}>{a.category}</span>
-                    </div>
+                    ?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                    :<span>{ICONS[a.category]||"📦"}</span>
                   }
-                  {/* Fav button */}
-                  <button onClick={e=>{e.stopPropagation();setFavs(f=>({...f,[a.id]:!f[a.id]}))}}
-                    style={{position:"absolute",top:12,right:12,width:36,height:36,borderRadius:"50%",background:D.white,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:favs[a.id]?D.orange:D.gray400,boxShadow:"0 2px 8px rgba(0,0,0,.1)"}}>
-                    <IconHeart filled={favs[a.id]}/>
-                  </button>
-                  {/* Brand tag */}
-                  {a.brand&&<div style={{position:"absolute",bottom:12,left:12,background:"rgba(0,0,0,.7)",color:D.white,fontSize:11,fontWeight:700,borderRadius:6,padding:"4px 10px",backdropFilter:"blur(4px)"}}>{a.brand}</div>}
                 </div>
-                {/* Info */}
-                <div style={{padding:"16px 18px 18px"}}>
-                  <StateTag state={a.state}/>
-                  <div style={{fontSize:15,fontWeight:700,margin:"6px 0 4px",lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
-                  <div style={{fontSize:12,color:D.gray400,marginBottom:12}}>{a.category}</div>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                    <span style={{fontSize:22,fontWeight:900,letterSpacing:"-0.5px"}}>{a.price} €</span>
-                    <div style={{width:36,height:36,borderRadius:"50%",background:D.green,display:"flex",alignItems:"center",justifyContent:"center",color:D.white}}>
-                      <IconArrow/>
-                    </div>
-                  </div>
+                <div style={{padding:"12px 14px"}}>
+                  <div style={{fontSize:11,color:C.m,marginBottom:2}}>{a.brand||"—"} · {a.category}</div>
+                  <div style={{fontSize:14,fontWeight:700,marginBottom:6,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
+                  <Badge label={a.state}/>
+                  <div style={{fontSize:18,fontWeight:900,marginTop:8}}>{a.price} €</div>
                 </div>
               </div>
             ))}
@@ -465,50 +396,25 @@ function Home({user,profile,annonces,allAnnonces,search,setSearch,filterCat,setF
         )}
       </div>
 
-      {/* TRUST SECTION */}
-      <div style={{background:D.gray50,borderTop:`1px solid ${D.gray200}`,padding:"80px 40px"}}>
-        <div style={{maxWidth:1000,margin:"0 auto",display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:48}}>
-          {[[<IconShield/>,"Paiement sécurisé","Toutes les transactions sont protégées et chiffrées."],[<IconTruck/>,"Livraison intégrée","Mondial Relay, Colissimo, Chronopost — en quelques clics."],[<IconLeaf/>,"Éco-responsable","Donnez une seconde vie à vos équipements de sport."],[<IconCheck/>,"Vendeurs vérifiés","Avis authentiques et profils contrôlés."]].map(([icon,title,desc])=>(
-            <div key={title}>
-              <div style={{width:44,height:44,background:D.greenLight,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",color:D.green,marginBottom:16}}>{icon}</div>
-              <div style={{fontSize:15,fontWeight:700,marginBottom:6}}>{title}</div>
-              <div style={{fontSize:14,color:D.gray600,lineHeight:1.6}}>{desc}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* FOOTER */}
-      <footer style={{background:D.black,color:D.white,padding:"60px 40px 40px"}}>
-        <div style={{maxWidth:1200,margin:"0 auto"}}>
-          <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:40,marginBottom:48}}>
-            <div style={{maxWidth:280}}>
-              <Logo size={24} dark/>
-              <p style={{fontSize:14,color:"rgba(255,255,255,.4)",marginTop:16,lineHeight:1.7}}>
-                La marketplace de seconde main dédiée aux sports de raquette.
-              </p>
-            </div>
-            {[["Acheter",["Catalogue","Nouveautés","Bons plans","Vendeurs Pro"]],["Vendre",["Déposer une annonce","Comment ça marche","Tarifs","FAQ"]],["SMASHD",["À propos","Blog","Presse","Contact"]]].map(([t,ls])=>(
-              <div key={t}>
-                <div style={{fontSize:12,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:16}}>{t}</div>
-                {ls.map(l=><div key={l} style={{fontSize:14,color:"rgba(255,255,255,.6)",marginBottom:10,cursor:"pointer"}}>{l}</div>)}
-              </div>
-            ))}
-          </div>
-          <div style={{borderTop:"1px solid rgba(255,255,255,.1)",paddingTop:24,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12}}>
-            <div style={{fontSize:13,color:"rgba(255,255,255,.3)"}}>© 2026 SMASHD. Tous droits réservés.</div>
-            <div style={{display:"flex",gap:20,fontSize:13,color:"rgba(255,255,255,.3)"}}>
-              {["CGV","Confidentialité","Cookies"].map(l=><span key={l} style={{cursor:"pointer"}}>{l}</span>)}
-            </div>
-          </div>
+      <footer style={{background:C.pd,color:"#a8d5c5",padding:"28px 20px",display:"flex",gap:24,flexWrap:"wrap",justifyContent:"space-between",fontSize:13}}>
+        <div>
+          <div style={{color:"#fff",fontWeight:900,fontSize:20,marginBottom:8}}>SMASH<span style={{color:"#f4a07a"}}>D</span></div>
+          <div style={{maxWidth:220,lineHeight:1.6}}>Marketplace de seconde main dédiée aux sports de raquette.</div>
         </div>
+        {[["Acheter",["Catalogue","Nouveautés","Bons plans"]],["Vendre",["Déposer une annonce","Espace Pro","Tarifs"]],["Aide",["FAQ","Livraison","Contact"]]].map(([title,links])=>(
+          <div key={title}>
+            <div style={{color:"#fff",fontWeight:700,marginBottom:8}}>{title}</div>
+            {links.map(l=><div key={l} style={{marginBottom:4,cursor:"pointer"}}>{l}</div>)}
+          </div>
+        ))}
       </footer>
     </div>
   );
 }
 
 // ═══════════ AUTH ═══════════
-function Auth({login,register,loading,go}){
+function Auth({login,register,loading,go}) {
   const [mode,setMode]=useState("login");
   const [step,setStep]=useState(0);
   const [userType,setUserType]=useState("particulier");
@@ -516,173 +422,122 @@ function Auth({login,register,loading,go}){
   const [err,setErr]=useState({});
   const set=(k,v)=>setF(x=>({...x,[k]:v}));
 
-  const v0=()=>{const e={};if(!f.email||!/\S+@\S+\.\S+/.test(f.email))e.email="Email invalide";if(!f.pwd||f.pwd.length<6)e.pwd="6 caractères minimum";if(mode==="register"&&f.pwd!==f.pwd2)e.pwd2="Mots de passe différents";setErr(e);return!Object.keys(e).length};
-  const v1=()=>{const e={};if(!f.name)e.name="Nom requis";if(userType==="pro"&&!f.siret)e.siret="SIRET requis";if(!f.cgv)e.cgv="Requis";setErr(e);return!Object.keys(e).length};
+  const v0=()=>{
+    const e={};
+    if(!f.email||!/\S+@\S+\.\S+/.test(f.email))e.email="Email invalide";
+    if(!f.pwd||f.pwd.length<6)e.pwd="6 caractères minimum";
+    if(mode==="register"&&f.pwd!==f.pwd2)e.pwd2="Mots de passe différents";
+    setErr(e);return!Object.keys(e).length;
+  };
+  const v1=()=>{
+    const e={};
+    if(!f.name)e.name="Nom requis";
+    if(userType==="pro"&&!f.siret)e.siret="SIRET requis";
+    if(!f.cgv)e.cgv="Acceptez les CGV";
+    setErr(e);return!Object.keys(e).length;
+  };
+
   const doLogin=async()=>{if(!v0())return;try{await login(f.email,f.pwd)}catch(e){setErr({email:"Email ou mot de passe incorrect"})}};
   const doRegister=async()=>{if(!v1())return;try{await register(f.email,f.pwd,f.name,userType,f.siret,f.company)}catch(e){setErr({email:e.message})}};
 
-  const inputStyle={width:"100%",padding:"14px 16px",borderRadius:12,border:`1.5px solid ${D.gray200}`,fontSize:15,outline:"none",boxSizing:"border-box",background:D.white,color:D.black,transition:"border-color .15s"};
-
-  return(
-    <div style={{minHeight:"100vh",background:D.gray50,display:"flex"}}>
-      {/* Left panel */}
-      <div style={{flex:1,background:D.green,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:60,position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",inset:0,opacity:.05,backgroundImage:"radial-gradient(circle,white 1px,transparent 1px)",backgroundSize:"40px 40px"}}/>
-        <Logo size={28} dark/>
-        <h2 style={{fontSize:40,fontWeight:900,color:D.white,margin:"40px 0 16px",letterSpacing:"-1.5px",lineHeight:1.1}}>
-          La seconde main<br/>du sport de raquette
-        </h2>
-        <p style={{fontSize:16,color:"rgba(255,255,255,.6)",lineHeight:1.7,maxWidth:320}}>
-          Rejoignez des milliers de joueurs qui achètent et vendent leurs équipements sur SMASHD.
-        </p>
-        <div style={{marginTop:48,display:"flex",flexDirection:"column",gap:16}}>
-          {[["Paiement 100% sécurisé"],["Livraison simplifiée"],["Communauté de passionnés"],["Zéro commission à l'inscription"]].map(([l])=>(
-            <div key={l} style={{display:"flex",alignItems:"center",gap:12,color:"rgba(255,255,255,.8)",fontSize:14}}>
-              <div style={{width:22,height:22,borderRadius:"50%",background:D.greenAccent,display:"flex",alignItems:"center",justifyContent:"center",color:D.black,flexShrink:0}}><IconCheck/></div>
-              {l}
-            </div>
+  return (
+    <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div style={{background:C.w,border:`1px solid ${C.b}`,borderRadius:18,padding:"32px 28px",maxWidth:420,width:"100%"}}>
+        <div style={{textAlign:"center",marginBottom:24}}><Logo size={26}/></div>
+        <div style={{display:"flex",gap:8,marginBottom:24}}>
+          {[["login","Connexion"],["register","Inscription"]].map(([m,l])=>(
+            <button key={m} onClick={()=>{setMode(m);setErr({});setStep(0)}}
+              style={{flex:1,background:mode===m?C.p:C.w,color:mode===m?"#fff":C.m,border:`1.5px solid ${mode===m?C.p:C.b}`,borderRadius:10,padding:"10px",fontSize:14,fontWeight:700,cursor:"pointer"}}>{l}</button>
           ))}
         </div>
-      </div>
 
-      {/* Right panel */}
-      <div style={{width:480,background:D.white,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:48}}>
-        <div style={{width:"100%",maxWidth:360}}>
-          <button onClick={()=>go("home")} style={{background:"none",border:"none",cursor:"pointer",color:D.gray400,fontSize:13,display:"flex",alignItems:"center",gap:6,marginBottom:32}}>
-            <IconChevron dir="left"/> Retour
-          </button>
+        {mode==="login"&&(
+          <>
+            <Input label="Email" type="email" value={f.email} onChange={e=>set("email",e.target.value)} placeholder="vous@exemple.com" error={err.email} required/>
+            <Input label="Mot de passe" type="password" value={f.pwd} onChange={e=>set("pwd",e.target.value)} placeholder="••••••••" error={err.pwd} required/>
+            <Btn onClick={doLogin} disabled={loading} style={{width:"100%",padding:"13px"}}>{loading?"Connexion…":"Se connecter"}</Btn>
+          </>
+        )}
 
-          <div style={{display:"flex",gap:8,marginBottom:32,background:D.gray100,borderRadius:12,padding:4}}>
-            {[["login","Connexion"],["register","Inscription"]].map(([m,l])=>(
-              <button key={m} onClick={()=>{setMode(m);setErr({});setStep(0)}}
-                style={{flex:1,background:mode===m?D.white:"transparent",color:mode===m?D.black:D.gray400,border:"none",borderRadius:10,padding:"10px",fontSize:14,fontWeight:700,cursor:"pointer",transition:"all .15s"}}>{l}</button>
-            ))}
-          </div>
+        {mode==="register"&&(
+          <>
+            <div style={{display:"flex",gap:8,marginBottom:16}}>
+              {[["particulier","👤 Particulier"],["pro","🏪 Vendeur Pro"]].map(([id,l])=>(
+                <button key={id} onClick={()=>setUserType(id)}
+                  style={{flex:1,background:userType===id?C.p:C.w,color:userType===id?"#fff":C.t,border:`2px solid ${userType===id?C.p:C.b}`,borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>{l}</button>
+              ))}
+            </div>
+            {userType==="pro"&&<div style={{background:C.warnl,border:`1px solid ${C.warn}`,borderRadius:8,padding:"10px 14px",fontSize:12,color:C.warn,marginBottom:14}}>🏅 Abonnement Pro 99€/an — Invendus + espace publicitaire</div>}
 
-          {mode==="login"&&(
-            <>
-              <h2 style={{fontSize:26,fontWeight:900,letterSpacing:"-0.5px",marginBottom:8}}>Bon retour</h2>
-              <p style={{fontSize:14,color:D.gray400,marginBottom:28}}>Connectez-vous à votre compte SMASHD</p>
-              <div style={{marginBottom:16}}>
-                <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:6}}>Email</label>
-                <input type="email" value={f.email} onChange={e=>set("email",e.target.value)} placeholder="vous@exemple.com" style={{...inputStyle,borderColor:err.email?D.red:D.gray200}}/>
-                {err.email&&<div style={{fontSize:12,color:D.red,marginTop:4}}>{err.email}</div>}
-              </div>
-              <div style={{marginBottom:28}}>
-                <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:6}}>Mot de passe</label>
-                <input type="password" value={f.pwd} onChange={e=>set("pwd",e.target.value)} placeholder="••••••••" style={inputStyle} onKeyDown={e=>e.key==="Enter"&&doLogin()}/>
-              </div>
-              <button onClick={doLogin} disabled={loading} className="btn-hover"
-                style={{width:"100%",background:D.green,color:D.white,border:"none",borderRadius:12,padding:"16px",fontSize:15,fontWeight:700,cursor:"pointer"}}>
-                {loading?"Connexion…":"Se connecter"}
-              </button>
-            </>
-          )}
-
-          {mode==="register"&&(
-            <>
-              <h2 style={{fontSize:26,fontWeight:900,letterSpacing:"-0.5px",marginBottom:8}}>Créer un compte</h2>
-              <p style={{fontSize:14,color:D.gray400,marginBottom:24}}>Rejoignez la communauté SMASHD</p>
-
-              <div style={{display:"flex",gap:8,marginBottom:24}}>
-                {[["particulier","Particulier"],["pro","Vendeur Pro"]].map(([id,l])=>(
-                  <button key={id} onClick={()=>setUserType(id)}
-                    style={{flex:1,background:userType===id?D.green:D.gray100,color:userType===id?D.white:D.gray600,border:"none",borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer",transition:"all .15s"}}>{l}</button>
-                ))}
-              </div>
-
-              {userType==="pro"&&<div style={{background:D.greenLight,border:`1px solid ${D.greenAccent}`,borderRadius:10,padding:"12px 14px",fontSize:12,color:D.green,marginBottom:20,fontWeight:500}}>Abonnement annuel 99€/an — Invendus + espace publicitaire inclus</div>}
-
-              {/* Steps */}
-              <div style={{display:"flex",gap:4,marginBottom:24}}>
-                {["Compte","Profil"].map((s,i)=>(
-                  <div key={s} style={{flex:1,height:3,borderRadius:2,background:step>i?D.green:step===i?D.greenAccent:D.gray200,transition:"background .3s"}}/>
-                ))}
-              </div>
-
-              {step===0&&(
-                <>
-                  <div style={{marginBottom:16}}>
-                    <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:6}}>Email *</label>
-                    <input type="email" value={f.email} onChange={e=>set("email",e.target.value)} placeholder="vous@exemple.com" style={{...inputStyle,borderColor:err.email?D.red:D.gray200}}/>
-                    {err.email&&<div style={{fontSize:12,color:D.red,marginTop:4}}>{err.email}</div>}
+            <div style={{display:"flex",gap:6,marginBottom:18,alignItems:"center"}}>
+              {["Compte","Profil"].map((s,i)=>(
+                <React.Fragment key={s}>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{width:24,height:24,borderRadius:"50%",background:step>=i?C.p:C.gl,color:step>=i?"#fff":C.g,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700}}>{step>i?"✓":i+1}</div>
+                    <span style={{fontSize:12,color:step===i?C.t:C.m,fontWeight:step===i?700:400}}>{s}</span>
                   </div>
-                  <div style={{marginBottom:16}}>
-                    <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:6}}>Mot de passe *</label>
-                    <input type="password" value={f.pwd} onChange={e=>set("pwd",e.target.value)} placeholder="6 caractères minimum" style={{...inputStyle,borderColor:err.pwd?D.red:D.gray200}}/>
-                    {err.pwd&&<div style={{fontSize:12,color:D.red,marginTop:4}}>{err.pwd}</div>}
-                  </div>
-                  <div style={{marginBottom:28}}>
-                    <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:6}}>Confirmer *</label>
-                    <input type="password" value={f.pwd2} onChange={e=>set("pwd2",e.target.value)} placeholder="Répétez" style={{...inputStyle,borderColor:err.pwd2?D.red:D.gray200}}/>
-                    {err.pwd2&&<div style={{fontSize:12,color:D.red,marginTop:4}}>{err.pwd2}</div>}
-                  </div>
-                  <button onClick={()=>v0()&&setStep(1)} className="btn-hover"
-                    style={{width:"100%",background:D.green,color:D.white,border:"none",borderRadius:12,padding:"16px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Continuer</button>
-                </>
-              )}
-              {step===1&&(
-                <>
-                  <div style={{marginBottom:16}}>
-                    <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:6}}>{userType==="pro"?"Nom du responsable *":"Nom complet *"}</label>
-                    <input value={f.name} onChange={e=>set("name",e.target.value)} placeholder="Jean Dupont" style={{...inputStyle,borderColor:err.name?D.red:D.gray200}}/>
-                    {err.name&&<div style={{fontSize:12,color:D.red,marginTop:4}}>{err.name}</div>}
-                  </div>
-                  {userType==="pro"&&(
-                    <>
-                      <div style={{marginBottom:16}}>
-                        <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:6}}>SIRET *</label>
-                        <input value={f.siret} onChange={e=>set("siret",e.target.value)} placeholder="123 456 789 00012" style={{...inputStyle,borderColor:err.siret?D.red:D.gray200}}/>
-                        {err.siret&&<div style={{fontSize:12,color:D.red,marginTop:4}}>{err.siret}</div>}
-                      </div>
-                      <div style={{marginBottom:16}}>
-                        <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:6}}>Nom commercial</label>
-                        <input value={f.company} onChange={e=>set("company",e.target.value)} placeholder="Mon Shop Tennis" style={inputStyle}/>
-                      </div>
-                    </>
-                  )}
-                  <div style={{marginBottom:24}}>
-                    <label style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer",fontSize:13,color:D.gray600}}>
-                      <input type="checkbox" checked={f.cgv} onChange={e=>set("cgv",e.target.checked)} style={{marginTop:3,accentColor:D.green}}/>
-                      <span>J'accepte les <span style={{color:D.green,fontWeight:600}}>CGV</span> et la <span style={{color:D.green,fontWeight:600}}>Politique de confidentialité</span></span>
-                    </label>
-                    {err.cgv&&<div style={{fontSize:12,color:D.red,marginTop:4}}>{err.cgv}</div>}
-                  </div>
-                  <div style={{display:"flex",gap:8}}>
-                    <button onClick={()=>setStep(0)} style={{flex:1,background:D.gray100,color:D.black,border:"none",borderRadius:12,padding:"14px",fontSize:14,fontWeight:600,cursor:"pointer"}}>Retour</button>
-                    <button onClick={doRegister} disabled={loading} className="btn-hover"
-                      style={{flex:2,background:D.green,color:D.white,border:"none",borderRadius:12,padding:"14px",fontSize:14,fontWeight:700,cursor:"pointer"}}>
-                      {loading?"Création…":"Créer mon compte"}
-                    </button>
-                  </div>
-                </>
-              )}
-            </>
-          )}
-        </div>
+                  {i===0&&<div style={{flex:1,height:1,background:step>0?C.p:C.b}}/>}
+                </React.Fragment>
+              ))}
+            </div>
+
+            {step===0&&(
+              <>
+                <Input label="Email" type="email" value={f.email} onChange={e=>set("email",e.target.value)} placeholder="vous@exemple.com" error={err.email} required/>
+                <Input label="Mot de passe" type="password" value={f.pwd} onChange={e=>set("pwd",e.target.value)} placeholder="6 caractères minimum" error={err.pwd} required/>
+                <Input label="Confirmer" type="password" value={f.pwd2} onChange={e=>set("pwd2",e.target.value)} placeholder="Répétez" error={err.pwd2} required/>
+                <Btn onClick={()=>v0()&&setStep(1)} style={{width:"100%",padding:"13px"}}>Continuer →</Btn>
+              </>
+            )}
+            {step===1&&(
+              <>
+                <Input label={userType==="pro"?"Nom du responsable":"Nom complet"} value={f.name} onChange={e=>set("name",e.target.value)} placeholder="Jean Dupont" error={err.name} required/>
+                {userType==="pro"&&(
+                  <>
+                    <Input label="SIRET" value={f.siret} onChange={e=>set("siret",e.target.value)} placeholder="123 456 789 00012" error={err.siret} required/>
+                    <Input label="Nom commercial" value={f.company} onChange={e=>set("company",e.target.value)} placeholder="Mon Shop Tennis"/>
+                  </>
+                )}
+                <div style={{marginBottom:16}}>
+                  <label style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer",fontSize:13,color:C.m}}>
+                    <input type="checkbox" checked={f.cgv} onChange={e=>set("cgv",e.target.checked)} style={{marginTop:2,accentColor:C.p}}/>
+                    <span>J'accepte les <span style={{color:C.p,fontWeight:600}}>CGV</span> et la <span style={{color:C.p,fontWeight:600}}>Politique de confidentialité</span></span>
+                  </label>
+                  {err.cgv&&<div style={{fontSize:12,color:C.err,marginTop:4}}>{err.cgv}</div>}
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <Btn onClick={()=>setStep(0)} variant="ghost" style={{flex:1,padding:"12px"}}>← Retour</Btn>
+                  <Btn onClick={doRegister} disabled={loading} style={{flex:2,padding:"12px"}}>{loading?"Création…":userType==="pro"?"Créer compte Pro":"Créer mon compte"}</Btn>
+                </div>
+              </>
+            )}
+          </>
+        )}
+        {err.email&&mode==="register"&&step===0&&<div style={{background:C.errl,color:C.err,borderRadius:8,padding:"10px 14px",fontSize:13,marginTop:12}}>❌ {err.email}</div>}
+        <button onClick={()=>go("home")} style={{width:"100%",background:"none",border:"none",color:C.m,fontSize:13,cursor:"pointer",marginTop:16}}>← Retour à l'accueil</button>
       </div>
     </div>
   );
 }
 
 // ═══════════ SELL ═══════════
-function Sell({publishAnnonce,loading,go}){
+function Sell({publishAnnonce,loading,go}) {
   const [step,setStep]=useState(0);
   const [f,setF]=useState({title:"",description:"",category:"",brand:"",state:"",price:"",shipping:"mondial"});
   const [photos,setPhotos]=useState([]);
   const [uploading,setUploading]=useState(false);
   const fileRef=useRef();
   const set=(k,v)=>setF(x=>({...x,[k]:v}));
-  const STEPS=["Sport","Photos","Article","Prix","Envoi","Vérification"];
+  const STEPS=["Catégorie","Photos","Détails","Prix","Expédition","Confirmation"];
   const commission=f.price?(f.price*0.08).toFixed(2):0;
   const gain=f.price?(f.price*0.92).toFixed(2):0;
 
   const handleUpload=async(e)=>{
     const files=Array.from(e.target.files);
-    if(photos.length+files.length>8){return}
+    if(photos.length+files.length>8){alert("Max 8 photos");return}
     setUploading(true);
     try{const urls=await Promise.all(files.map(f=>uploadPhoto(f)));setPhotos(p=>[...p,...urls])}
-    catch(e){alert("Erreur upload")}
+    catch(e){alert("Erreur upload, réessayez")}
     finally{setUploading(false)}
   };
 
@@ -695,41 +550,40 @@ function Sell({publishAnnonce,loading,go}){
     return true;
   };
 
-  return(
-    <div style={{minHeight:"100vh",background:D.white}}>
-      {/* Header */}
-      <div style={{background:D.white,borderBottom:`1px solid ${D.gray200}`,padding:"0 40px",display:"flex",alignItems:"center",height:64,gap:16,position:"sticky",top:0,zIndex:100}}>
-        <button onClick={()=>go("home")} style={{background:"none",border:"none",cursor:"pointer",color:D.gray600,display:"flex",alignItems:"center",gap:6,fontSize:14,fontWeight:500}}>
-          <IconChevron dir="left"/> Retour
-        </button>
-        <Logo size={20}/>
-        <div style={{flex:1,display:"flex",justifyContent:"center",gap:4}}>
+  return (
+    <div style={{minHeight:"100vh",background:C.bg}}>
+      <nav style={{background:C.w,borderBottom:`1px solid ${C.b}`,padding:"0 20px",display:"flex",alignItems:"center",height:56,gap:12}}>
+        <button onClick={()=>go("home")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer"}}>←</button>
+        <Logo size={18}/>
+        <span style={{fontSize:13,color:C.m}}>› Vendre un article</span>
+      </nav>
+
+      <div style={{background:C.w,borderBottom:`1px solid ${C.b}`,padding:"12px 20px",overflowX:"auto"}}>
+        <div style={{display:"flex",alignItems:"center",gap:0,minWidth:"max-content"}}>
           {STEPS.map((s,i)=>(
-            <div key={s} style={{display:"flex",alignItems:"center",gap:4}}>
+            <React.Fragment key={s}>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <div style={{width:28,height:28,borderRadius:"50%",background:i<step?D.green:i===step?D.black:D.gray100,color:i<=step?D.white:D.gray400,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,flexShrink:0}}>
-                  {i<step?<IconCheck/>:i+1}
-                </div>
-                <span style={{fontSize:12,color:i===step?D.black:D.gray400,fontWeight:i===step?700:400,display:window.innerWidth<600?"none":"block"}}>{s}</span>
+                <div style={{width:26,height:26,borderRadius:"50%",background:i<step?C.p:i===step?C.p:C.gl,color:i<=step?"#fff":C.g,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{i<step?"✓":i+1}</div>
+                <span style={{fontSize:11,color:i===step?C.t:C.m,fontWeight:i===step?700:400,whiteSpace:"nowrap"}}>{s}</span>
               </div>
-              {i<STEPS.length-1&&<div style={{width:16,height:1,background:i<step?D.green:D.gray200,margin:"0 4px"}}/>}
-            </div>
+              {i<STEPS.length-1&&<div style={{width:20,height:1,background:i<step?C.p:C.b,margin:"0 6px",flexShrink:0}}/>}
+            </React.Fragment>
           ))}
         </div>
       </div>
 
-      <div style={{maxWidth:600,margin:"0 auto",padding:"48px 24px"}}>
+      <div style={{maxWidth:600,margin:"28px auto",padding:"0 20px"}}>
 
         {step===0&&(
           <div>
-            <h2 style={{fontSize:28,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Quel sport ?</h2>
-            <p style={{color:D.gray400,fontSize:15,marginBottom:32}}>Sélectionnez la catégorie de votre article.</p>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12}}>
+            <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Quelle catégorie ?</h2>
+            <p style={{color:C.m,fontSize:14,marginBottom:20}}>Sélectionnez le sport de votre article.</p>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:10}}>
               {CATS.map(c=>(
-                <button key={c} onClick={()=>set("category",c)} className="btn-hover"
-                  style={{background:f.category===c?D.green:D.gray50,border:`1.5px solid ${f.category===c?D.green:D.gray200}`,borderRadius:16,padding:"24px 20px",cursor:"pointer",textAlign:"left",transition:"all .15s"}}>
-                  <div style={{fontSize:13,fontWeight:700,color:f.category===c?D.greenAccent:"rgba(0,0,0,.3)",letterSpacing:"1px",textTransform:"uppercase",marginBottom:8}}>Sport</div>
-                  <div style={{fontSize:18,fontWeight:800,color:f.category===c?D.white:D.black}}>{c}</div>
+                <button key={c} onClick={()=>set("category",c)}
+                  style={{background:f.category===c?C.pl:C.w,border:`2px solid ${f.category===c?C.p:C.b}`,borderRadius:12,padding:"16px 8px",cursor:"pointer",textAlign:"center"}}>
+                  <div style={{fontSize:28}}>{ICONS[c]}</div>
+                  <div style={{fontSize:13,marginTop:6,fontWeight:f.category===c?700:400}}>{c}</div>
                 </button>
               ))}
             </div>
@@ -738,100 +592,96 @@ function Sell({publishAnnonce,loading,go}){
 
         {step===1&&(
           <div>
-            <h2 style={{fontSize:28,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Les photos</h2>
-            <p style={{color:D.gray400,fontSize:15,marginBottom:32}}>Jusqu'à 8 photos. La première sera la principale.</p>
+            <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Photos de l'article</h2>
+            <p style={{color:C.m,fontSize:14,marginBottom:20}}>Jusqu'à 8 photos. La première sera la principale.</p>
             <div onClick={()=>!uploading&&fileRef.current.click()}
-              style={{border:`2px dashed ${D.gray200}`,borderRadius:20,padding:"48px",textAlign:"center",cursor:"pointer",background:D.gray50,transition:"all .15s",marginBottom:20}}>
-              <div style={{width:56,height:56,background:D.green,borderRadius:16,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}}><IconPlus/></div>
-              <div style={{fontSize:16,fontWeight:700,marginBottom:4}}>{uploading?"Upload en cours…":"Ajouter des photos"}</div>
-              <div style={{fontSize:13,color:D.gray400}}>JPG, PNG — Max 8 photos</div>
+              style={{border:`2px dashed ${C.p}`,borderRadius:14,padding:"28px",textAlign:"center",cursor:"pointer",background:C.pl,marginBottom:16}}>
+              <div style={{fontSize:36,marginBottom:8}}>📸</div>
+              <div style={{fontSize:14,fontWeight:600,color:C.pd}}>{uploading?"Upload en cours…":"Cliquez pour ajouter des photos"}</div>
+              <div style={{fontSize:12,color:C.m,marginTop:4}}>JPG, PNG · Max 8 photos</div>
               <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleUpload} style={{display:"none"}}/>
             </div>
             {photos.length>0&&(
               <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
                 {photos.map((url,i)=>(
-                  <div key={i} style={{position:"relative",aspectRatio:"1",borderRadius:12,overflow:"hidden",border:`2px solid ${i===0?D.green:D.gray200}`}}>
+                  <div key={i} style={{position:"relative",aspectRatio:"1",borderRadius:10,overflow:"hidden",border:`2px solid ${i===0?C.p:C.b}`}}>
                     <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-                    {i===0&&<div style={{position:"absolute",bottom:0,left:0,right:0,background:D.green,color:D.white,fontSize:10,fontWeight:700,padding:"4px 8px",textAlign:"center"}}>PRINCIPALE</div>}
+                    {i===0&&<span style={{position:"absolute",bottom:4,left:4,background:C.p,color:"#fff",fontSize:9,borderRadius:4,padding:"2px 6px",fontWeight:700}}>Principale</span>}
                     <button onClick={()=>setPhotos(p=>p.filter((_,idx)=>idx!==i))}
-                      style={{position:"absolute",top:6,right:6,width:24,height:24,background:"rgba(0,0,0,.7)",color:D.white,border:"none",borderRadius:"50%",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><IconX/></button>
+                      style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",borderRadius:"50%",width:22,height:22,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
                   </div>
                 ))}
-                {photos.length<8&&<div onClick={()=>fileRef.current.click()} style={{aspectRatio:"1",borderRadius:12,border:`2px dashed ${D.gray200}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:24,color:D.gray400,background:D.gray50}}>+</div>}
+                {photos.length<8&&(
+                  <div onClick={()=>fileRef.current.click()}
+                    style={{aspectRatio:"1",borderRadius:10,border:`2px dashed ${C.b}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:24,color:C.g,background:C.gl}}>+</div>
+                )}
               </div>
             )}
-            {photos.length===0&&<div style={{background:"#FFF8E1",borderRadius:10,padding:"12px 16px",fontSize:13,color:"#8a6a00"}}>Au moins 1 photo requise pour continuer.</div>}
+            {photos.length===0&&<div style={{background:C.warnl,borderRadius:8,padding:"10px 14px",fontSize:13,color:C.warn,marginTop:8}}>⚠️ Au moins 1 photo requise</div>}
           </div>
         )}
 
         {step===2&&(
-          <div>
-            <h2 style={{fontSize:28,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>L'article</h2>
-            <p style={{color:D.gray400,fontSize:15,marginBottom:32}}>Décrivez votre article avec précision.</p>
-            <div style={{marginBottom:24}}>
-              <label style={{fontSize:13,fontWeight:700,display:"block",marginBottom:10,textTransform:"uppercase",letterSpacing:"1px",color:D.gray400}}>Marque</label>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <h2 style={{fontSize:20,fontWeight:800,margin:0}}>Décrivez votre article</h2>
+            <div>
+              <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:8}}>Marque *</label>
               <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
                 {[...(BRANDS[f.category]||[]),"Autre"].filter((v,i,a)=>a.indexOf(v)===i).map(b=>(
-                  <Pill key={b} label={b} active={f.brand===b} onClick={()=>set("brand",b)}/>
+                  <button key={b} onClick={()=>set("brand",b)}
+                    style={{background:f.brand===b?C.p:C.w,color:f.brand===b?"#fff":C.t,border:`1px solid ${f.brand===b?C.p:C.b}`,borderRadius:20,padding:"7px 14px",fontSize:13,cursor:"pointer"}}>{b}</button>
                 ))}
               </div>
             </div>
-            <div style={{marginBottom:24}}>
-              <label style={{fontSize:13,fontWeight:700,display:"block",marginBottom:10,textTransform:"uppercase",letterSpacing:"1px",color:D.gray400}}>État</label>
+            <div>
+              <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:8}}>État *</label>
               <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                {STATES.map(s=><Pill key={s} label={s} active={f.state===s} onClick={()=>set("state",s)}/>)}
+                {STATES.map(s=>(
+                  <button key={s} onClick={()=>set("state",s)}
+                    style={{background:f.state===s?C.p:C.w,color:f.state===s?"#fff":C.t,border:`1px solid ${f.state===s?C.p:C.b}`,borderRadius:20,padding:"7px 14px",fontSize:13,cursor:"pointer"}}>{s}</button>
+                ))}
               </div>
             </div>
-            <div style={{marginBottom:20}}>
-              <label style={{fontSize:13,fontWeight:700,display:"block",marginBottom:8,textTransform:"uppercase",letterSpacing:"1px",color:D.gray400}}>Titre *</label>
-              <input value={f.title} onChange={e=>set("title",e.target.value)} placeholder={`Ex: ${f.brand||"Wilson"} ${f.category} — Très bon état`}
-                style={{width:"100%",padding:"14px 16px",borderRadius:12,border:`1.5px solid ${D.gray200}`,fontSize:15,outline:"none",boxSizing:"border-box"}}/>
-            </div>
+            <Input label="Titre de l'annonce" value={f.title} onChange={e=>set("title",e.target.value)} placeholder={`Ex: ${f.brand||"Wilson"} ${f.category}`} required/>
             <div>
-              <label style={{fontSize:13,fontWeight:700,display:"block",marginBottom:8,textTransform:"uppercase",letterSpacing:"1px",color:D.gray400}}>Description</label>
+              <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>Description</label>
               <textarea value={f.description} onChange={e=>set("description",e.target.value)} rows={4}
-                placeholder="Décrivez l'article : modèle, année, raison de la vente, défauts éventuels…"
-                style={{width:"100%",padding:"14px 16px",borderRadius:12,border:`1.5px solid ${D.gray200}`,fontSize:15,resize:"vertical",boxSizing:"border-box",outline:"none"}}/>
+                placeholder="Décrivez l'article…"
+                style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1px solid ${C.b}`,fontSize:14,resize:"vertical",boxSizing:"border-box"}}/>
             </div>
           </div>
         )}
 
         {step===3&&(
           <div>
-            <h2 style={{fontSize:28,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Le prix</h2>
-            <p style={{color:D.gray400,fontSize:15,marginBottom:40}}>Positionnez-vous bien pour vendre rapidement.</p>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:32}}>
+            <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Fixez votre prix</h2>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20,marginTop:16}}>
               <input type="number" value={f.price} onChange={e=>set("price",e.target.value)} placeholder="0"
-                style={{width:180,padding:"20px 20px",borderRadius:16,border:`2px solid ${D.black}`,fontSize:36,fontWeight:900,textAlign:"center",outline:"none",letterSpacing:"-1px"}}/>
-              <span style={{fontSize:36,fontWeight:900,color:D.gray400}}>€</span>
+                style={{width:140,padding:"14px 16px",borderRadius:10,border:`2px solid ${C.p}`,fontSize:24,fontWeight:800,textAlign:"center"}}/>
+              <span style={{fontSize:24,fontWeight:700,color:C.m}}>€</span>
             </div>
             {f.price>0&&(
-              <div style={{background:D.greenLight,borderRadius:16,padding:"20px 24px"}}>
-                <div style={{fontSize:13,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:D.gray400,marginBottom:14}}>Récapitulatif</div>
-                {[["Prix de vente",`${f.price} €`],["Commission SMASHD (8%)",`- ${commission} €`]].map(([k,v])=>(
-                  <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:14,marginBottom:8,color:D.gray600}}><span>{k}</span><span>{v}</span></div>
+              <Card style={{background:C.pl}}>
+                {[["Prix de vente",`${f.price} €`],["Commission (8%)",`- ${commission} €`]].map(([k,v])=>(
+                  <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6}}><span style={{color:C.m}}>{k}</span><span>{v}</span></div>
                 ))}
-                <div style={{borderTop:`1px solid ${D.gray200}`,paddingTop:12,display:"flex",justifyContent:"space-between",fontSize:18,fontWeight:900}}>
-                  <span>Vous recevez</span><span style={{color:D.green}}>{gain} €</span>
+                <div style={{borderTop:`1px solid ${C.b}`,paddingTop:8,display:"flex",justifyContent:"space-between",fontSize:16,fontWeight:900}}>
+                  <span>Vous recevez</span><span style={{color:C.p}}>{gain} €</span>
                 </div>
-              </div>
+              </Card>
             )}
           </div>
         )}
 
         {step===4&&(
           <div>
-            <h2 style={{fontSize:28,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>L'envoi</h2>
-            <p style={{color:D.gray400,fontSize:15,marginBottom:32}}>L'étiquette sera générée automatiquement après la vente.</p>
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Mode d'expédition</h2>
+            <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:16}}>
               {SHIPPING.map(s=>(
-                <button key={s.id} onClick={()=>set("shipping",s.id)} className="btn-hover"
-                  style={{background:f.shipping===s.id?D.green:D.white,border:`1.5px solid ${f.shipping===s.id?D.green:D.gray200}`,borderRadius:16,padding:"20px 24px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",textAlign:"left",transition:"all .15s"}}>
-                  <div>
-                    <div style={{fontWeight:700,fontSize:15,color:f.shipping===s.id?D.white:D.black}}>{s.label}</div>
-                    <div style={{fontSize:13,color:f.shipping===s.id?"rgba(255,255,255,.6)":D.gray400,marginTop:2}}>Délai : {s.delay}</div>
-                  </div>
-                  <div style={{fontWeight:800,fontSize:18,color:f.shipping===s.id?D.white:D.black}}>{s.price===0?"Gratuit":`${s.price} €`}</div>
+                <button key={s.id} onClick={()=>set("shipping",s.id)}
+                  style={{background:f.shipping===s.id?C.pl:C.w,border:`2px solid ${f.shipping===s.id?C.p:C.b}`,borderRadius:12,padding:"16px 20px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",textAlign:"left"}}>
+                  <div><div style={{fontWeight:700,fontSize:15}}>{s.label}</div><div style={{fontSize:12,color:C.m,marginTop:2}}>Délai : {s.delay}</div></div>
+                  <div style={{fontWeight:800,color:f.shipping===s.id?C.p:C.t}}>{s.price===0?"Gratuit":`${s.price} €`}</div>
                 </button>
               ))}
             </div>
@@ -840,43 +690,33 @@ function Sell({publishAnnonce,loading,go}){
 
         {step===5&&(
           <div>
-            <h2 style={{fontSize:28,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Vérification</h2>
-            <p style={{color:D.gray400,fontSize:15,marginBottom:28}}>Tout est correct ? Publiez votre annonce.</p>
-            <div style={{background:D.white,border:`1.5px solid ${D.gray200}`,borderRadius:20,overflow:"hidden",marginBottom:20}}>
+            <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Vérifiez votre annonce</h2>
+            <Card>
               {photos.length>0
-                ?<img src={photos[0]} alt="" style={{width:"100%",height:220,objectFit:"cover"}}/>
-                :<div style={{height:140,background:D.gray100,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                  <div style={{width:48,height:48,background:CAT_COLORS[f.category]||D.green,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center"}}><IconGrid/></div>
-                </div>
+                ?<img src={photos[0]} alt="" style={{width:"100%",height:200,objectFit:"cover",borderRadius:10,marginBottom:16}}/>
+                :<div style={{background:C.gl,borderRadius:10,height:140,display:"flex",alignItems:"center",justifyContent:"center",fontSize:64,marginBottom:16}}>{ICONS[f.category]||"📦"}</div>
               }
-              <div style={{padding:"20px 24px"}}>
-                <StateTag state={f.state}/>
-                <div style={{fontSize:20,fontWeight:800,margin:"8px 0 4px",letterSpacing:"-0.3px"}}>{f.title}</div>
-                <div style={{fontSize:14,color:D.gray400,marginBottom:16}}>{f.brand} · {f.category}</div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div style={{fontSize:28,fontWeight:900,letterSpacing:"-1px"}}>{f.price} €</div>
-                  <div style={{fontSize:13,color:D.gray400}}>Vous recevrez {gain} €<br/>via {SHIPPING.find(s=>s.id===f.shipping)?.label}</div>
+              {photos.length>1&&(
+                <div style={{display:"flex",gap:6,marginBottom:14}}>
+                  {photos.slice(1,5).map((url,i)=>(
+                    <img key={i} src={url} alt="" style={{width:56,height:56,objectFit:"cover",borderRadius:8,border:`1px solid ${C.b}`}}/>
+                  ))}
                 </div>
-              </div>
-            </div>
+              )}
+              <div style={{fontSize:12,color:C.m}}>{f.brand} · {f.category}</div>
+              <div style={{fontSize:18,fontWeight:800,margin:"4px 0 8px"}}>{f.title}</div>
+              <Badge label={f.state}/>
+              <div style={{fontSize:24,fontWeight:900,marginTop:10}}>{f.price} €</div>
+              <div style={{fontSize:12,color:C.m,marginTop:2}}>Vous recevrez {gain} € · Via {SHIPPING.find(s=>s.id===f.shipping)?.label}</div>
+            </Card>
           </div>
         )}
 
-        {/* Nav */}
-        <div style={{display:"flex",justifyContent:"space-between",marginTop:40,paddingTop:32,borderTop:`1px solid ${D.gray200}`}}>
-          {step>0
-            ?<button onClick={()=>setStep(s=>s-1)} style={{background:D.gray100,color:D.black,border:"none",borderRadius:100,padding:"14px 28px",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}><IconChevron dir="left"/> Retour</button>
-            :<div/>
-          }
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:28,paddingBottom:40}}>
+          {step>0?<Btn onClick={()=>setStep(s=>s-1)} variant="ghost" style={{padding:"11px 24px"}}>← Retour</Btn>:<div/>}
           {step<STEPS.length-1
-            ?<button onClick={()=>canNext()&&setStep(s=>s+1)} disabled={!canNext()||uploading} className="btn-hover"
-                style={{background:canNext()&&!uploading?D.black:"#ccc",color:D.white,border:"none",borderRadius:100,padding:"14px 28px",fontSize:14,fontWeight:700,cursor:canNext()?"pointer":"not-allowed",display:"flex",alignItems:"center",gap:8}}>
-                {uploading?"Upload…":"Continuer"} {!uploading&&<IconArrow/>}
-              </button>
-            :<button onClick={()=>publishAnnonce({...f,photo_url:photos[0]||null,photos})} disabled={loading} className="btn-hover"
-                style={{background:D.green,color:D.white,border:"none",borderRadius:100,padding:"14px 32px",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
-                {loading?"Publication…":"Publier l'annonce"} {!loading&&<IconArrow/>}
-              </button>
+            ?<Btn onClick={()=>canNext()&&setStep(s=>s+1)} disabled={!canNext()||uploading} style={{padding:"11px 28px"}}>{uploading?"Upload…":"Continuer →"}</Btn>
+            :<Btn onClick={()=>publishAnnonce({...f,photo_url:photos[0]||null,photos})} disabled={loading} style={{padding:"11px 28px"}}>{loading?"Publication…":"🚀 Publier l'annonce"}</Btn>
           }
         </div>
       </div>
@@ -885,7 +725,7 @@ function Sell({publishAnnonce,loading,go}){
 }
 
 // ═══════════ ARTICLE ═══════════
-function Article({selected,go,user,placeOrder,loading,favs,setFavs}){
+function Article({selected,go,user,placeOrder,loading}) {
   const a=selected;
   const [tab,setTab]=useState("desc");
   const [shipping,setShipping]=useState("mondial");
@@ -899,156 +739,128 @@ function Article({selected,go,user,placeOrder,loading,favs,setFavs}){
   const commission=(a.price*0.08).toFixed(2);
   const shippingCost=SHIPPING.find(s=>s.id===shipping)?.price||0;
   const total=(parseFloat(a.price)+parseFloat(commission)+shippingCost).toFixed(2);
+
   const doOrder=async()=>{const ok=await placeOrder(a,shipping);if(ok)setOrdered(true)};
 
-  return(
-    <div style={{minHeight:"100vh",background:D.white}}>
-      <nav style={{background:D.white,borderBottom:`1px solid ${D.gray200}`,padding:"0 40px",display:"flex",alignItems:"center",height:64,gap:16,position:"sticky",top:0,zIndex:100}}>
-        <button onClick={()=>go("home")} style={{background:"none",border:"none",cursor:"pointer",color:D.gray600,display:"flex",alignItems:"center",gap:6,fontSize:14,fontWeight:500}}><IconChevron dir="left"/> Retour</button>
-        <Logo size={20}/>
+  return (
+    <div style={{minHeight:"100vh",background:C.bg}}>
+      <nav style={{background:C.w,borderBottom:`1px solid ${C.b}`,padding:"0 20px",display:"flex",alignItems:"center",height:56,gap:12,position:"sticky",top:0,zIndex:100}}>
+        <button onClick={()=>go("home")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer"}}>←</button>
+        <Logo size={18}/>
       </nav>
 
       {checkout&&!ordered&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
-          <div style={{background:D.white,borderRadius:24,padding:"32px",maxWidth:480,width:"100%",boxShadow:"0 32px 80px rgba(0,0,0,.2)"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
-              <h3 style={{fontSize:20,fontWeight:800}}>Finaliser l'achat</h3>
-              <button onClick={()=>setCheckout(false)} style={{background:D.gray100,border:"none",borderRadius:"50%",width:36,height:36,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><IconX/></button>
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
+          <Card style={{maxWidth:440,width:"100%"}}>
+            <h3 style={{fontSize:18,fontWeight:800,marginBottom:16}}>Finaliser l'achat</h3>
+            <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:16,background:C.gl,borderRadius:10,padding:"12px"}}>
+              <div style={{fontSize:32}}>{photos.length>0?<img src={photos[0]} alt="" style={{width:48,height:48,objectFit:"cover",borderRadius:8}}/>:ICONS[a.category]}</div>
+              <div style={{flex:1}}><div style={{fontWeight:700}}>{a.title}</div><div style={{fontSize:12,color:C.m}}>{a.state}</div></div>
+              <div style={{fontWeight:900}}>{a.price} €</div>
             </div>
-            <div style={{display:"flex",gap:14,alignItems:"center",marginBottom:24,background:D.gray50,borderRadius:14,padding:"14px"}}>
-              {photos.length>0?<img src={photos[0]} alt="" style={{width:56,height:56,objectFit:"cover",borderRadius:10}}/>:<div style={{width:56,height:56,background:D.gray200,borderRadius:10}}/>}
-              <div style={{flex:1}}><div style={{fontWeight:700,fontSize:15}}>{a.title}</div><StateTag state={a.state}/></div>
-              <div style={{fontWeight:900,fontSize:18}}>{a.price} €</div>
-            </div>
-            <div style={{marginBottom:20}}>
-              <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:D.gray400,marginBottom:12}}>Mode de livraison</div>
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:13,fontWeight:600,marginBottom:8}}>Livraison</div>
               {SHIPPING.map(s=>(
                 <button key={s.id} onClick={()=>setShipping(s.id)}
-                  style={{width:"100%",background:shipping===s.id?D.greenLight:D.white,border:`1.5px solid ${shipping===s.id?D.green:D.gray200}`,borderRadius:12,padding:"12px 16px",cursor:"pointer",display:"flex",justifyContent:"space-between",marginBottom:8,textAlign:"left",transition:"all .15s"}}>
-                  <div><div style={{fontSize:14,fontWeight:600}}>{s.label}</div><div style={{fontSize:12,color:D.gray400}}>{s.delay}</div></div>
-                  <div style={{fontWeight:700,color:shipping===s.id?D.green:D.black}}>{s.price===0?"Gratuit":`${s.price} €`}</div>
+                  style={{width:"100%",background:shipping===s.id?C.pl:C.w,border:`1.5px solid ${shipping===s.id?C.p:C.b}`,borderRadius:10,padding:"10px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",marginBottom:6,textAlign:"left"}}>
+                  <div><div style={{fontSize:13,fontWeight:600}}>{s.label}</div><div style={{fontSize:11,color:C.m}}>{s.delay}</div></div>
+                  <div style={{fontWeight:700,color:shipping===s.id?C.p:C.t}}>{s.price===0?"Gratuit":`${s.price} €`}</div>
                 </button>
               ))}
             </div>
-            <div style={{background:D.gray50,borderRadius:14,padding:"16px",marginBottom:20}}>
+            <div style={{background:C.gl,borderRadius:10,padding:"12px 14px",marginBottom:16}}>
               {[["Article",`${a.price} €`],["Livraison",`${shippingCost} €`],["Protection acheteur",`${commission} €`]].map(([k,v])=>(
-                <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:14,marginBottom:6,color:D.gray600}}><span>{k}</span><span>{v}</span></div>
+                <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}><span style={{color:C.m}}>{k}</span><span>{v}</span></div>
               ))}
-              <div style={{borderTop:`1px solid ${D.gray200}`,paddingTop:10,display:"flex",justifyContent:"space-between",fontWeight:900,fontSize:18,marginTop:6}}>
-                <span>Total</span><span style={{color:D.green}}>{total} €</span>
+              <div style={{borderTop:`1px solid ${C.b}`,paddingTop:8,display:"flex",justifyContent:"space-between",fontWeight:900,fontSize:16}}>
+                <span>Total</span><span style={{color:C.p}}>{total} €</span>
               </div>
             </div>
-            <div style={{fontSize:12,color:D.gray400,marginBottom:16,display:"flex",alignItems:"center",gap:6}}><IconShield/> Paiement sécurisé — Fonds libérés après réception</div>
+            <div style={{fontSize:11,color:C.m,marginBottom:14}}>🔒 Paiement sécurisé · Fonds libérés après réception</div>
             <div style={{display:"flex",gap:10}}>
-              <button onClick={()=>setCheckout(false)} style={{flex:1,background:D.gray100,color:D.black,border:"none",borderRadius:100,padding:"14px",fontSize:14,fontWeight:600,cursor:"pointer"}}>Annuler</button>
-              <button onClick={doOrder} disabled={loading} className="btn-hover"
-                style={{flex:2,background:D.orange,color:D.white,border:"none",borderRadius:100,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>
-                {loading?"Traitement…":`Payer ${total} €`}
-              </button>
+              <Btn onClick={()=>setCheckout(false)} variant="ghost" style={{flex:1,padding:"12px"}}>Annuler</Btn>
+              <Btn onClick={doOrder} disabled={loading} style={{flex:2,padding:"12px",background:C.a}}>{loading?"Traitement…":`Payer ${total} €`}</Btn>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
       {ordered&&(
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.6)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200}}>
-          <div style={{background:D.white,borderRadius:24,padding:"48px 40px",maxWidth:400,textAlign:"center",boxShadow:"0 32px 80px rgba(0,0,0,.2)"}}>
-            <div style={{width:72,height:72,background:D.greenLight,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 24px",color:D.green}}><IconCheck/></div>
-            <h3 style={{fontSize:24,fontWeight:900,marginBottom:10}}>Commande confirmée</h3>
-            <p style={{color:D.gray400,fontSize:14,marginBottom:32,lineHeight:1.7}}>Le vendeur a 7 jours pour expédier votre article. Vous serez notifié dès l'envoi.</p>
-            <button onClick={()=>go("dashboard")} className="btn-hover"
-              style={{background:D.green,color:D.white,border:"none",borderRadius:100,padding:"16px 36px",fontSize:15,fontWeight:700,cursor:"pointer",width:"100%"}}>
-              Voir mes commandes
-            </button>
-          </div>
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
+          <Card style={{maxWidth:380,width:"100%",textAlign:"center",padding:"40px 28px"}}>
+            <div style={{fontSize:56,marginBottom:14}}>🎉</div>
+            <h3 style={{fontSize:20,fontWeight:800,marginBottom:8}}>Commande confirmée !</h3>
+            <p style={{color:C.m,fontSize:14,marginBottom:24}}>Le vendeur a 7 jours pour expédier.</p>
+            <Btn onClick={()=>go("dashboard")} style={{width:"100%",padding:"13px"}}>Voir mes commandes</Btn>
+          </Card>
         </div>
       )}
 
-      <div style={{maxWidth:1100,margin:"0 auto",padding:"48px 40px",display:"grid",gridTemplateColumns:"1fr 360px",gap:48}}>
+      <div style={{maxWidth:960,margin:"24px auto",padding:"0 20px",display:"grid",gridTemplateColumns:"1fr 320px",gap:24}}>
         <div>
-          {/* Main photo */}
-          <div style={{background:D.gray100,borderRadius:20,height:400,overflow:"hidden",marginBottom:12,display:"flex",alignItems:"center",justifyContent:"center"}}>
-            {photos.length>0
-              ?<img src={photos[mainPhoto]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
-              :<div style={{width:80,height:80,background:CAT_COLORS[a.category]||D.green,borderRadius:20,display:"flex",alignItems:"center",justifyContent:"center"}}><IconGrid/></div>
-            }
+          <div style={{background:C.gl,borderRadius:14,height:300,display:"flex",alignItems:"center",justifyContent:"center",fontSize:100,marginBottom:10,overflow:"hidden"}}>
+            {photos.length>0?<img src={photos[mainPhoto]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span>{ICONS[a.category]||"📦"}</span>}
           </div>
           {photos.length>1&&(
-            <div style={{display:"flex",gap:8,marginBottom:32}}>
+            <div style={{display:"flex",gap:8,marginBottom:20}}>
               {photos.map((url,i)=>(
                 <div key={i} onClick={()=>setMainPhoto(i)}
-                  style={{width:72,height:72,borderRadius:12,overflow:"hidden",border:`2px solid ${mainPhoto===i?D.black:D.gray200}`,cursor:"pointer",flexShrink:0}}>
+                  style={{width:64,height:64,borderRadius:8,border:`2px solid ${mainPhoto===i?C.p:C.b}`,overflow:"hidden",cursor:"pointer",flexShrink:0}}>
                   <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
                 </div>
               ))}
             </div>
           )}
 
-          {/* Tabs */}
-          <div style={{display:"flex",borderBottom:`1px solid ${D.gray200}`,marginBottom:24}}>
+          <div style={{display:"flex",borderBottom:`1px solid ${C.b}`,marginBottom:20}}>
             {[["desc","Description"],["specs","Caractéristiques"]].map(([id,l])=>(
               <button key={id} onClick={()=>setTab(id)}
-                style={{background:"none",border:"none",borderBottom:`2px solid ${tab===id?D.black:"transparent"}`,padding:"12px 0",marginRight:32,fontSize:14,fontWeight:tab===id?700:400,color:tab===id?D.black:D.gray400,cursor:"pointer"}}>
-                {l}
-              </button>
+                style={{background:"none",border:"none",borderBottom:`3px solid ${tab===id?C.p:"transparent"}`,padding:"10px 16px",fontSize:13,fontWeight:tab===id?700:400,color:tab===id?C.p:C.m,cursor:"pointer"}}>{l}</button>
             ))}
           </div>
-          {tab==="desc"&&<p style={{fontSize:15,lineHeight:1.8,color:D.gray600}}>{a.description||"Aucune description fournie."}</p>}
+
+          {tab==="desc"&&<p style={{fontSize:14,lineHeight:1.8,color:C.m}}>{a.description||"Aucune description."}</p>}
           {tab==="specs"&&(
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               {[["Catégorie",a.category],["Marque",a.brand||"—"],["État",a.state],["Livraison",SHIPPING.find(s=>s.id===a.shipping)?.label||"—"]].map(([k,v])=>(
-                <div key={k} style={{background:D.gray50,borderRadius:12,padding:"14px 16px"}}>
-                  <div style={{fontSize:11,fontWeight:700,color:D.gray400,letterSpacing:"1px",textTransform:"uppercase",marginBottom:4}}>{k}</div>
-                  <div style={{fontSize:15,fontWeight:600}}>{v}</div>
-                </div>
+                <Card key={k} style={{padding:"12px 14px"}}>
+                  <div style={{fontSize:11,color:C.m,marginBottom:2}}>{k}</div>
+                  <div style={{fontSize:14,fontWeight:600}}>{v}</div>
+                </Card>
               ))}
             </div>
           )}
         </div>
 
-        {/* Sticky panel */}
-        <div style={{position:"sticky",top:80,alignSelf:"start"}}>
-          <div style={{fontSize:12,fontWeight:700,color:D.gray400,letterSpacing:"1px",textTransform:"uppercase",marginBottom:8}}>{a.brand} · {a.category}</div>
-          <h1 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:8,lineHeight:1.2}}>{a.title}</h1>
-          <StateTag state={a.state}/>
-          <div style={{fontSize:42,fontWeight:900,letterSpacing:"-2px",margin:"16px 0 4px"}}>{a.price} €</div>
-          <div style={{fontSize:13,color:D.gray400,marginBottom:24}}>+ protection acheteur {commission} €</div>
+        <div style={{position:"sticky",top:20,alignSelf:"start"}}>
+          <Card>
+            <div style={{fontSize:12,color:C.m,marginBottom:4}}>{a.brand} · {a.category}</div>
+            <h1 style={{fontSize:17,fontWeight:800,margin:"0 0 10px",lineHeight:1.3}}>{a.title}</h1>
+            <div style={{fontSize:26,fontWeight:900,marginBottom:4}}>{a.price} €</div>
+            <div style={{fontSize:12,color:C.m,marginBottom:8}}>+ Protection acheteur : {commission} €</div>
+            <Badge label={a.state}/>
 
-          {offerSent&&(
-            <div style={{background:D.greenLight,border:`1px solid ${D.green}`,borderRadius:12,padding:"12px 16px",fontSize:13,color:D.green,marginBottom:16,fontWeight:500}}>
-              Offre de <strong>{offer} €</strong> envoyée au vendeur.
+            {offerSent&&(
+              <div style={{background:C.pl,border:`1px solid ${C.p}`,borderRadius:8,padding:"10px 14px",fontSize:13,color:C.pd,margin:"14px 0"}}>
+                ✅ Offre de <strong>{offer} €</strong> envoyée.
+              </div>
+            )}
+
+            <div style={{display:"flex",flexDirection:"column",gap:10,margin:"16px 0"}}>
+              <Btn onClick={()=>user?setCheckout(true):go("auth")} style={{padding:"14px",fontSize:15,width:"100%"}}>Acheter maintenant</Btn>
+              <div style={{display:"flex",gap:8}}>
+                <input type="number" value={offer} onChange={e=>setOffer(e.target.value)} placeholder="Votre offre €"
+                  style={{flex:1,padding:"10px 12px",borderRadius:10,border:`1px solid ${C.b}`,fontSize:14}}/>
+                <Btn onClick={()=>offer&&setOfferSent(true)} variant="outline" style={{padding:"10px 14px",fontSize:13}}>Offrir</Btn>
+              </div>
             </div>
-          )}
 
-          <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:24}}>
-            <button onClick={()=>user?setCheckout(true):go("auth")} className="btn-hover"
-              style={{background:D.green,color:D.white,border:"none",borderRadius:100,padding:"18px",fontSize:16,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-              Acheter maintenant <IconArrow/>
-            </button>
-            <div style={{display:"flex",gap:8}}>
-              <input type="number" value={offer} onChange={e=>setOffer(e.target.value)} placeholder="Proposer un prix €"
-                style={{flex:1,padding:"14px 16px",borderRadius:100,border:`1.5px solid ${D.gray200}`,fontSize:14,outline:"none"}}/>
-              <button onClick={()=>offer&&setOfferSent(true)} className="btn-hover"
-                style={{background:D.white,color:D.black,border:`1.5px solid ${D.black}`,borderRadius:100,padding:"14px 20px",fontSize:14,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}>
-                Offrir
-              </button>
-            </div>
-            <button onClick={()=>setFavs(f=>({...f,[a.id]:!f[a.id]}))}
-              style={{background:"none",border:`1.5px solid ${favs[a.id]?D.orange:D.gray200}`,borderRadius:100,padding:"12px",fontSize:14,fontWeight:600,cursor:"pointer",color:favs[a.id]?D.orange:D.gray400,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
-              <IconHeart filled={favs[a.id]}/> {favs[a.id]?"Sauvegardé":"Sauvegarder"}
-            </button>
-          </div>
-
-          <div style={{borderTop:`1px solid ${D.gray200}`,paddingTop:20}}>
-            <div style={{display:"flex",flexDirection:"column",gap:12}}>
-              {[[<IconTruck/>,"Livraison dès 3,99 €"],[<IconShield/>,"Paiement sécurisé Stripe"],[<IconCheck/>,"Protection acheteur incluse"],[<IconLeaf/>,"Article de seconde main vérifié"]].map(([icon,l])=>(
-                <div key={l} style={{display:"flex",gap:12,alignItems:"center",fontSize:14,color:D.gray600}}>
-                  <div style={{color:D.green,flexShrink:0}}>{icon}</div>
-                  {l}
-                </div>
+            <div style={{borderTop:`1px solid ${C.b}`,paddingTop:12}}>
+              {[["🚚","Livraison dès 3,99 €"],["🔒","Paiement sécurisé"],["✅","Protection acheteur"],["↩️","Retour 14 jours"]].map(([i,l])=>(
+                <div key={l} style={{display:"flex",gap:8,fontSize:12,color:C.m,marginBottom:6}}><span>{i}</span><span>{l}</span></div>
               ))}
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>
@@ -1056,165 +868,149 @@ function Article({selected,go,user,placeOrder,loading,favs,setFavs}){
 }
 
 // ═══════════ DASHBOARD ═══════════
-function Dashboard({user,profile,go,logout,myAnnonces,myOrders,mySales,wallet,dashTab,setDashTab,toggleAnnonceStatus,deleteAnnonce,showToast}){
-  const [boosted,setBoosted]=useState([]);
+function Dashboard({user,profile,go,logout,myAnnonces,myOrders,mySales,wallet,dashTab,setDashTab,toggleAnnonceStatus,deleteAnnonce,vacanceMode,setVacanceMode,showToast}) {
   const [boostId,setBoostId]=useState(null);
+  const [boosted,setBoosted]=useState([]);
   const isPro=profile?.user_type==="pro";
   const totalRevenu=mySales.reduce((acc,s)=>acc+(s.gain||0),0);
+  const activeAnn=myAnnonces.filter(a=>a.status==="active").length;
 
   const TABS=[
-    {id:"overview",label:"Vue d'ensemble"},
-    {id:"annonces",label:"Mes annonces"},
-    {id:"ventes",label:"Mes ventes"},
-    {id:"achats",label:"Mes achats"},
-    {id:"wallet",label:"E-Wallet"},
-    {id:"stats",label:"Statistiques"},
-    ...(isPro?[{id:"pro",label:"Espace Pro"}]:[]),
-    {id:"settings",label:"Paramètres"},
+    {id:"overview",icon:"📊",label:"Tableau de bord"},
+    {id:"annonces",icon:"📦",label:"Mes annonces"},
+    {id:"ventes",icon:"🛒",label:"Mes ventes"},
+    {id:"achats",icon:"📬",label:"Mes achats"},
+    {id:"wallet",icon:"💰",label:"E-Wallet"},
+    {id:"stats",icon:"📈",label:"Statistiques"},
+    ...(isPro?[{id:"pro",icon:"🏪",label:"Espace Pro"}]:[]),
+    {id:"settings",icon:"⚙️",label:"Paramètres"},
   ];
 
-  return(
-    <div style={{minHeight:"100vh",background:D.gray50}}>
-      {/* Top nav */}
-      <nav style={{background:D.white,borderBottom:`1px solid ${D.gray200}`,padding:"0 40px",display:"flex",alignItems:"center",height:64,gap:16,position:"sticky",top:0,zIndex:100}}>
-        <button onClick={()=>go("home")} style={{background:"none",border:"none",cursor:"pointer",color:D.gray600,display:"flex",alignItems:"center",gap:6,fontSize:14}}><IconChevron dir="left"/></button>
-        <Logo size={20}/>
-        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:12}}>
-          <button onClick={()=>go("sell")} className="btn-hover"
-            style={{background:D.orange,color:D.white,border:"none",borderRadius:100,padding:"10px 20px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-            <IconPlus/> Vendre
-          </button>
-          <div style={{width:40,height:40,borderRadius:"50%",background:isPro?D.black:D.green,display:"flex",alignItems:"center",justifyContent:"center",color:D.white,fontWeight:700,fontSize:15}}>
+  return (
+    <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column"}}>
+      <nav style={{background:C.w,borderBottom:`1px solid ${C.b}`,padding:"0 20px",display:"flex",alignItems:"center",height:56,gap:12,position:"sticky",top:0,zIndex:100}}>
+        <button onClick={()=>go("home")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer"}}>←</button>
+        <Logo size={18}/>
+        <span style={{fontSize:12,background:isPro?C.warnl:C.pl,color:isPro?C.warn:C.pd,borderRadius:10,padding:"3px 10px",fontWeight:700}}>{isPro?"🏪 Dashboard Pro":"Dashboard"}</span>
+        <div style={{marginLeft:"auto"}}>
+          <div style={{width:34,height:34,borderRadius:"50%",background:isPro?C.warnl:C.pl,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,color:isPro?C.warn:C.pd}}>
             {profile?.name?.charAt(0)||"?"}
           </div>
         </div>
       </nav>
 
-      <div style={{maxWidth:1100,margin:"0 auto",padding:"32px 40px",display:"grid",gridTemplateColumns:"200px 1fr",gap:32}}>
-        {/* Sidebar */}
-        <div>
-          <div style={{background:D.white,border:`1px solid ${D.gray200}`,borderRadius:16,padding:"16px",marginBottom:12}}>
-            <div style={{fontSize:15,fontWeight:700,marginBottom:2}}>{profile?.name||"Utilisateur"}</div>
-            <div style={{fontSize:12,color:D.gray400,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{profile?.email}</div>
-            {isPro&&<div style={{marginTop:8,background:D.black,color:D.white,borderRadius:6,padding:"3px 10px",fontSize:11,fontWeight:700,display:"inline-block"}}>PRO</div>}
+      <div style={{display:"flex",flex:1}}>
+        <aside style={{width:210,background:C.w,borderRight:`1px solid ${C.b}`,padding:"16px 10px",flexShrink:0}}>
+          <div style={{marginBottom:16,padding:"10px 12px",background:C.gl,borderRadius:10}}>
+            <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{profile?.name||"Utilisateur"}</div>
+            <div style={{fontSize:11,color:C.m,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{profile?.email||""}</div>
+            {isPro&&<div style={{marginTop:6}}><Badge label="Vendeur Pro" color="orange"/></div>}
           </div>
-          <div style={{background:D.white,border:`1px solid ${D.gray200}`,borderRadius:16,padding:"8px",overflow:"hidden"}}>
-            {TABS.map(t=>(
-              <button key={t.id} onClick={()=>setDashTab(t.id)}
-                style={{width:"100%",display:"block",padding:"10px 14px",borderRadius:10,border:"none",background:dashTab===t.id?D.black:"transparent",color:dashTab===t.id?D.white:D.gray600,fontWeight:dashTab===t.id?700:500,fontSize:13,cursor:"pointer",marginBottom:2,textAlign:"left",transition:"all .15s"}}>
-                {t.label}
-              </button>
-            ))}
-            <div style={{borderTop:`1px solid ${D.gray200}`,marginTop:8,paddingTop:8}}>
-              <button onClick={logout}
-                style={{width:"100%",display:"block",padding:"10px 14px",borderRadius:10,border:"none",background:"transparent",color:D.red,fontWeight:600,fontSize:13,cursor:"pointer",textAlign:"left"}}>
-                Déconnexion
-              </button>
-            </div>
+          {TABS.map(t=>(
+            <button key={t.id} onClick={()=>setDashTab(t.id)}
+              style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:"none",background:dashTab===t.id?C.pl:"transparent",color:dashTab===t.id?C.pd:C.m,fontWeight:dashTab===t.id?700:400,fontSize:13,cursor:"pointer",marginBottom:2,textAlign:"left"}}>
+              <span>{t.icon}</span>{t.label}
+            </button>
+          ))}
+          <div style={{borderTop:`1px solid ${C.b}`,marginTop:12,paddingTop:12}}>
+            <button onClick={logout} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:"none",background:"transparent",color:C.err,fontSize:13,cursor:"pointer",fontWeight:600}}>
+              🚪 Déconnexion
+            </button>
           </div>
-        </div>
+        </aside>
 
-        {/* Main */}
-        <div>
+        <main style={{flex:1,padding:"24px",overflowY:"auto"}}>
 
           {dashTab==="overview"&&(
             <div>
-              <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:24}}>Bonjour, {profile?.name?.split(" ")[0]} 👋</h2>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:24}}>
-                {[[`${totalRevenu.toFixed(2)} €`,"Revenus",D.green],[myAnnonces.filter(a=>a.status==="active").length,"Annonces actives",D.black],[mySales.length,"Ventes",D.orange],[myOrders.length,"Achats",D.gray800]].map(([v,l,c])=>(
-                  <div key={l} style={{background:D.white,border:`1px solid ${D.gray200}`,borderRadius:16,padding:"20px"}}>
-                    <div style={{fontSize:28,fontWeight:900,color:c,letterSpacing:"-1px"}}>{v}</div>
-                    <div style={{fontSize:13,color:D.gray400,marginTop:4,fontWeight:500}}>{l}</div>
-                  </div>
-                ))}
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Bonjour, {profile?.name?.split(" ")[0]||"là"} 👋</h2>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12,marginBottom:24}}>
+                <StatCard icon="💰" label="Revenus" value={`${totalRevenu.toFixed(2)} €`} color={C.p}/>
+                <StatCard icon="📦" label="Annonces actives" value={activeAnn}/>
+                <StatCard icon="🛒" label="Ventes" value={mySales.length}/>
+                <StatCard icon="📬" label="Achats" value={myOrders.length}/>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-                <div style={{background:D.white,border:`1px solid ${D.gray200}`,borderRadius:16,padding:"20px"}}>
-                  <div style={{fontSize:13,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:D.gray400,marginBottom:16}}>Annonces récentes</div>
+                <Card>
+                  <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>Activité récente</div>
                   {myAnnonces.slice(0,4).map(a=>(
-                    <div key={a.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:`1px solid ${D.gray100}`}}>
-                      <div style={{width:40,height:40,borderRadius:10,overflow:"hidden",background:D.gray100,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        {a.photo_url?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:20,height:20,background:CAT_COLORS[a.category]||D.green,borderRadius:4}}/>}
+                    <div key={a.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:`1px solid ${C.b}`}}>
+                      <div style={{width:36,height:36,borderRadius:8,overflow:"hidden",background:C.gl,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>
+                        {a.photo_url?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:ICONS[a.category]||"📦"}
                       </div>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
-                        <div style={{fontSize:12,color:D.gray400}}>{a.price} €</div>
+                        <div style={{fontSize:11,color:C.m}}>{a.price} €</div>
                       </div>
-                      <div style={{fontSize:11,fontWeight:700,color:a.status==="active"?D.green:D.gray400,textTransform:"uppercase"}}>{a.status==="active"?"Actif":"Inactif"}</div>
+                      <Badge label={a.status==="active"?"En ligne":a.status==="pause"?"En pause":"Vendu"} color={a.status==="active"?"green":a.status==="pause"?"orange":"gray"}/>
                     </div>
                   ))}
-                  {myAnnonces.length===0&&<div style={{fontSize:13,color:D.gray400,textAlign:"center",padding:"20px 0"}}>Aucune annonce</div>}
-                </div>
-                <div style={{background:D.green,borderRadius:16,padding:"24px"}}>
-                  <div style={{fontSize:13,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:"rgba(255,255,255,.5)",marginBottom:8}}>E-Wallet</div>
-                  <div style={{fontSize:40,fontWeight:900,color:D.white,letterSpacing:"-2px",marginBottom:4}}>{wallet.toFixed(2)} €</div>
-                  <div style={{fontSize:13,color:"rgba(255,255,255,.5)",marginBottom:24}}>Solde disponible</div>
-                  <button onClick={()=>setDashTab("wallet")} className="btn-hover"
-                    style={{background:"rgba(255,255,255,.15)",color:D.white,border:"1px solid rgba(255,255,255,.3)",borderRadius:100,padding:"10px 20px",fontSize:13,fontWeight:600,cursor:"pointer"}}>
-                    Gérer mon wallet
-                  </button>
-                </div>
+                  {myAnnonces.length===0&&<div style={{fontSize:13,color:C.m,textAlign:"center",padding:"20px 0"}}>Aucune annonce</div>}
+                </Card>
+                <Card>
+                  <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>E-Wallet</div>
+                  <div style={{fontSize:32,fontWeight:900,color:C.p,marginBottom:6}}>{wallet.toFixed(2)} €</div>
+                  <div style={{fontSize:12,color:C.m,marginBottom:16}}>Solde disponible</div>
+                  <Btn onClick={()=>setDashTab("wallet")} variant="outline" style={{width:"100%",padding:"10px"}}>Gérer mon wallet</Btn>
+                </Card>
               </div>
             </div>
           )}
 
           {dashTab==="annonces"&&(
             <div>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
-                <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px"}}>Mes annonces</h2>
-                <button onClick={()=>go("sell")} className="btn-hover"
-                  style={{background:D.black,color:D.white,border:"none",borderRadius:100,padding:"10px 20px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-                  <IconPlus/> Nouvelle
-                </button>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+                <h2 style={{fontSize:20,fontWeight:800,margin:0}}>Mes annonces</h2>
+                <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:C.m}}>
+                    🌴
+                    <button onClick={()=>setVacanceMode(v=>!v)} style={{width:44,height:24,borderRadius:12,background:vacanceMode?C.p:C.gl,border:"none",cursor:"pointer",position:"relative"}}>
+                      <div style={{width:18,height:18,borderRadius:"50%",background:C.w,position:"absolute",top:3,left:vacanceMode?23:3,transition:"left .2s"}}/>
+                    </button>
+                    Mode vacances
+                  </div>
+                  <Btn onClick={()=>go("sell")} style={{padding:"8px 16px",fontSize:13}}>+ Nouvelle</Btn>
+                </div>
               </div>
+              {vacanceMode&&<div style={{background:C.warnl,border:`1px solid ${C.warn}`,borderRadius:10,padding:"10px 14px",fontSize:13,color:C.warn,marginBottom:16}}>🌴 Mode vacances actif</div>}
               <div style={{display:"flex",flexDirection:"column",gap:10}}>
                 {myAnnonces.map(a=>(
-                  <div key={a.id} style={{background:D.white,border:`1px solid ${D.gray200}`,borderRadius:16,padding:"16px 20px",display:"flex",alignItems:"center",gap:16}}>
-                    <div style={{width:60,height:60,borderRadius:12,overflow:"hidden",background:D.gray100,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                      {a.photo_url?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:24,height:24,background:CAT_COLORS[a.category]||D.green,borderRadius:6}}/>}
+                  <Card key={a.id} style={{display:"flex",alignItems:"center",gap:14}}>
+                    <div style={{width:52,height:52,borderRadius:8,overflow:"hidden",background:C.gl,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>
+                      {a.photo_url?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:ICONS[a.category]||"📦"}
                     </div>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:15,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
-                      <div style={{fontSize:13,color:D.gray400,marginTop:2}}>{a.category} · {a.price} €</div>
+                      <div style={{fontSize:14,fontWeight:700,marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
+                      <div style={{fontSize:12,color:C.m}}>{a.category} · {a.price} €</div>
                     </div>
-                    <div style={{display:"flex",alignItems:"center",gap:8}}>
-                      <div style={{fontSize:11,fontWeight:700,color:a.status==="active"?D.green:a.status==="pause"?D.orange:D.gray400,textTransform:"uppercase",letterSpacing:".5px",background:a.status==="active"?D.greenLight:a.status==="pause"?"#FFF3E0":D.gray100,padding:"4px 10px",borderRadius:100}}>{a.status==="active"?"En ligne":a.status==="pause"?"En pause":"Vendu"}</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
+                      <Badge label={a.status==="active"?"En ligne":a.status==="pause"?"En pause":a.status==="vendu"?"Vendu":"Supprimé"} color={a.status==="active"?"green":a.status==="pause"?"orange":a.status==="vendu"?"blue":"gray"}/>
                       {a.status!=="vendu"&&a.status!=="supprimé"&&(
-                        <>
-                          <button onClick={()=>toggleAnnonceStatus(a.id,a.status==="pause"?"active":"pause")}
-                            style={{background:D.gray100,color:D.black,border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,cursor:"pointer",fontWeight:600}}>
-                            {a.status==="pause"?"Activer":"Pause"}
-                          </button>
+                        <div style={{display:"flex",gap:6}}>
+                          <button onClick={()=>toggleAnnonceStatus(a.id,a.status==="pause"?"active":"pause")} style={{fontSize:11,background:C.gl,border:"none",borderRadius:6,padding:"4px 8px",cursor:"pointer",color:C.m,fontWeight:600}}>{a.status==="pause"?"Activer":"Pause"}</button>
                           {!boosted.includes(a.id)
-                            ?<button onClick={()=>setBoostId(a.id)}
-                                style={{background:"#FFF3E0",color:D.orange,border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,cursor:"pointer",fontWeight:600}}>
-                                Booster
-                              </button>
-                            :<span style={{fontSize:11,color:D.green,fontWeight:700}}>Boosté</span>
+                            ?<button onClick={()=>setBoostId(a.id)} style={{fontSize:11,background:C.warnl,border:"none",borderRadius:6,padding:"4px 8px",cursor:"pointer",color:C.warn,fontWeight:600}}>🚀 Booster</button>
+                            :<Badge label="✅ Boosté" color="green"/>
                           }
-                          <button onClick={()=>deleteAnnonce(a.id)}
-                            style={{background:D.gray100,color:D.gray400,border:"none",borderRadius:8,padding:"6px 10px",fontSize:12,cursor:"pointer"}}>
-                            Suppr.
-                          </button>
-                        </>
+                          <button onClick={()=>deleteAnnonce(a.id)} style={{fontSize:11,background:C.errl,border:"none",borderRadius:6,padding:"4px 8px",cursor:"pointer",color:C.err,fontWeight:600}}>🗑️</button>
+                        </div>
                       )}
                     </div>
-                  </div>
+                  </Card>
                 ))}
-                {myAnnonces.length===0&&<div style={{textAlign:"center",padding:"60px",color:D.gray400,background:D.white,borderRadius:16,border:`1px solid ${D.gray200}`}}>Aucune annonce. <span style={{color:D.green,cursor:"pointer",fontWeight:600}} onClick={()=>go("sell")}>Publiez votre premier article</span></div>}
+                {myAnnonces.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.m}}>Aucune annonce. <span style={{color:C.p,cursor:"pointer",fontWeight:600}} onClick={()=>go("sell")}>Publiez votre premier article →</span></div>}
               </div>
               {boostId&&(
-                <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200}}>
-                  <div style={{background:D.white,borderRadius:20,padding:"32px",maxWidth:360,width:"90%",textAlign:"center"}}>
-                    <div style={{width:56,height:56,background:"#FFF3E0",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",fontSize:24}}>⚡</div>
-                    <h3 style={{fontSize:18,fontWeight:800,marginBottom:8}}>Booster cette annonce</h3>
-                    <p style={{fontSize:14,color:D.gray400,marginBottom:24,lineHeight:1.6}}>Mise en avant 7 jours pour <strong>3,50 €</strong>. Multipliez vos vues par 5.</p>
+                <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200}}>
+                  <Card style={{maxWidth:360,width:"90%",textAlign:"center"}}>
+                    <div style={{fontSize:40,marginBottom:10}}>🚀</div>
+                    <h3 style={{fontSize:17,fontWeight:800,marginBottom:8}}>Booster cette annonce</h3>
+                    <p style={{fontSize:13,color:C.m,marginBottom:20}}>Mise en avant 7 jours pour <strong>3,50 €</strong>.</p>
                     <div style={{display:"flex",gap:10}}>
-                      <button onClick={()=>setBoostId(null)} style={{flex:1,background:D.gray100,border:"none",borderRadius:100,padding:"12px",fontSize:14,fontWeight:600,cursor:"pointer"}}>Annuler</button>
-                      <button onClick={()=>{setBoosted(b=>[...b,boostId]);setBoostId(null);showToast&&showToast("Annonce boostée !")}} className="btn-hover"
-                        style={{flex:2,background:D.orange,color:D.white,border:"none",borderRadius:100,padding:"12px",fontSize:14,fontWeight:700,cursor:"pointer"}}>Payer 3,50 €</button>
+                      <Btn onClick={()=>setBoostId(null)} variant="ghost" style={{flex:1,padding:"11px"}}>Annuler</Btn>
+                      <Btn onClick={()=>{setBoosted(b=>[...b,boostId]);setBoostId(null);showToast("Annonce boostée 🚀")}} style={{flex:2,padding:"11px",background:C.a}}>Payer 3,50 €</Btn>
                     </div>
-                  </div>
+                  </Card>
                 </div>
               )}
             </div>
@@ -1222,22 +1018,23 @@ function Dashboard({user,profile,go,logout,myAnnonces,myOrders,mySales,wallet,da
 
           {dashTab==="ventes"&&(
             <div>
-              <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:24}}>Mes ventes</h2>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Mes ventes</h2>
               {mySales.length===0
-                ?<div style={{textAlign:"center",padding:"60px",color:D.gray400,background:D.white,borderRadius:16,border:`1px solid ${D.gray200}`}}>Aucune vente pour l'instant.</div>
+                ?<div style={{textAlign:"center",padding:"40px 0",color:C.m}}>Aucune vente pour l'instant.</div>
                 :<div style={{display:"flex",flexDirection:"column",gap:10}}>
                   {mySales.map(v=>(
-                    <div key={v.id} style={{background:D.white,border:`1px solid ${D.gray200}`,borderRadius:16,padding:"18px 22px"}}>
-                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}>
-                        <div><div style={{fontSize:15,fontWeight:700}}>Commande #{v.id?.slice(0,8)}</div><div style={{fontSize:13,color:D.gray400,marginTop:2}}>{new Date(v.created_at).toLocaleDateString("fr-FR")}</div></div>
-                        <div style={{fontSize:11,fontWeight:700,color:v.status==="livré"?D.green:D.orange,textTransform:"uppercase",letterSpacing:".5px"}}>{v.status}</div>
+                    <Card key={v.id}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
+                        <div><div style={{fontSize:14,fontWeight:700}}>Commande #{v.id?.slice(0,8)}</div><div style={{fontSize:12,color:C.m}}>{new Date(v.created_at).toLocaleDateString("fr-FR")}</div></div>
+                        <Badge label={v.status} color={v.status==="livré"?"green":v.status==="expédié"?"blue":"orange"}/>
                       </div>
-                      <div style={{display:"flex",gap:24,fontSize:14}}>
-                        <span><span style={{color:D.gray400}}>Prix : </span><strong>{v.price} €</strong></span>
-                        <span><span style={{color:D.gray400}}>Commission : </span><span style={{color:D.red}}>- {v.commission} €</span></span>
-                        <span><span style={{color:D.gray400}}>Net : </span><strong style={{color:D.green}}>{v.gain} €</strong></span>
+                      <div style={{display:"flex",gap:16,fontSize:13}}>
+                        <span><span style={{color:C.m}}>Prix : </span><strong>{v.price} €</strong></span>
+                        <span><span style={{color:C.m}}>Commission : </span><span style={{color:C.a}}>- {v.commission} €</span></span>
+                        <span><span style={{color:C.m}}>Net : </span><strong style={{color:C.p}}>{v.gain} €</strong></span>
                       </div>
-                    </div>
+                      {v.status==="en attente"&&<div style={{marginTop:10}}><Btn style={{padding:"8px 16px",fontSize:12}}>📦 Imprimer l'étiquette</Btn></div>}
+                    </Card>
                   ))}
                 </div>
               }
@@ -1246,18 +1043,18 @@ function Dashboard({user,profile,go,logout,myAnnonces,myOrders,mySales,wallet,da
 
           {dashTab==="achats"&&(
             <div>
-              <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:24}}>Mes achats</h2>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Mes achats</h2>
               {myOrders.length===0
-                ?<div style={{textAlign:"center",padding:"60px",color:D.gray400,background:D.white,borderRadius:16,border:`1px solid ${D.gray200}`}}>Aucun achat. <span style={{color:D.green,cursor:"pointer",fontWeight:600}} onClick={()=>go("home")}>Explorer le catalogue</span></div>
+                ?<div style={{textAlign:"center",padding:"40px 0",color:C.m}}>Aucun achat. <span style={{color:C.p,cursor:"pointer",fontWeight:600}} onClick={()=>go("home")}>Explorer le catalogue →</span></div>
                 :<div style={{display:"flex",flexDirection:"column",gap:10}}>
                   {myOrders.map(o=>(
-                    <div key={o.id} style={{background:D.white,border:`1px solid ${D.gray200}`,borderRadius:16,padding:"18px 22px"}}>
-                      <div style={{display:"flex",justifyContent:"space-between"}}>
-                        <div><div style={{fontSize:15,fontWeight:700}}>Commande #{o.id?.slice(0,8)}</div><div style={{fontSize:13,color:D.gray400,marginTop:2}}>{new Date(o.created_at).toLocaleDateString("fr-FR")}</div></div>
-                        <div style={{fontSize:11,fontWeight:700,color:o.status==="livré"?D.green:D.orange,textTransform:"uppercase"}}>{o.status}</div>
+                    <Card key={o.id}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                        <div><div style={{fontSize:14,fontWeight:700}}>Commande #{o.id?.slice(0,8)}</div><div style={{fontSize:12,color:C.m}}>{new Date(o.created_at).toLocaleDateString("fr-FR")}</div></div>
+                        <Badge label={o.status} color={o.status==="livré"?"green":o.status==="expédié"?"blue":"orange"}/>
                       </div>
-                      <div style={{fontSize:15,fontWeight:700,marginTop:10}}>{o.price} € · {o.shipping_method}</div>
-                    </div>
+                      <div style={{fontSize:14,fontWeight:700}}>{o.price} € · {o.shipping_method}</div>
+                    </Card>
                   ))}
                 </div>
               }
@@ -1266,101 +1063,97 @@ function Dashboard({user,profile,go,logout,myAnnonces,myOrders,mySales,wallet,da
 
           {dashTab==="wallet"&&(
             <div>
-              <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:24}}>E-Wallet</h2>
-              <div style={{background:D.green,borderRadius:20,padding:"32px 36px",marginBottom:20,color:D.white}}>
-                <div style={{fontSize:13,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:"rgba(255,255,255,.5)",marginBottom:8}}>Solde disponible</div>
-                <div style={{fontSize:52,fontWeight:900,letterSpacing:"-2px",marginBottom:24}}>{wallet.toFixed(2)} €</div>
-                <button className="btn-hover" style={{background:"rgba(255,255,255,.15)",color:D.white,border:"1px solid rgba(255,255,255,.3)",borderRadius:100,padding:"12px 24px",fontSize:14,fontWeight:600,cursor:"pointer"}}>Retirer les fonds</button>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Mon E-Wallet</h2>
+              <div style={{background:C.p,borderRadius:16,padding:"28px 24px",marginBottom:20,color:"#fff",textAlign:"center"}}>
+                <div style={{fontSize:13,opacity:.8,marginBottom:6}}>Solde disponible</div>
+                <div style={{fontSize:42,fontWeight:900,marginBottom:16}}>{wallet.toFixed(2)} €</div>
+                <Btn style={{background:"#fff",color:C.p,padding:"11px 28px"}}>🏦 Retirer les fonds</Btn>
               </div>
-              <div style={{background:D.white,border:`1px solid ${D.gray200}`,borderRadius:16,padding:"20px"}}>
-                <div style={{fontSize:13,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:D.gray400,marginBottom:16}}>Transactions</div>
+              <Card>
+                <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>Transactions</div>
                 {mySales.length===0
-                  ?<div style={{textAlign:"center",padding:"20px",color:D.gray400,fontSize:14}}>Aucune transaction.</div>
+                  ?<div style={{textAlign:"center",padding:"20px 0",color:C.m,fontSize:13}}>Aucune transaction.</div>
                   :mySales.map((s,i)=>(
-                    <div key={s.id} style={{display:"flex",justifyContent:"space-between",padding:"12px 0",borderBottom:i<mySales.length-1?`1px solid ${D.gray100}`:"none"}}>
-                      <div><div style={{fontSize:14,fontWeight:600}}>Vente #{s.id?.slice(0,8)}</div><div style={{fontSize:12,color:D.gray400}}>{new Date(s.created_at).toLocaleDateString("fr-FR")}</div></div>
-                      <div style={{fontSize:16,fontWeight:800,color:D.green}}>+{s.gain} €</div>
+                    <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:i<mySales.length-1?`1px solid ${C.b}`:"none"}}>
+                      <div><div style={{fontSize:13,fontWeight:600}}>Vente #{s.id?.slice(0,8)}</div><div style={{fontSize:11,color:C.m}}>{new Date(s.created_at).toLocaleDateString("fr-FR")}</div></div>
+                      <div style={{fontSize:15,fontWeight:800,color:C.p}}>+{s.gain} €</div>
                     </div>
                   ))
                 }
-              </div>
+              </Card>
             </div>
           )}
 
           {dashTab==="stats"&&(
             <div>
-              <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:24}}>Statistiques</h2>
-              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:20}}>
-                {[[myAnnonces.reduce((a,x)=>a+(x.views||0),0),"Vues totales"],[myAnnonces.reduce((a,x)=>a+(x.favs||0),0),"Favoris"],[mySales.length,"Ventes"],[`${totalRevenu.toFixed(0)} €`,"Revenus"]].map(([v,l])=>(
-                  <div key={l} style={{background:D.white,border:`1px solid ${D.gray200}`,borderRadius:16,padding:"20px"}}>
-                    <div style={{fontSize:26,fontWeight:900,letterSpacing:"-1px"}}>{v}</div>
-                    <div style={{fontSize:13,color:D.gray400,marginTop:4}}>{l}</div>
-                  </div>
-                ))}
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Statistiques</h2>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12,marginBottom:24}}>
+                <StatCard icon="👁️" label="Vues totales" value={myAnnonces.reduce((a,x)=>a+(x.views||0),0)}/>
+                <StatCard icon="🛒" label="Ventes" value={mySales.length} color={C.p}/>
+                <StatCard icon="💰" label="Revenus" value={`${totalRevenu.toFixed(0)} €`} color={C.p}/>
+                <StatCard icon="📦" label="Annonces" value={myAnnonces.length}/>
               </div>
-              <div style={{background:D.white,border:`1px solid ${D.gray200}`,borderRadius:16,padding:"20px"}}>
-                <div style={{fontSize:13,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:D.gray400,marginBottom:16}}>Performance par annonce</div>
+              <Card>
+                <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>Performance par annonce</div>
                 {myAnnonces.length===0
-                  ?<div style={{textAlign:"center",padding:"20px",color:D.gray400}}>Pas encore de données.</div>
+                  ?<div style={{textAlign:"center",padding:"20px 0",color:C.m,fontSize:13}}>Pas encore de données.</div>
                   :myAnnonces.map(a=>(
-                    <div key={a.id} style={{marginBottom:16}}>
-                      <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6}}>
-                        <span style={{fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"70%"}}>{a.title}</span>
-                        <span style={{color:D.gray400}}>{a.views||0} vues</span>
+                    <div key={a.id} style={{marginBottom:14}}>
+                      <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}>
+                        <span style={{fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"60%"}}>{a.title}</span>
+                        <span style={{color:C.m}}>{a.views||0} vues</span>
                       </div>
-                      <div style={{background:D.gray100,borderRadius:4,height:6,overflow:"hidden"}}>
-                        <div style={{background:D.green,height:"100%",borderRadius:4,width:`${Math.min((a.views||0)/Math.max(...myAnnonces.map(x=>x.views||1))*100,100)}%`,transition:"width .5s"}}/>
+                      <div style={{background:C.gl,borderRadius:4,height:8,overflow:"hidden"}}>
+                        <div style={{background:C.p,height:"100%",borderRadius:4,width:`${Math.min((a.views||0)/Math.max(...myAnnonces.map(x=>x.views||1))*100,100)}%`}}/>
                       </div>
                     </div>
                   ))
                 }
-              </div>
+              </Card>
             </div>
           )}
 
           {dashTab==="pro"&&isPro&&(
             <div>
-              <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Espace Vendeur Pro</h2>
-              <p style={{color:D.gray400,marginBottom:24}}>Gérez vos invendus et votre espace publicitaire.</p>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Espace Vendeur Pro 🏪</h2>
+              <p style={{color:C.m,fontSize:14,marginBottom:20}}>Gérez vos invendus et votre espace publicitaire.</p>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
-                <div style={{background:D.black,borderRadius:16,padding:"24px",color:D.white}}>
-                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:"rgba(255,255,255,.4)",marginBottom:12}}>Abonnement</div>
-                  <div style={{fontSize:20,fontWeight:800,marginBottom:4}}>PRO Actif</div>
-                  <div style={{fontSize:13,color:"rgba(255,255,255,.4)"}}>Renouvellement le 01/01/2027</div>
-                </div>
-                <div style={{background:D.white,border:`1px solid ${D.gray200}`,borderRadius:16,padding:"24px"}}>
-                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:D.gray400,marginBottom:12}}>Publicité</div>
-                  <div style={{fontSize:20,fontWeight:800,marginBottom:4}}>Espace pub</div>
-                  <div style={{fontSize:13,color:D.gray400}}>Gérez vos bannières</div>
-                </div>
+                <Card style={{background:C.warnl,border:`1px solid ${C.warn}`}}>
+                  <div style={{fontSize:22,marginBottom:8}}>🏅</div>
+                  <div style={{fontSize:16,fontWeight:800,color:C.warn}}>Abonnement Pro</div>
+                  <div style={{fontSize:13,color:C.warn,marginTop:4}}>Actif · 99€/an</div>
+                </Card>
+                <Card>
+                  <div style={{fontSize:22,marginBottom:8}}>📢</div>
+                  <div style={{fontSize:16,fontWeight:800}}>Publicité</div>
+                  <div style={{fontSize:13,color:C.m,marginTop:4}}>Gérez vos bannières</div>
+                </Card>
               </div>
-              <div style={{background:D.white,border:`1px solid ${D.gray200}`,borderRadius:16,padding:"24px"}}>
-                <div style={{fontSize:13,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:D.gray400,marginBottom:16}}>Invendus</div>
-                <button onClick={()=>go("sell")} className="btn-hover"
-                  style={{background:D.black,color:D.white,border:"none",borderRadius:100,padding:"12px 24px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-                  <IconPlus/> Ajouter un invendu
-                </button>
-              </div>
+              <Card>
+                <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>Mes invendus</div>
+                <Btn onClick={()=>go("sell")} style={{padding:"10px 20px",fontSize:13}}>+ Ajouter un invendu</Btn>
+              </Card>
             </div>
           )}
 
           {dashTab==="settings"&&(
             <div>
-              <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:24}}>Paramètres</h2>
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                {[["Informations personnelles","Nom, email, téléphone"],["Sécurité","Mot de passe, 2FA"],["Moyens de paiement","Carte bancaire, IBAN"],["Notifications","Email, push, SMS"],["Langue","Français / English"],["Supprimer mon compte","Action irréversible"]].map(([t,s],i)=>(
-                  <div key={t} style={{background:D.white,border:`1px solid ${D.gray200}`,borderRadius:14,padding:"16px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Paramètres</h2>
+              {[["👤","Informations personnelles","Nom, email, téléphone"],["🔒","Sécurité","Mot de passe"],["💳","Moyens de paiement","Carte, IBAN"],["🔔","Notifications","Email, push"],["🌍","Langue","Français / English"],["🗑️","Supprimer mon compte","Action irréversible"]].map(([icon,title,sub])=>(
+                <Card key={title} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",padding:"14px 18px",marginBottom:10}}>
+                  <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                    <span style={{fontSize:20}}>{icon}</span>
                     <div>
-                      <div style={{fontSize:14,fontWeight:600,color:i===5?D.red:D.black}}>{t}</div>
-                      <div style={{fontSize:13,color:D.gray400,marginTop:2}}>{s}</div>
+                      <div style={{fontSize:14,fontWeight:600,color:title.includes("Supprimer")?C.err:C.t}}>{title}</div>
+                      <div style={{fontSize:12,color:C.m}}>{sub}</div>
                     </div>
-                    <IconChevron/>
                   </div>
-                ))}
-              </div>
+                  <span style={{color:C.m,fontSize:18}}>›</span>
+                </Card>
+              ))}
             </div>
           )}
-        </div>
+        </main>
       </div>
     </div>
   );
