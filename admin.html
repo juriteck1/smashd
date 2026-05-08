@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SMASHD Admin</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:system-ui,sans-serif;background:#0f1117;color:#e2e8f0}
+    input,textarea,select,button{font-family:inherit}
+    ::-webkit-scrollbar{width:5px}
+    ::-webkit-scrollbar-track{background:#1a1d27}
+    ::-webkit-scrollbar-thumb{background:#2d3748;border-radius:3px}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const SB_URL = "https://gcnmgtwbouakwaufqswh.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjbm1ndHdib3Vha3dhdWZxc3doIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTk4NDQsImV4cCI6MjA5MzgzNTg0NH0.qtHQ4si2Ybsriiaaj9F-1Z6WeN52sZ1ry7T7VpcIMpM";
+
+let _token = SB_KEY;
+const getToken = () => _token;
+const setToken = (t) => { _token = t || SB_KEY; };
+
+const C = {
+  bg: "#0f1117", card: "#1a1d27", border: "#2d3748",
+  p: "#1D9E75", pl: "#0d3326", pd: "#4ade80",
+  a: "#D85A30", al: "#3d1a0d",
+  text: "#e2e8f0", muted: "#718096",
+  err: "#fc8181", errl: "#2d1515",
+  warn: "#f6ad55", warnl: "#2d1e0d",
+  info: "#63b3ed", infol: "#0d2038",
+  success: "#68d391", successl: "#0d2d1a",
+};
+
+const sbApi = async (path, opts={}) => {
+  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
+    headers:{"apikey":SB_KEY,"Authorization":`Bearer ${getToken()}`,"Content-Type":"application/json","Prefer":opts.prefer||"return=representation",...(opts.headers||{})},
+    ...opts
+  });
+  if(!res.ok){const e=await res.json();throw new Error(e.message||"Erreur")}
+  const tx=await res.text();return tx?JSON.parse(tx):[];
+};
+
+const sbAuth = async (ep, body) => {
+  const res = await fetch(`${SB_URL}/auth/v1/${ep}`,{method:"POST",headers:{"apikey":SB_KEY,"Content-Type":"application/json"},body:JSON.stringify(body)});
+  const d = await res.json();
+  if(d.error||d.error_description) throw new Error(d.error_description||d.error);
+  return d;
+};
+
+const CATS = ["Tennis","Padel","Badminton","Squash","Ping-Pong","Pickleball","Raquetball","Pelote basque"];
+const ICONS = {Tennis:"🎾",Padel:"🟩",Badminton:"🏸",Squash:"🎯","Ping-Pong":"🏓",Pickleball:"🏅",Raquetball:"🔵","Pelote basque":"⚪"};
+
+const Toast = ({msg,type}) => (
+  <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:type==="error"?C.err:C.p,color:"#fff",borderRadius:24,padding:"12px 24px",fontSize:14,fontWeight:600,zIndex:9999}}>
+    {type==="error"?"❌":"✅"} {msg}
+  </div>
+);
+
+const Badge = ({label,color="green"}) => {
+  const m={green:[C.successl,C.success],orange:[C.warnl,C.warn],gray:["#1a1d27",C.muted],blue:[C.infol,C.info],red:[C.errl,C.err]};
+  const [bg,tx]=m[color]||m.green;
+  return <span style={{background:bg,color:tx,fontSize:11,fontWeight:700,borderRadius:6,padding:"3px 9px",whiteSpace:"nowrap"}}>{label}</span>;
+};
+
+const StatCard = ({icon,label,value,sub,color,trend}) => (
+  <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"20px"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+      <div style={{fontSize:24}}>{icon}</div>
+      {trend&&<span style={{fontSize:11,color:trend>0?C.success:C.err,fontWeight:600}}>{trend>0?"↑":"↓"} {Math.abs(trend)}%</span>}
+    </div>
+    <div style={{fontSize:28,fontWeight:900,color:color||C.text}}>{value}</div>
+    <div style={{fontSize:13,color:C.muted,marginTop:4}}>{label}</div>
+    {sub&&<div style={{fontSize:11,color:C.muted,marginTop:2}}>{sub}</div>}
+  </div>
+);
+
+const MiniBar = ({val,max,color}) => (
+  <div style={{background:"#2d3748",borderRadius:4,height:6,overflow:"hidden",flex:1}}>
+    <div style={{background:color||C.p,height:"100%",borderRadius:4,width:`${Math.min(max>0?(val/max)*100:0,100)}%`,transition:"width .5s"}}/>
+  </div>
+);
+
+// ═══════════ LOGIN ═══════════
+function Login({onLogin}) {
+  const [email,setEmail]=useState("");
+  const [pwd,setPwd]=useState("");
+  const [err,setErr]=useState("");
+  const [loading,setLoading]=useState(false);
+
+  const doLogin=async()=>{
+    setErr("");setLoading(true);
+    try{
+      const d=await sbAuth("token?grant_type=password",{email,password:pwd});
+      setToken(d.access_token);
+      // Vérifier si admin
+      const admins=await sbApi(`admins?id=eq.${d.user.id}`);
+      if(admins.length===0){setErr("Accès refusé — Vous n'êtes pas administrateur");setLoading(false);return}
+      onLogin(d.user);
+    }catch(e){setErr("Email ou mot de passe incorrect")}
+    finally{setLoading(false)}
+  };
+
+  return (
+    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:18,padding:"40px 32px",maxWidth:400,width:"100%"}}>
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div style={{fontSize:32,fontWeight:900,letterSpacing:"-1px"}}>SMASH<span style={{color:C.a}}>D</span></div>
+          <div style={{fontSize:13,color:C.muted,marginTop:4}}>Espace Administrateur</div>
+          <div style={{fontSize:20,marginTop:8}}>🔐</div>
+        </div>
+        <div style={{marginBottom:14}}>
+          <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5,color:C.muted}}>Email admin</label>
+          <input type="email" value={email} onChange={e=>setEmail(e.target.value)}
+            placeholder="admin@smashd.fr"
+            style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1px solid ${C.border}`,fontSize:14,background:"#0f1117",color:C.text,outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        <div style={{marginBottom:20}}>
+          <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5,color:C.muted}}>Mot de passe</label>
+          <input type="password" value={pwd} onChange={e=>setPwd(e.target.value)} onKeyDown={e=>e.key==="Enter"&&doLogin()}
+            placeholder="••••••••"
+            style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1px solid ${C.border}`,fontSize:14,background:"#0f1117",color:C.text,outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        {err&&<div style={{background:C.errl,color:C.err,borderRadius:8,padding:"10px 14px",fontSize:13,marginBottom:16}}>❌ {err}</div>}
+        <button onClick={doLogin} disabled={loading}
+          style={{width:"100%",background:loading?"#0d3326":C.p,color:"#fff",border:"none",borderRadius:24,padding:"13px",fontSize:15,fontWeight:700,cursor:"pointer"}}>
+          {loading?"Vérification…":"Accéder au dashboard"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════ ADMIN DASHBOARD ═══════════
+function AdminDashboard({admin,onLogout}) {
+  const [tab,setTab]=useState("overview");
+  const [toast,setToast]=useState(null);
+  const [loading,setLoading]=useState(false);
+
+  // Data
+  const [users,setUsers]=useState([]);
+  const [annonces,setAnnonces]=useState([]);
+  const [commandes,setCommandes]=useState([]);
+  const [admins,setAdmins]=useState([]);
+
+  // Filters
+  const [userSearch,setUserSearch]=useState("");
+  const [annonceSearch,setAnnonceSearch]=useState("");
+  const [annonceFilter,setAnnonceFilter]=useState("Tous");
+  const [selectedUser,setSelectedUser]=useState(null);
+  const [selectedAnnonce,setSelectedAnnonce]=useState(null);
+
+  const showToast=(msg,type="success")=>{setToast({msg,type});setTimeout(()=>setToast(null),3500)};
+
+  const loadAll=async()=>{
+    setLoading(true);
+    try{
+      const [u,a,c,adm]=await Promise.all([
+        sbApi("profiles?order=created_at.desc"),
+        sbApi("annonces?order=created_at.desc"),
+        sbApi("commandes?order=created_at.desc"),
+        sbApi("admins"),
+      ]);
+      setUsers(u);setAnnonces(a);setCommandes(c);setAdmins(adm);
+    }catch(e){showToast("Erreur chargement","error")}
+    finally{setLoading(false)}
+  };
+
+  useEffect(()=>{loadAll()},[]);
+
+  const suspendUser=async(id)=>{
+    try{
+      await sbApi(`profiles?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({suspended:true})});
+      showToast("Utilisateur suspendu");loadAll();
+    }catch(e){showToast("Erreur","error")}
+  };
+
+  const suspendAnnonce=async(id)=>{
+    try{
+      await sbApi(`annonces?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({status:"suspendu"})});
+      showToast("Annonce suspendue");loadAll();setSelectedAnnonce(null);
+    }catch(e){showToast("Erreur","error")}
+  };
+
+  const restoreAnnonce=async(id)=>{
+    try{
+      await sbApi(`annonces?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({status:"active"})});
+      showToast("Annonce restaurée");loadAll();setSelectedAnnonce(null);
+    }catch(e){showToast("Erreur","error")}
+  };
+
+  const deleteAnnonce=async(id)=>{
+    try{
+      await sbApi(`annonces?id=eq.${id}`,{method:"DELETE"});
+      showToast("Annonce supprimée");loadAll();setSelectedAnnonce(null);
+    }catch(e){showToast("Erreur","error")}
+  };
+
+  // Stats
+  const totalRevenu=commandes.reduce((acc,c)=>acc+(c.commission||0),0);
+  const activeAnnonces=annonces.filter(a=>a.status==="active").length;
+  const proUsers=users.filter(u=>u.user_type==="pro").length;
+  const catStats=CATS.map(c=>({cat:c,count:annonces.filter(a=>a.category===c).length})).sort((a,b)=>b.count-a.count);
+  const maxCat=Math.max(...catStats.map(c=>c.count),1);
+
+  const filteredUsers=users.filter(u=>!userSearch||u.name?.toLowerCase().includes(userSearch.toLowerCase())||u.email?.toLowerCase().includes(userSearch.toLowerCase()));
+  const filteredAnnonces=annonces
+    .filter(a=>annonceFilter==="Tous"||a.status===annonceFilter)
+    .filter(a=>!annonceSearch||a.title?.toLowerCase().includes(annonceSearch.toLowerCase()));
+
+  const TABS=[
+    {id:"overview",icon:"📊",label:"Vue globale"},
+    {id:"users",icon:"👥",label:"Utilisateurs",count:users.length},
+    {id:"annonces",icon:"📦",label:"Annonces",count:annonces.length},
+    {id:"commandes",icon:"🛒",label:"Commandes",count:commandes.length},
+    {id:"revenus",icon:"💰",label:"Revenus"},
+    {id:"pros",icon:"🏪",label:"Vendeurs Pro",count:proUsers},
+    {id:"moderation",icon:"🚨",label:"Modération"},
+  ];
+
+  return (
+    <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column"}}>
+      {toast&&<Toast {...toast}/>}
+
+      {/* TOP NAV */}
+      <nav style={{background:C.card,borderBottom:`1px solid ${C.border}`,padding:"0 20px",display:"flex",alignItems:"center",height:56,gap:12,position:"sticky",top:0,zIndex:100}}>
+        <div style={{fontWeight:900,fontSize:18,letterSpacing:"-0.5px"}}>SMASH<span style={{color:C.a}}>D</span> <span style={{fontSize:12,color:C.muted,fontWeight:400}}>Admin</span></div>
+        <div style={{marginLeft:"auto",display:"flex",gap:10,alignItems:"center"}}>
+          <div style={{fontSize:12,color:C.muted}}>🔐 {admin?.email}</div>
+          <button onClick={loadAll} style={{background:C.pl,border:`1px solid ${C.p}`,color:C.pd,borderRadius:8,padding:"6px 12px",fontSize:12,cursor:"pointer",fontWeight:600}}>⟳ Actualiser</button>
+          <button onClick={onLogout} style={{background:C.errl,border:`1px solid ${C.err}`,color:C.err,borderRadius:8,padding:"6px 12px",fontSize:12,cursor:"pointer",fontWeight:600}}>Déconnexion</button>
+        </div>
+      </nav>
+
+      <div style={{display:"flex",flex:1}}>
+        {/* SIDEBAR */}
+        <aside style={{width:200,background:C.card,borderRight:`1px solid ${C.border}`,padding:"16px 10px",flexShrink:0}}>
+          {TABS.map(t=>(
+            <button key={t.id} onClick={()=>setTab(t.id)}
+              style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 12px",borderRadius:10,border:"none",background:tab===t.id?C.pl:"transparent",color:tab===t.id?C.pd:C.muted,fontWeight:tab===t.id?700:400,fontSize:13,cursor:"pointer",marginBottom:2,textAlign:"left"}}>
+              <span style={{display:"flex",alignItems:"center",gap:8}}><span>{t.icon}</span>{t.label}</span>
+              {t.count!==undefined&&<span style={{background:"#2d3748",borderRadius:10,padding:"1px 7px",fontSize:11,fontWeight:700,color:C.muted}}>{t.count}</span>}
+            </button>
+          ))}
+        </aside>
+
+        {/* MAIN */}
+        <main style={{flex:1,padding:"24px",overflowY:"auto"}}>
+          {loading&&<div style={{textAlign:"center",padding:"40px",color:C.muted}}>Chargement…</div>}
+
+          {/* ── OVERVIEW ── */}
+          {tab==="overview"&&!loading&&(
+            <div>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Vue globale</h2>
+              <p style={{color:C.muted,fontSize:13,marginBottom:24}}>Dernière mise à jour : {new Date().toLocaleString("fr-FR")}</p>
+
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:14,marginBottom:28}}>
+                <StatCard icon="👥" label="Utilisateurs" value={users.length} sub={`${proUsers} Pro`} color={C.info} trend={12}/>
+                <StatCard icon="📦" label="Annonces actives" value={activeAnnonces} sub={`sur ${annonces.length} total`} color={C.pd} trend={8}/>
+                <StatCard icon="🛒" label="Commandes" value={commandes.length} color={C.warn} trend={5}/>
+                <StatCard icon="💰" label="Commissions SMASHD" value={`${totalRevenu.toFixed(2)} €`} color={C.success} trend={15}/>
+              </div>
+
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
+                {/* Annonces par catégorie */}
+                <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"20px"}}>
+                  <div style={{fontSize:14,fontWeight:700,marginBottom:16}}>Annonces par catégorie</div>
+                  {catStats.map(c=>(
+                    <div key={c.cat} style={{marginBottom:12}}>
+                      <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}>
+                        <span>{ICONS[c.cat]} {c.cat}</span>
+                        <span style={{color:C.muted,fontWeight:600}}>{c.count}</span>
+                      </div>
+                      <MiniBar val={c.count} max={maxCat}/>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Activité récente */}
+                <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"20px"}}>
+                  <div style={{fontSize:14,fontWeight:700,marginBottom:16}}>Dernières inscriptions</div>
+                  {users.slice(0,6).map(u=>(
+                    <div key={u.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:`1px solid ${C.border}`}}>
+                      <div style={{width:32,height:32,borderRadius:"50%",background:u.user_type==="pro"?C.warnl:C.pl,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:u.user_type==="pro"?C.warn:C.pd,flexShrink:0}}>
+                        {u.name?.charAt(0)||"?"}
+                      </div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{u.name||u.email}</div>
+                        <div style={{fontSize:11,color:C.muted}}>{u.user_type==="pro"?"🏪 Pro":"👤 Particulier"}</div>
+                      </div>
+                      <div style={{fontSize:11,color:C.muted}}>{new Date(u.created_at).toLocaleDateString("fr-FR")}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Commandes récentes */}
+              <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"20px"}}>
+                <div style={{fontSize:14,fontWeight:700,marginBottom:16}}>Dernières commandes</div>
+                {commandes.length===0?<div style={{color:C.muted,fontSize:13,textAlign:"center",padding:"20px 0"}}>Aucune commande</div>:(
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                    <thead>
+                      <tr style={{color:C.muted,borderBottom:`1px solid ${C.border}`}}>
+                        {["ID","Prix","Commission","Statut","Date"].map(h=><th key={h} style={{textAlign:"left",padding:"8px 0",fontWeight:600}}>{h}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {commandes.slice(0,8).map(c=>(
+                        <tr key={c.id} style={{borderBottom:`1px solid ${C.border}`}}>
+                          <td style={{padding:"10px 0",color:C.muted}}>#{c.id?.slice(0,8)}</td>
+                          <td style={{padding:"10px 0",fontWeight:700}}>{c.price} €</td>
+                          <td style={{padding:"10px 0",color:C.success,fontWeight:700}}>+{c.commission} €</td>
+                          <td style={{padding:"10px 0"}}><Badge label={c.status} color={c.status==="livré"?"green":c.status==="expédié"?"blue":"orange"}/></td>
+                          <td style={{padding:"10px 0",color:C.muted}}>{new Date(c.created_at).toLocaleDateString("fr-FR")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── USERS ── */}
+          {tab==="users"&&!loading&&(
+            <div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+                <h2 style={{fontSize:20,fontWeight:800}}>Utilisateurs ({users.length})</h2>
+                <input value={userSearch} onChange={e=>setUserSearch(e.target.value)} placeholder="Rechercher…"
+                  style={{padding:"8px 14px",borderRadius:8,border:`1px solid ${C.border}`,fontSize:13,background:C.card,color:C.text,outline:"none",width:200}}/>
+              </div>
+              <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                  <thead>
+                    <tr style={{color:C.muted,borderBottom:`1px solid ${C.border}`,background:"#12151f"}}>
+                      {["Utilisateur","Email","Type","Inscription","Actions"].map(h=><th key={h} style={{textAlign:"left",padding:"12px 16px",fontWeight:600}}>{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map((u,i)=>(
+                      <tr key={u.id} style={{borderBottom:`1px solid ${C.border}`,background:i%2===0?C.card:"#12151f"}}>
+                        <td style={{padding:"12px 16px"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:8}}>
+                            <div style={{width:30,height:30,borderRadius:"50%",background:u.user_type==="pro"?C.warnl:C.pl,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:u.user_type==="pro"?C.warn:C.pd}}>
+                              {u.name?.charAt(0)||"?"}
+                            </div>
+                            <span style={{fontWeight:600}}>{u.name||"—"}</span>
+                          </div>
+                        </td>
+                        <td style={{padding:"12px 16px",color:C.muted}}>{u.email}</td>
+                        <td style={{padding:"12px 16px"}}><Badge label={u.user_type==="pro"?"🏪 Pro":"👤 Particulier"} color={u.user_type==="pro"?"orange":"gray"}/></td>
+                        <td style={{padding:"12px 16px",color:C.muted}}>{new Date(u.created_at).toLocaleDateString("fr-FR")}</td>
+                        <td style={{padding:"12px 16px"}}>
+                          <div style={{display:"flex",gap:6}}>
+                            <button onClick={()=>setSelectedUser(u)}
+                              style={{background:C.infol,color:C.info,border:"none",borderRadius:6,padding:"4px 10px",fontSize:11,cursor:"pointer",fontWeight:600}}>Voir</button>
+                            {!admins.find(a=>a.id===u.id)&&(
+                              <button onClick={()=>suspendUser(u.id)}
+                                style={{background:C.errl,color:C.err,border:"none",borderRadius:6,padding:"4px 10px",fontSize:11,cursor:"pointer",fontWeight:600}}>Suspendre</button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {selectedUser&&(
+                <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
+                  <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:"28px",maxWidth:460,width:"100%"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:20}}>
+                      <h3 style={{fontSize:17,fontWeight:800}}>Profil utilisateur</h3>
+                      <button onClick={()=>setSelectedUser(null)} style={{background:"none",border:"none",color:C.muted,fontSize:20,cursor:"pointer"}}>×</button>
+                    </div>
+                    <div style={{display:"flex",gap:14,marginBottom:20}}>
+                      <div style={{width:56,height:56,borderRadius:"50%",background:selectedUser.user_type==="pro"?C.warnl:C.pl,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:700,color:selectedUser.user_type==="pro"?C.warn:C.pd}}>
+                        {selectedUser.name?.charAt(0)||"?"}
+                      </div>
+                      <div>
+                        <div style={{fontSize:17,fontWeight:700}}>{selectedUser.name||"—"}</div>
+                        <div style={{fontSize:13,color:C.muted}}>{selectedUser.email}</div>
+                        <div style={{marginTop:4}}><Badge label={selectedUser.user_type==="pro"?"🏪 Vendeur Pro":"👤 Particulier"} color={selectedUser.user_type==="pro"?"orange":"gray"}/></div>
+                      </div>
+                    </div>
+                    {[["ID",selectedUser.id?.slice(0,16)+"…"],["Inscription",new Date(selectedUser.created_at).toLocaleDateString("fr-FR")],["SIRET",selectedUser.siret||"—"],["Entreprise",selectedUser.company||"—"]].map(([k,v])=>(
+                      <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:`1px solid ${C.border}`,fontSize:13}}>
+                        <span style={{color:C.muted}}>{k}</span><span style={{fontWeight:600}}>{v}</span>
+                      </div>
+                    ))}
+                    <div style={{marginTop:16}}>
+                      <div style={{fontSize:13,color:C.muted,marginBottom:8}}>Annonces de cet utilisateur</div>
+                      <div style={{fontSize:20,fontWeight:800,color:C.pd}}>{annonces.filter(a=>a.user_id===selectedUser.id).length}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── ANNONCES ── */}
+          {tab==="annonces"&&!loading&&(
+            <div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+                <h2 style={{fontSize:20,fontWeight:800}}>Annonces ({annonces.length})</h2>
+                <div style={{display:"flex",gap:8}}>
+                  <select value={annonceFilter} onChange={e=>setAnnonceFilter(e.target.value)}
+                    style={{padding:"8px 12px",borderRadius:8,border:`1px solid ${C.border}`,fontSize:13,background:C.card,color:C.text,outline:"none"}}>
+                    {["Tous","active","pause","vendu","suspendu","supprimé"].map(s=><option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <input value={annonceSearch} onChange={e=>setAnnonceSearch(e.target.value)} placeholder="Rechercher…"
+                    style={{padding:"8px 14px",borderRadius:8,border:`1px solid ${C.border}`,fontSize:13,background:C.card,color:C.text,outline:"none",width:180}}/>
+                </div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                {filteredAnnonces.map(a=>(
+                  <div key={a.id} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:12,padding:"14px 16px",display:"flex",alignItems:"center",gap:14}}>
+                    <div style={{width:52,height:52,borderRadius:8,overflow:"hidden",background:"#12151f",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>
+                      {a.photo_url?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:ICONS[a.category]||"📦"}
+                    </div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:14,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
+                      <div style={{fontSize:12,color:C.muted}}>{a.category} · {a.brand||"—"} · {a.price} €</div>
+                      <div style={{fontSize:11,color:C.muted,marginTop:2}}>{new Date(a.created_at).toLocaleDateString("fr-FR")}</div>
+                    </div>
+                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                      <Badge label={a.status} color={a.status==="active"?"green":a.status==="pause"?"orange":a.status==="vendu"?"blue":"red"}/>
+                      <button onClick={()=>setSelectedAnnonce(a)}
+                        style={{background:C.infol,color:C.info,border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,cursor:"pointer",fontWeight:600}}>Détails</button>
+                    </div>
+                  </div>
+                ))}
+                {filteredAnnonces.length===0&&<div style={{textAlign:"center",padding:"40px",color:C.muted}}>Aucune annonce</div>}
+              </div>
+
+              {selectedAnnonce&&(
+                <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
+                  <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:"28px",maxWidth:460,width:"100%"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:16}}>
+                      <h3 style={{fontSize:17,fontWeight:800}}>Détail annonce</h3>
+                      <button onClick={()=>setSelectedAnnonce(null)} style={{background:"none",border:"none",color:C.muted,fontSize:20,cursor:"pointer"}}>×</button>
+                    </div>
+                    {selectedAnnonce.photo_url&&<img src={selectedAnnonce.photo_url} alt="" style={{width:"100%",height:160,objectFit:"cover",borderRadius:10,marginBottom:14}}/>}
+                    <div style={{fontSize:17,fontWeight:700,marginBottom:4}}>{selectedAnnonce.title}</div>
+                    <div style={{fontSize:13,color:C.muted,marginBottom:12}}>{selectedAnnonce.description||"Aucune description"}</div>
+                    {[["Catégorie",selectedAnnonce.category],["Marque",selectedAnnonce.brand||"—"],["État",selectedAnnonce.state],["Prix",`${selectedAnnonce.price} €`],["Statut",selectedAnnonce.status]].map(([k,v])=>(
+                      <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:`1px solid ${C.border}`,fontSize:13}}>
+                        <span style={{color:C.muted}}>{k}</span><span style={{fontWeight:600}}>{v}</span>
+                      </div>
+                    ))}
+                    <div style={{display:"flex",gap:8,marginTop:16}}>
+                      {selectedAnnonce.status!=="suspendu"
+                        ?<button onClick={()=>suspendAnnonce(selectedAnnonce.id)} style={{flex:1,background:C.warnl,color:C.warn,border:`1px solid ${C.warn}`,borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>⚠️ Suspendre</button>
+                        :<button onClick={()=>restoreAnnonce(selectedAnnonce.id)} style={{flex:1,background:C.successl,color:C.success,border:`1px solid ${C.success}`,borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>✅ Restaurer</button>
+                      }
+                      <button onClick={()=>deleteAnnonce(selectedAnnonce.id)} style={{flex:1,background:C.errl,color:C.err,border:`1px solid ${C.err}`,borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>🗑️ Supprimer</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── COMMANDES ── */}
+          {tab==="commandes"&&!loading&&(
+            <div>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Commandes ({commandes.length})</h2>
+              <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden"}}>
+                {commandes.length===0?<div style={{padding:"40px",textAlign:"center",color:C.muted}}>Aucune commande</div>:(
+                  <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                    <thead>
+                      <tr style={{color:C.muted,borderBottom:`1px solid ${C.border}`,background:"#12151f"}}>
+                        {["ID","Prix","Commission","Livraison","Statut","Date"].map(h=><th key={h} style={{textAlign:"left",padding:"12px 16px",fontWeight:600}}>{h}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {commandes.map((c,i)=>(
+                        <tr key={c.id} style={{borderBottom:`1px solid ${C.border}`,background:i%2===0?C.card:"#12151f"}}>
+                          <td style={{padding:"12px 16px",color:C.muted,fontFamily:"monospace"}}>#{c.id?.slice(0,8)}</td>
+                          <td style={{padding:"12px 16px",fontWeight:700}}>{c.price} €</td>
+                          <td style={{padding:"12px 16px",color:C.success,fontWeight:700}}>+{c.commission} €</td>
+                          <td style={{padding:"12px 16px",color:C.muted}}>{c.shipping_method||"—"}</td>
+                          <td style={{padding:"12px 16px"}}><Badge label={c.status} color={c.status==="livré"?"green":c.status==="expédié"?"blue":"orange"}/></td>
+                          <td style={{padding:"12px 16px",color:C.muted}}>{new Date(c.created_at).toLocaleDateString("fr-FR")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── REVENUS ── */}
+          {tab==="revenus"&&!loading&&(
+            <div>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Revenus SMASHD</h2>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(180px,1fr))",gap:14,marginBottom:24}}>
+                <StatCard icon="💰" label="Total commissions" value={`${totalRevenu.toFixed(2)} €`} color={C.success}/>
+                <StatCard icon="🛒" label="Nb commandes" value={commandes.length} color={C.info}/>
+                <StatCard icon="📊" label="Commission moy." value={`${commandes.length>0?(totalRevenu/commandes.length).toFixed(2):0} €`} color={C.warn}/>
+                <StatCard icon="🏪" label="Abonnements Pro" value={`${proUsers * 99} €`} color={C.pd} sub={`${proUsers} × 99€/an`}/>
+              </div>
+              <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"20px"}}>
+                <div style={{fontSize:14,fontWeight:700,marginBottom:16}}>Détail des commissions</div>
+                {commandes.length===0?<div style={{textAlign:"center",padding:"20px",color:C.muted}}>Aucune commission</div>:(
+                  commandes.map((c,i)=>(
+                    <div key={c.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:i<commandes.length-1?`1px solid ${C.border}`:"none"}}>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:600}}>Commande #{c.id?.slice(0,8)}</div>
+                        <div style={{fontSize:11,color:C.muted}}>{new Date(c.created_at).toLocaleDateString("fr-FR")} · {c.price} € vendu</div>
+                      </div>
+                      <div style={{fontSize:16,fontWeight:800,color:C.success}}>+{c.commission} €</div>
+                    </div>
+                  ))
+                )}
+                <div style={{borderTop:`2px solid ${C.border}`,paddingTop:12,marginTop:8,display:"flex",justifyContent:"space-between",fontSize:16,fontWeight:900}}>
+                  <span>Total</span><span style={{color:C.success}}>{totalRevenu.toFixed(2)} €</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── PROS ── */}
+          {tab==="pros"&&!loading&&(
+            <div>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Vendeurs Pro ({proUsers})</h2>
+              {proUsers===0?<div style={{textAlign:"center",padding:"60px",color:C.muted}}>Aucun vendeur pro pour l'instant.</div>:(
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  {users.filter(u=>u.user_type==="pro").map(u=>(
+                    <div key={u.id} style={{background:C.card,border:`1px solid ${C.warn}`,borderRadius:12,padding:"16px 18px",display:"flex",alignItems:"center",gap:14}}>
+                      <div style={{width:46,height:46,borderRadius:"50%",background:C.warnl,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,fontWeight:700,color:C.warn,flexShrink:0}}>
+                        {u.name?.charAt(0)||"?"}
+                      </div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:15,fontWeight:700}}>{u.name||"—"}</div>
+                        <div style={{fontSize:12,color:C.muted}}>{u.email}</div>
+                        {u.company&&<div style={{fontSize:12,color:C.warn,marginTop:2}}>🏪 {u.company}</div>}
+                      </div>
+                      <div style={{textAlign:"right"}}>
+                        <div style={{fontSize:13,color:C.muted}}>SIRET</div>
+                        <div style={{fontSize:12,fontWeight:600,fontFamily:"monospace"}}>{u.siret||"—"}</div>
+                        <div style={{marginTop:6}}><Badge label="✅ Abonnement actif" color="green"/></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── MODERATION ── */}
+          {tab==="moderation"&&!loading&&(
+            <div>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Modération</h2>
+              <p style={{color:C.muted,fontSize:13,marginBottom:20}}>Annonces signalées ou nécessitant une attention particulière.</p>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:24}}>
+                <div style={{background:C.card,border:`1px solid ${C.warn}`,borderRadius:14,padding:"20px",textAlign:"center"}}>
+                  <div style={{fontSize:32,marginBottom:8}}>⚠️</div>
+                  <div style={{fontSize:24,fontWeight:900,color:C.warn}}>{annonces.filter(a=>a.status==="suspendu").length}</div>
+                  <div style={{fontSize:13,color:C.muted}}>Annonces suspendues</div>
+                </div>
+                <div style={{background:C.card,border:`1px solid ${C.err}`,borderRadius:14,padding:"20px",textAlign:"center"}}>
+                  <div style={{fontSize:32,marginBottom:8}}>🗑️</div>
+                  <div style={{fontSize:24,fontWeight:900,color:C.err}}>{annonces.filter(a=>a.status==="supprimé").length}</div>
+                  <div style={{fontSize:13,color:C.muted}}>Annonces supprimées</div>
+                </div>
+              </div>
+              <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:14,padding:"20px"}}>
+                <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>Annonces suspendues</div>
+                {annonces.filter(a=>a.status==="suspendu").length===0
+                  ?<div style={{textAlign:"center",padding:"20px",color:C.muted}}>✅ Aucune annonce suspendue</div>
+                  :annonces.filter(a=>a.status==="suspendu").map(a=>(
+                    <div key={a.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:`1px solid ${C.border}`}}>
+                      <div style={{fontSize:24}}>{ICONS[a.category]||"📦"}</div>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:13,fontWeight:600}}>{a.title}</div>
+                        <div style={{fontSize:11,color:C.muted}}>{a.category} · {a.price} €</div>
+                      </div>
+                      <div style={{display:"flex",gap:6}}>
+                        <button onClick={()=>restoreAnnonce(a.id)} style={{background:C.successl,color:C.success,border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,cursor:"pointer",fontWeight:600}}>Restaurer</button>
+                        <button onClick={()=>deleteAnnonce(a.id)} style={{background:C.errl,color:C.err,border:"none",borderRadius:6,padding:"5px 10px",fontSize:11,cursor:"pointer",fontWeight:600}}>Supprimer</button>
+                      </div>
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════ ROOT ═══════════
+function App() {
+  const [admin,setAdmin]=useState(null);
+  return admin
+    ?<AdminDashboard admin={admin} onLogout={()=>{setAdmin(null);clearToken()}}/>
+    :<Login onLogin={setAdmin}/>;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
