@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SMASHD — Marketplace sports de raquette</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: #f8faf9; color: #2C2C2A; }
+    input, textarea, select, button { font-family: inherit; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const SUPABASE_URL = "https://gcnmgtwbouakwaufqswh.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjbm1ndHdib3Vha3dhdWZxc3doIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTk4NDQsImV4cCI6MjA5MzgzNTg0NH0.qtHQ4si2Ybsriiaaj9F-1Z6WeN52sZ1ry7T7VpcIMpM";
+
+    const C = {
+      primary: "#1D9E75", primaryDark: "#0F6E56", primaryLight: "#E1F5EE",
+      accent: "#D85A30", bg: "#f8faf9", white: "#fff", gray: "#888780",
+      grayLight: "#F1EFE8", text: "#2C2C2A", muted: "#5F5E5A", border: "#e0ede8",
+      error: "#E24B4A", errorLight: "#FCEBEB",
+    };
+
+    const api = async (path, options = {}) => {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+        headers: {
+          "apikey": SUPABASE_KEY,
+          "Authorization": `Bearer ${SUPABASE_KEY}`,
+          "Content-Type": "application/json",
+          "Prefer": options.prefer || "return=representation",
+          ...options.headers,
+        },
+        ...options,
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.message || "Erreur"); }
+      const t = await res.text();
+      return t ? JSON.parse(t) : [];
+    };
+
+    const authApi = async (endpoint, body) => {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/${endpoint}`, {
+        method: "POST",
+        headers: { "apikey": SUPABASE_KEY, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (data.error || data.error_description) throw new Error(data.error_description || data.error);
+      return data;
+    };
+
+    const categories = ["Tennis", "Padel", "Badminton", "Squash", "Ping-Pong", "Pickleball"];
+    const catIcons = { Tennis: "🎾", Padel: "🟩", Badminton: "🏸", Squash: "🎯", "Ping-Pong": "🏓", Pickleball: "🏅" };
+    const states = ["Neuf avec étiquette", "Neuf sans étiquette", "Très bon état", "Bon état", "Acceptable"];
+
+    const Logo = ({ size = 20 }) => (
+      <span style={{ fontWeight: 900, fontSize: size, letterSpacing: "-0.5px" }}>
+        SMASH<span style={{ color: C.accent }}>D</span>
+      </span>
+    );
+
+    const Toast = ({ msg, type }) => (
+      <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: type === "error" ? C.error : C.primary, color: "#fff", borderRadius: 24, padding: "12px 24px", fontSize: 14, fontWeight: 600, zIndex: 999 }}>
+        {type === "error" ? "❌" : "✅"} {msg}
+      </div>
+    );
+
+    const { useState, useEffect } = React;
+
+    function App() {
+      const [screen, setScreen] = useState("home");
+      const [user, setUser] = useState(null);
+      const [profile, setProfile] = useState(null);
+      const [annonces, setAnnonces] = useState([]);
+      const [loading, setLoading] = useState(false);
+      const [toast, setToast] = useState(null);
+      const [searchQ, setSearchQ] = useState("");
+      const [filterCat, setFilterCat] = useState("Tous");
+      const [selectedArticle, setSelectedArticle] = useState(null);
+      const [authMode, setAuthMode] = useState("login");
+      const [authEmail, setAuthEmail] = useState("");
+      const [authPwd, setAuthPwd] = useState("");
+      const [authName, setAuthName] = useState("");
+      const [authError, setAuthError] = useState("");
+      const [sellForm, setSellForm] = useState({ title: "", description: "", category: "", brand: "", state: "", price: "" });
+
+      const showToast = (msg, type = "success") => {
+        setToast({ msg, type });
+        setTimeout(() => setToast(null), 3000);
+      };
+
+      const loadAnnonces = async () => {
+        try {
+          const data = await api("annonces?status=eq.active&order=created_at.desc&limit=20");
+          setAnnonces(data);
+        } catch (e) { console.error(e); }
+      };
+
+      useEffect(() => { loadAnnonces(); }, []);
+
+      const login = async () => {
+        setAuthError("");
+        if (!authEmail || !authPwd) { setAuthError("Remplissez tous les champs"); return; }
+        setLoading(true);
+        try {
+          const data = await authApi("token?grant_type=password", { email: authEmail, password: authPwd });
+          setUser(data.user);
+          const profiles = await api(`profiles?id=eq.${data.user.id}`);
+          setProfile(profiles[0] || null);
+          showToast("Connecté avec succès !");
+          setScreen("home");
+        } catch (e) { setAuthError("Email ou mot de passe incorrect"); }
+        finally { setLoading(false); }
+      };
+
+      const register = async () => {
+        setAuthError("");
+        if (!authEmail || !authPwd || !authName) { setAuthError("Remplissez tous les champs"); return; }
+        if (authPwd.length < 6) { setAuthError("Mot de passe : 6 caractères minimum"); return; }
+        setLoading(true);
+        try {
+          const data = await authApi("signup", { email: authEmail, password: authPwd });
+          if (data.user) {
+            await api("profiles", { method: "POST", body: JSON.stringify({ id: data.user.id, name: authName, email: authEmail, user_type: "particulier" }) });
+            setUser(data.user);
+            setProfile({ id: data.user.id, name: authName, email: authEmail });
+            showToast("Compte créé ! Bienvenue sur SMASHD 🎉");
+            setScreen("home");
+          }
+        } catch (e) { setAuthError(e.message || "Erreur lors de l'inscription"); }
+        finally { setLoading(false); }
+      };
+
+      const logout = () => { setUser(null); setProfile(null); showToast("Déconnecté"); setScreen("home"); };
+
+      const publishAnnonce = async () => {
+        if (!user) { setScreen("auth"); return; }
+        const { title, category, state, price } = sellForm;
+        if (!title || !category || !state || !price) { showToast("Remplissez tous les champs requis", "error"); return; }
+        setLoading(true);
+        try {
+          await api("annonces", { method: "POST", body: JSON.stringify({ user_id: user.id, title, description: sellForm.description, category, brand: sellForm.brand, state, price: parseFloat(price), status: "active" }) });
+          showToast("Annonce publiée ! 🎉");
+          setSellForm({ title: "", description: "", category: "", brand: "", state: "", price: "" });
+          setScreen("home");
+          loadAnnonces();
+        } catch (e) { showToast("Erreur publication", "error"); }
+        finally { setLoading(false); }
+      };
+
+      const filtered = annonces
+        .filter(a => filterCat === "Tous" || a.category === filterCat)
+        .filter(a => !searchQ || a.title?.toLowerCase().includes(searchQ.toLowerCase()));
+
+      // HOME
+      if (screen === "home") return (
+        <div style={{ minHeight: "100vh", background: C.bg }}>
+          {toast && <Toast {...toast} />}
+          <nav style={{ background: C.white, borderBottom: `1px solid ${C.border}`, padding: "0 20px", display: "flex", alignItems: "center", height: 56, gap: 12, position: "sticky", top: 0, zIndex: 100 }}>
+            <Logo size={20} />
+            <div style={{ flex: 1, position: "relative", maxWidth: 360, margin: "0 12px" }}>
+              <input value={searchQ} onChange={e => setSearchQ(e.target.value)} placeholder="Rechercher une raquette…"
+                style={{ width: "100%", padding: "8px 14px 8px 34px", borderRadius: 20, border: `1px solid ${C.border}`, fontSize: 13, background: C.grayLight, outline: "none" }} />
+              <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }}>🔍</span>
+            </div>
+            <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+              {user ? (
+                <>
+                  <button onClick={() => setScreen("sell")} style={{ background: C.primary, color: "#fff", border: "none", borderRadius: 20, padding: "7px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>+ Vendre</button>
+                  <button onClick={logout} style={{ background: C.grayLight, border: "none", borderRadius: 20, padding: "7px 14px", fontSize: 13, cursor: "pointer" }}>👤 {profile?.name?.split(" ")[0] || "Compte"}</button>
+                </>
+              ) : (
+                <>
+                  <button onClick={() => { setAuthMode("login"); setScreen("auth"); }} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 20, padding: "7px 16px", fontSize: 13, cursor: "pointer" }}>Connexion</button>
+                  <button onClick={() => { setAuthMode("register"); setScreen("auth"); }} style={{ background: C.primary, color: "#fff", border: "none", borderRadius: 20, padding: "7px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>S'inscrire</button>
+                </>
+              )}
+            </div>
+          </nav>
+
+          <div style={{ background: C.primaryLight, padding: "32px 20px", textAlign: "center" }}>
+            <h1 style={{ fontSize: 28, fontWeight: 900, margin: "0 0 8px" }}>Achetez & vendez vos <span style={{ color: C.primary }}>équipements de raquette</span></h1>
+            <p style={{ color: C.muted, fontSize: 14, margin: "0 0 20px" }}>Marketplace éco-responsable · Simple · Sécurisé</p>
+            {!user && <button onClick={() => { setAuthMode("register"); setScreen("auth"); }} style={{ background: C.primary, color: "#fff", border: "none", borderRadius: 24, padding: "12px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Rejoindre SMASHD gratuitement</button>}
+          </div>
+
+          <div style={{ padding: "16px 20px 0" }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {["Tous", ...categories].map(c => (
+                <button key={c} onClick={() => setFilterCat(c)} style={{ background: filterCat === c ? C.primary : C.white, color: filterCat === c ? "#fff" : C.text, border: `1px solid ${filterCat === c ? C.primary : C.border}`, borderRadius: 20, padding: "7px 16px", fontSize: 13, cursor: "pointer", fontWeight: filterCat === c ? 700 : 400 }}>
+                  {catIcons[c] || ""} {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ padding: "16px 20px 40px" }}>
+            {filtered.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>
+                <div style={{ fontSize: 48, marginBottom: 12 }}>🎾</div>
+                <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Aucune annonce pour l'instant</div>
+                <div style={{ fontSize: 13, marginBottom: 20 }}>Soyez le premier à vendre sur SMASHD !</div>
+                {user && <button onClick={() => setScreen("sell")} style={{ background: C.primary, color: "#fff", border: "none", borderRadius: 20, padding: "10px 24px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Publier une annonce</button>}
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14, marginTop: 16 }}>
+                {filtered.map(a => (
+                  <div key={a.id} onClick={() => { setSelectedArticle(a); setScreen("article"); }} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 14, overflow: "hidden", cursor: "pointer" }}>
+                    <div style={{ background: C.grayLight, height: 140, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 56 }}>{catIcons[a.category] || "📦"}</div>
+                    <div style={{ padding: "12px 14px" }}>
+                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 3 }}>{a.brand || "—"} · {a.category}</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{a.title}</div>
+                      <div style={{ display: "inline-block", background: C.primaryLight, color: C.primaryDark, fontSize: 11, borderRadius: 4, padding: "2px 8px", marginBottom: 8 }}>{a.state}</div>
+                      <div style={{ fontSize: 18, fontWeight: 900 }}>{a.price} €</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+
+      // AUTH
+      if (screen === "auth") return (
+        <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          {toast && <Toast {...toast} />}
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 18, padding: "32px 28px", maxWidth: 400, width: "100%" }}>
+            <div style={{ textAlign: "center", marginBottom: 24 }}><Logo size={26} /></div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+              {[["login", "Connexion"], ["register", "Inscription"]].map(([m, l]) => (
+                <button key={m} onClick={() => { setAuthMode(m); setAuthError(""); }} style={{ flex: 1, background: authMode === m ? C.primary : C.white, color: authMode === m ? "#fff" : C.muted, border: `1.5px solid ${authMode === m ? C.primary : C.border}`, borderRadius: 10, padding: "10px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>{l}</button>
+              ))}
+            </div>
+            {authMode === "register" && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 5 }}>Nom complet *</label>
+                <input value={authName} onChange={e => setAuthName(e.target.value)} placeholder="Jean Dupont" style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 14 }} />
+              </div>
+            )}
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 5 }}>Email *</label>
+              <input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="vous@exemple.com" style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 14 }} />
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 5 }}>Mot de passe *</label>
+              <input type="password" value={authPwd} onChange={e => setAuthPwd(e.target.value)} placeholder="6 caractères minimum" style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 14 }} />
+            </div>
+            {authError && <div style={{ background: C.errorLight, color: C.error, borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>❌ {authError}</div>}
+            <button onClick={authMode === "login" ? login : register} disabled={loading} style={{ width: "100%", background: loading ? "#9FE1CB" : C.primary, color: "#fff", border: "none", borderRadius: 24, padding: "13px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+              {loading ? "Chargement…" : authMode === "login" ? "Se connecter" : "Créer mon compte"}
+            </button>
+            <button onClick={() => setScreen("home")} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontSize: 13, cursor: "pointer", marginTop: 16 }}>← Retour</button>
+          </div>
+        </div>
+      );
+
+      // SELL
+      if (screen === "sell") return (
+        <div style={{ minHeight: "100vh", background: C.bg }}>
+          {toast && <Toast {...toast} />}
+          <nav style={{ background: C.white, borderBottom: `1px solid ${C.border}`, padding: "0 20px", display: "flex", alignItems: "center", height: 56, gap: 12 }}>
+            <button onClick={() => setScreen("home")} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer" }}>←</button>
+            <Logo size={18} />
+          </nav>
+          <div style={{ maxWidth: 560, margin: "28px auto", padding: "0 20px" }}>
+            <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 20 }}>Publier une annonce</h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Catégorie *</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {categories.map(c => (
+                    <button key={c} onClick={() => setSellForm(f => ({ ...f, category: c }))} style={{ background: sellForm.category === c ? C.primary : C.white, color: sellForm.category === c ? "#fff" : C.text, border: `1px solid ${sellForm.category === c ? C.primary : C.border}`, borderRadius: 20, padding: "7px 14px", fontSize: 13, cursor: "pointer" }}>
+                      {catIcons[c]} {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Titre *</label>
+                <input value={sellForm.title} onChange={e => setSellForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex : Wilson Pro Staff 97" style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 14 }} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Marque</label>
+                  <input value={sellForm.brand} onChange={e => setSellForm(f => ({ ...f, brand: e.target.value }))} placeholder="Wilson, Babolat…" style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 14 }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Prix (€) *</label>
+                  <input type="number" value={sellForm.price} onChange={e => setSellForm(f => ({ ...f, price: e.target.value }))} placeholder="85" style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 14 }} />
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>État *</label>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {states.map(s => (
+                    <button key={s} onClick={() => setSellForm(f => ({ ...f, state: s }))} style={{ background: sellForm.state === s ? C.primary : C.white, color: sellForm.state === s ? "#fff" : C.text, border: `1px solid ${sellForm.state === s ? C.primary : C.border}`, borderRadius: 20, padding: "7px 14px", fontSize: 12, cursor: "pointer" }}>{s}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Description</label>
+                <textarea value={sellForm.description} onChange={e => setSellForm(f => ({ ...f, description: e.target.value }))} rows={4} placeholder="Décrivez votre article…" style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 14, resize: "vertical" }} />
+              </div>
+              {sellForm.price > 0 && (
+                <div style={{ background: C.primaryLight, borderRadius: 10, padding: "14px 16px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}><span style={{ color: C.muted }}>Prix de vente</span><strong>{sellForm.price} €</strong></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}><span style={{ color: C.muted }}>Commission (8%)</span><span style={{ color: C.accent }}>- {(sellForm.price * 0.08).toFixed(2)} €</span></div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 800, borderTop: `1px solid ${C.border}`, paddingTop: 8, marginTop: 4 }}><span>Vous recevez</span><span style={{ color: C.primary }}>{(sellForm.price * 0.92).toFixed(2)} €</span></div>
+                </div>
+              )}
+              <button onClick={publishAnnonce} disabled={loading} style={{ background: loading ? "#9FE1CB" : C.primary, color: "#fff", border: "none", borderRadius: 24, padding: "14px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
+                {loading ? "Publication…" : "🚀 Publier l'annonce"}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+
+      // ARTICLE
+      if (screen === "article" && selectedArticle) {
+        const a = selectedArticle;
+        return (
+          <div style={{ minHeight: "100vh", background: C.bg }}>
+            {toast && <Toast {...toast} />}
+            <nav style={{ background: C.white, borderBottom: `1px solid ${C.border}`, padding: "0 20px", display: "flex", alignItems: "center", height: 56, gap: 12 }}>
+              <button onClick={() => setScreen("home")} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer" }}>←</button>
+              <Logo size={18} />
+            </nav>
+            <div style={{ maxWidth: 680, margin: "24px auto", padding: "0 20px" }}>
+              <div style={{ background: C.grayLight, borderRadius: 14, height: 260, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 100, marginBottom: 20 }}>{catIcons[a.category] || "📦"}</div>
+              <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 14, padding: "20px" }}>
+                <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>{a.brand} · {a.category}</div>
+                <h1 style={{ fontSize: 20, fontWeight: 800, margin: "0 0 10px" }}>{a.title}</h1>
+                <div style={{ display: "inline-block", background: C.primaryLight, color: C.primaryDark, fontSize: 12, borderRadius: 6, padding: "3px 10px", marginBottom: 14 }}>{a.state}</div>
+                <div style={{ fontSize: 28, fontWeight: 900, marginBottom: 6 }}>{a.price} €</div>
+                {a.description && <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>{a.description}</p>}
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button style={{ flex: 2, background: C.primary, color: "#fff", border: "none", borderRadius: 24, padding: "13px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Acheter maintenant</button>
+                  <button style={{ flex: 1, background: C.white, color: C.primary, border: `2px solid ${C.primary}`, borderRadius: 24, padding: "13px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Faire une offre</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      return null;
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
