@@ -11,9 +11,6 @@
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:system-ui,sans-serif;background:#f8faf9;color:#2C2C2A}
     input,textarea,select,button{font-family:inherit}
-    ::-webkit-scrollbar{width:6px}
-    ::-webkit-scrollbar-track{background:#f1f1f1}
-    ::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
   </style>
 </head>
 <body>
@@ -21,64 +18,14 @@
 <script type="text/babel">
 const { useState, useEffect, useRef } = React;
 
-// Upload photo vers Supabase Storage
-const uploadPhoto = async (file) => {
-  const ext = file.name.split('.').pop();
-  const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const res = await fetch(`${SB_URL}/storage/v1/object/smashd-photos/${filename}`, {
-    method: "POST",
-    headers: {
-      "apikey": SB_KEY,
-      "Authorization": `Bearer ${getToken()}`,
-      "Content-Type": file.type,
-    },
-    body: file,
-  });
-  if (!res.ok) throw new Error("Erreur upload photo");
-  return `${SB_URL}/storage/v1/object/public/smashd-photos/${filename}`;
-};
-
-const TRANSLATIONS = {
-  FR: {
-    search: "Rechercher raquette, marque…",
-    sell: "+ Vendre",
-    login: "Connexion",
-    register: "S'inscrire",
-    account: "Mon compte",
-    hero1: "Achetez & vendez vos",
-    hero2: "équipements de raquette",
-    hero3: "Marketplace éco-responsable · Simple · Sécurisé",
-    join: "Rejoindre SMASHD",
-    proSeller: "Vendeur Pro 🏪",
-    allStates: "Tous les états",
-    items: "article",
-    noItems: "Aucune annonce pour l'instant",
-    beFirst: "Soyez le premier à vendre sur SMASHD !",
-    publish: "Publier une annonce",
-    ecoLabel: "🌿 Marketplace éco-responsable",
-  },
-  EN: {
-    search: "Search racket, brand…",
-    sell: "+ Sell",
-    login: "Login",
-    register: "Sign up",
-    account: "My account",
-    hero1: "Buy & sell your",
-    hero2: "racket sports gear",
-    hero3: "Eco-friendly marketplace · Simple · Secure",
-    join: "Join SMASHD",
-    proSeller: "Pro Seller 🏪",
-    allStates: "All conditions",
-    items: "item",
-    noItems: "No listings yet",
-    beFirst: "Be the first to sell on SMASHD!",
-    publish: "Post a listing",
-    ecoLabel: "🌿 Eco-friendly marketplace",
-  }
-};
-
 const SB_URL = "https://gcnmgtwbouakwaufqswh.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjbm1ndHdib3Vha3dhdWZxc3doIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTk4NDQsImV4cCI6MjA5MzgzNTg0NH0.qtHQ4si2Ybsriiaaj9F-1Z6WeN52sZ1ry7T7VpcIMpM";
+
+// Token en mémoire (évite blocage localStorage)
+let _token = SB_KEY;
+const getToken = () => _token;
+const setToken = (t) => { _token = t || SB_KEY; };
+const clearToken = () => { _token = SB_KEY; };
 
 const C = {
   p:"#1D9E75",pd:"#0F6E56",pl:"#E1F5EE",
@@ -93,59 +40,83 @@ const C = {
 
 const CATS = ["Tennis","Padel","Badminton","Squash","Ping-Pong","Pickleball","Raquetball","Pelote basque"];
 const ICONS = {Tennis:"🎾",Padel:"🟩",Badminton:"🏸",Squash:"🎯","Ping-Pong":"🏓",Pickleball:"🏅",Raquetball:"🔵","Pelote basque":"⚪"};
-const BRANDS = {Tennis:["Wilson","Babolat","Head","Yonex","Prince","Dunlop","Tecnifibre"],Padel:["Head","Bullpadel","Nox","Adidas","Wilson","Babolat"],Badminton:["Yonex","Victor","Li-Ning","Carlton","Forza"],Squash:["Dunlop","Head","Wilson","Tecnifibre","Prince"],"Ping-Pong":["Butterfly","Donic","Tibhar","Stiga","Joola"],Pickleball:["Selkirk","Engage","Paddletek","Head"],Raquetball:["Head","Wilson","Ektelon"],"Pelote basque":["Autre"]};
+const BRANDS = {
+  Tennis:["Wilson","Babolat","Head","Yonex","Prince","Dunlop","Tecnifibre"],
+  Padel:["Head","Bullpadel","Nox","Adidas","Wilson","Babolat"],
+  Badminton:["Yonex","Victor","Li-Ning","Carlton","Forza"],
+  Squash:["Dunlop","Head","Wilson","Tecnifibre","Prince"],
+  "Ping-Pong":["Butterfly","Donic","Tibhar","Stiga","Joola"],
+  Pickleball:["Selkirk","Engage","Paddletek","Head"],
+  Raquetball:["Head","Wilson","Ektelon"],
+  "Pelote basque":["Autre"]
+};
 const STATES = ["Neuf avec étiquette","Neuf sans étiquette","Très bon état","Bon état","Acceptable"];
-const SHIPPING = [{id:"mondial",label:"Mondial Relay",price:3.99,delay:"3-5j"},{id:"colissimo",label:"Colissimo",price:5.49,delay:"2-3j"},{id:"chrono",label:"Chronopost",price:7.99,delay:"24h"},{id:"main",label:"Remise en main propre",price:0,delay:"À convenir"}];
+const SHIPPING = [
+  {id:"mondial",label:"Mondial Relay",price:3.99,delay:"3-5j"},
+  {id:"colissimo",label:"Colissimo",price:5.49,delay:"2-3j"},
+  {id:"chrono",label:"Chronopost",price:7.99,delay:"24h"},
+  {id:"main",label:"Remise en main propre",price:0,delay:"À convenir"}
+];
 
-// API helpers
-// Token stocké en mémoire (évite le blocage localStorage)
-let _token = SB_KEY;
-const getToken = () => _token;
-const setToken = (token) => { _token = token || SB_KEY; };
-const clearToken = () => { _token = SB_KEY; };
+const TR = {
+  FR:{search:"Rechercher raquette, marque…",sell:"+ Vendre",login:"Connexion",register:"S'inscrire",account:"Mon compte",hero1:"Achetez & vendez vos",hero2:"équipements de raquette",hero3:"Marketplace éco-responsable · Simple · Sécurisé",join:"Rejoindre SMASHD",pro:"Vendeur Pro 🏪",eco:"🌿 Marketplace éco-responsable",noItems:"Aucune annonce pour l'instant",beFirst:"Soyez le premier à vendre sur SMASHD !",publish:"Publier une annonce"},
+  EN:{search:"Search racket, brand…",sell:"+ Sell",login:"Login",register:"Sign up",account:"My account",hero1:"Buy & sell your",hero2:"racket sports gear",hero3:"Eco-friendly marketplace · Simple · Secure",join:"Join SMASHD",pro:"Pro Seller 🏪",eco:"🌿 Eco-friendly marketplace",noItems:"No listings yet",beFirst:"Be the first to sell on SMASHD!",publish:"Post a listing"}
+};
 
+// API
 const sbApi = async (path, opts={}) => {
-  const token = getToken();
-  const res = await fetch(`${SB_URL}/rest/v1/${path}`,{
-    headers:{"apikey":SB_KEY,"Authorization":`Bearer ${token}`,"Content-Type":"application/json","Prefer":opts.prefer||"return=representation",...(opts.headers||{})},
+  const res = await fetch(`${SB_URL}/rest/v1/${path}`, {
+    headers:{"apikey":SB_KEY,"Authorization":`Bearer ${getToken()}`,"Content-Type":"application/json","Prefer":opts.prefer||"return=representation",...(opts.headers||{})},
     ...opts
   });
-  if(!res.ok){const e=await res.json();throw new Error(e.message||"Erreur API")}
+  if(!res.ok){const e=await res.json();throw new Error(e.message||"Erreur")}
   const tx=await res.text();return tx?JSON.parse(tx):[];
 };
-const sbAuth = async (ep,body) => {
-  const res=await fetch(`${SB_URL}/auth/v1/${ep}`,{method:"POST",headers:{"apikey":SB_KEY,"Content-Type":"application/json"},body:JSON.stringify(body)});
-  const d=await res.json();
-  if(d.error||d.error_description)throw new Error(d.error_description||d.error);
+
+const sbAuth = async (ep, body) => {
+  const res = await fetch(`${SB_URL}/auth/v1/${ep}`,{method:"POST",headers:{"apikey":SB_KEY,"Content-Type":"application/json"},body:JSON.stringify(body)});
+  const d = await res.json();
+  if(d.error||d.error_description) throw new Error(d.error_description||d.error);
   return d;
 };
 
-// UI Components
-const Logo=({size=20})=><span style={{fontWeight:900,fontSize:size,letterSpacing:"-0.5px"}}>SMASH<span style={{color:C.a}}>D</span></span>;
+const uploadPhoto = async (file) => {
+  const ext = file.name.split('.').pop();
+  const name = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const res = await fetch(`${SB_URL}/storage/v1/object/smashd-photos/${name}`,{
+    method:"POST",
+    headers:{"apikey":SB_KEY,"Authorization":`Bearer ${getToken()}`,"Content-Type":file.type},
+    body:file
+  });
+  if(!res.ok) throw new Error("Erreur upload");
+  return `${SB_URL}/storage/v1/object/public/smashd-photos/${name}`;
+};
 
-const Toast=({msg,type})=>(
-  <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:type==="error"?C.err:C.p,color:"#fff",borderRadius:24,padding:"12px 24px",fontSize:14,fontWeight:600,zIndex:9999,whiteSpace:"nowrap"}}>
+// UI
+const Logo = ({size=20}) => (
+  <span style={{fontWeight:900,fontSize:size,letterSpacing:"-0.5px",cursor:"pointer"}}>
+    SMASH<span style={{color:C.a}}>D</span>
+  </span>
+);
+
+const Toast = ({msg,type}) => (
+  <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:type==="error"?C.err:C.p,color:"#fff",borderRadius:24,padding:"12px 24px",fontSize:14,fontWeight:600,zIndex:9999,whiteSpace:"nowrap",boxShadow:"0 4px 20px rgba(0,0,0,0.15)"}}>
     {type==="error"?"❌":"✅"} {msg}
   </div>
 );
 
-const Badge=({label,color="green"})=>{
-  const map={green:[C.pl,C.pd],orange:[C.warnl,C.warn],gray:[C.gl,C.m],blue:[C.infol,C.info],red:[C.errl,C.err]};
-  const [bg,tx]=map[color]||map.green;
+const Badge = ({label,color="green"}) => {
+  const m={green:[C.pl,C.pd],orange:[C.warnl,C.warn],gray:[C.gl,C.m],blue:[C.infol,C.info],red:[C.errl,C.err]};
+  const [bg,tx]=m[color]||m.green;
   return <span style={{background:bg,color:tx,fontSize:11,fontWeight:700,borderRadius:6,padding:"3px 9px",whiteSpace:"nowrap"}}>{label}</span>;
 };
 
-const Btn=({onClick,children,style={},disabled=false,variant="primary"})=>{
-  const variants={
-    primary:{background:disabled?"#9FE1CB":C.p,color:"#fff",border:"none"},
-    outline:{background:C.w,color:C.p,border:`2px solid ${C.p}`},
-    ghost:{background:C.gl,color:C.t,border:"none"},
-    danger:{background:C.errl,color:C.err,border:`1px solid ${C.err}`},
-  };
-  return <button onClick={onClick} disabled={disabled} style={{borderRadius:24,padding:"10px 20px",fontSize:14,fontWeight:700,cursor:disabled?"not-allowed":"pointer",...variants[variant],...style}}>{children}</button>;
+const Btn = ({onClick,children,style={},disabled=false,variant="primary"}) => {
+  const v={primary:{background:disabled?"#9FE1CB":C.p,color:"#fff",border:"none"},outline:{background:C.w,color:C.p,border:`2px solid ${C.p}`},ghost:{background:C.gl,color:C.t,border:"none"},danger:{background:C.errl,color:C.err,border:`1px solid ${C.err}`}};
+  return <button onClick={onClick} disabled={disabled} style={{borderRadius:24,padding:"10px 20px",fontSize:14,fontWeight:700,cursor:disabled?"not-allowed":"pointer",...v[variant],...style}}>{children}</button>;
 };
 
-const Input=({label,type="text",value,onChange,placeholder,error,required})=>(
+const Input = ({label,type="text",value,onChange,placeholder,error,required}) => (
   <div style={{marginBottom:14}}>
     {label&&<label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>{label}{required&&<span style={{color:C.err}}> *</span>}</label>}
     <input type={type} value={value} onChange={onChange} placeholder={placeholder}
@@ -154,11 +125,11 @@ const Input=({label,type="text",value,onChange,placeholder,error,required})=>(
   </div>
 );
 
-const Card=({children,style={}})=>(
+const Card = ({children,style={}}) => (
   <div style={{background:C.w,border:`1px solid ${C.b}`,borderRadius:14,padding:"20px",...style}}>{children}</div>
 );
 
-const StatCard=({icon,label,value,color})=>(
+const StatCard = ({icon,label,value,color}) => (
   <Card style={{textAlign:"center"}}>
     <div style={{fontSize:24,marginBottom:6}}>{icon}</div>
     <div style={{fontSize:22,fontWeight:900,color:color||C.t}}>{value}</div>
@@ -166,12 +137,8 @@ const StatCard=({icon,label,value,color})=>(
   </Card>
 );
 
-// ═══════════════════════════════════════════════
-// MAIN APP
-// ═══════════════════════════════════════════════
+// ═══════════ APP ═══════════
 function App() {
-  const [lang,setLang]=useState("FR");
-  const T=TRANSLATIONS[lang];
   const [screen,setScreen]=useState("home");
   const [user,setUser]=useState(null);
   const [profile,setProfile]=useState(null);
@@ -179,7 +146,6 @@ function App() {
   const [myAnnonces,setMyAnnonces]=useState([]);
   const [myOrders,setMyOrders]=useState([]);
   const [mySales,setMySales]=useState([]);
-  const [messages,setMessages]=useState([]);
   const [toast,setToast]=useState(null);
   const [loading,setLoading]=useState(false);
   const [search,setSearch]=useState("");
@@ -189,6 +155,8 @@ function App() {
   const [selected,setSelected]=useState(null);
   const [dashTab,setDashTab]=useState("overview");
   const [vacanceMode,setVacanceMode]=useState(false);
+  const [lang,setLang]=useState("FR");
+  const T=TR[lang];
 
   const showToast=(msg,type="success")=>{setToast({msg,type});setTimeout(()=>setToast(null),3500)};
   const go=(s,data=null)=>{setScreen(s);if(data)setSelected(data);window.scrollTo(0,0)};
@@ -215,6 +183,7 @@ function App() {
     setLoading(true);
     try{
       const d=await sbAuth("token?grant_type=password",{email,password:pwd});
+      setToken(d.access_token);
       setUser(d.user);
       const p=await sbApi(`profiles?id=eq.${d.user.id}`);
       setProfile(p[0]||null);
@@ -230,6 +199,7 @@ function App() {
     try{
       const d=await sbAuth("signup",{email,password:pwd});
       if(d.user){
+        if(d.access_token) setToken(d.access_token);
         await sbApi("profiles",{method:"POST",body:JSON.stringify({id:d.user.id,name,email,user_type:userType,siret:siret||null,company:company||null})});
         setUser(d.user);
         setProfile({id:d.user.id,name,email,user_type:userType});
@@ -240,26 +210,30 @@ function App() {
     finally{setLoading(false)}
   };
 
-  const logout=()=>{setUser(null);setProfile(null);setMyAnnonces([]);setMyOrders([]);setMySales([]);clearToken();showToast("Déconnecté");go("home")};
+  const logout=()=>{clearToken();setUser(null);setProfile(null);setMyAnnonces([]);setMyOrders([]);setMySales([]);showToast("Déconnecté");go("home")};
 
   const publishAnnonce=async(form)=>{
     if(!user){go("auth");return}
     setLoading(true);
     try{
-      await sbApi("annonces",{method:"POST",body:JSON.stringify({user_id:user.id,...form,status:"active"})});
+      await sbApi("annonces",{method:"POST",body:JSON.stringify({
+        user_id:user.id,title:form.title,description:form.description,
+        category:form.category,brand:form.brand,state:form.state,
+        price:parseFloat(form.price),shipping:form.shipping,
+        photo_url:form.photo_url||null,photos:form.photos||[],status:"active"
+      })});
       showToast("Annonce publiée ! 🎉");
       await loadAnnonces();
       await loadMyData(user.id);
       go("dashboard");setDashTab("annonces");
-    }catch(e){showToast("Erreur publication","error")}
+    }catch(e){showToast("Erreur publication : "+e.message,"error")}
     finally{setLoading(false)}
   };
 
   const toggleAnnonceStatus=async(id,status)=>{
     try{
       await sbApi(`annonces?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({status})});
-      await loadMyData(user.id);
-      await loadAnnonces();
+      await loadMyData(user.id);await loadAnnonces();
       showToast(status==="active"?"Annonce activée":"Annonce mise en pause");
     }catch(e){showToast("Erreur","error")}
   };
@@ -267,18 +241,9 @@ function App() {
   const deleteAnnonce=async(id)=>{
     try{
       await sbApi(`annonces?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({status:"supprimé"})});
-      await loadMyData(user.id);
-      await loadAnnonces();
+      await loadMyData(user.id);await loadAnnonces();
       showToast("Annonce supprimée");
     }catch(e){showToast("Erreur","error")}
-  };
-
-  const sendMessage=async(annonce_id,receiver_id,content)=>{
-    if(!user)return;
-    try{
-      await sbApi("messages",{method:"POST",body:JSON.stringify({annonce_id,sender_id:user.id,receiver_id,content})});
-      showToast("Message envoyé !");
-    }catch(e){showToast("Erreur envoi","error")}
   };
 
   const placeOrder=async(annonce,shippingMethod)=>{
@@ -289,12 +254,10 @@ function App() {
       const gain=parseFloat((annonce.price-commission).toFixed(2));
       await sbApi("commandes",{method:"POST",body:JSON.stringify({annonce_id:annonce.id,buyer_id:user.id,seller_id:annonce.user_id,price:annonce.price,commission,gain,shipping_method:shippingMethod,status:"en attente"})});
       await sbApi(`annonces?id=eq.${annonce.id}`,{method:"PATCH",body:JSON.stringify({status:"vendu"})});
-      await sbApi("transactions",{method:"POST",body:JSON.stringify({user_id:annonce.user_id,label:`Vente — ${annonce.title}`,amount:gain,type:"credit"})});
       showToast("Commande confirmée ! 🎉");
-      await loadAnnonces();
-      await loadMyData(user.id);
-      go("dashboard");setDashTab("achats");
-    }catch(e){showToast("Erreur commande","error")}
+      await loadAnnonces();await loadMyData(user.id);
+      return true;
+    }catch(e){showToast("Erreur commande","error");return false}
     finally{setLoading(false)}
   };
 
@@ -305,12 +268,8 @@ function App() {
     .filter(a=>!filterPrice.max||a.price<=parseFloat(filterPrice.max))
     .filter(a=>!search||a.title?.toLowerCase().includes(search.toLowerCase())||a.brand?.toLowerCase().includes(search.toLowerCase()));
 
-  const wallet=(()=>{
-    const credits=mySales.reduce((acc,s)=>acc+s.gain,0);
-    return Math.round(credits*100)/100;
-  })();
-
-  const props={user,profile,loading,showToast,go,login,register,logout,publishAnnonce,toggleAnnonceStatus,deleteAnnonce,sendMessage,placeOrder,myAnnonces,myOrders,mySales,wallet,dashTab,setDashTab,vacanceMode,setVacanceMode,annonces:filtered,allAnnonces:annonces,search,setSearch,filterCat,setFilterCat,filterState,setFilterState,filterPrice,setFilterPrice,selected,setSelected,loadMyData,lang,setLang,T};
+  const wallet=Math.round(mySales.reduce((acc,s)=>acc+(s.gain||0),0)*100)/100;
+  const props={user,profile,loading,showToast,go,login,register,logout,publishAnnonce,toggleAnnonceStatus,deleteAnnonce,placeOrder,myAnnonces,myOrders,mySales,wallet,dashTab,setDashTab,vacanceMode,setVacanceMode,annonces:filtered,search,setSearch,filterCat,setFilterCat,filterState,setFilterState,filterPrice,setFilterPrice,selected,loadMyData,lang,setLang,T};
 
   return (
     <div>
@@ -324,47 +283,32 @@ function App() {
   );
 }
 
-// ═══════════════════════════════════════════════
-// HOME
-// ═══════════════════════════════════════════════
-function Home({user,profile,annonces,search,setSearch,filterCat,setFilterCat,filterState,setFilterState,filterPrice,setFilterPrice,go,logout,lang,setLang,T}){
-  return(
+// ═══════════ HOME ═══════════
+function Home({user,profile,annonces,search,setSearch,filterCat,setFilterCat,filterState,setFilterState,filterPrice,setFilterPrice,go,lang,setLang,T}) {
+  return (
     <div style={{minHeight:"100vh",background:C.bg}}>
+      {/* NAV */}
       <nav style={{background:C.w,borderBottom:`1px solid ${C.b}`,padding:"0 20px",display:"flex",alignItems:"center",height:58,gap:12,position:"sticky",top:0,zIndex:100}}>
-        {/* LOGO */}
-        <div style={{display:"flex",alignItems:"center",gap:2,cursor:"pointer"}} onClick={()=>{}}>
-          <span style={{fontWeight:900,fontSize:22,letterSpacing:"-1px",color:C.t}}>SMASH</span>
-          <span style={{fontWeight:900,fontSize:22,letterSpacing:"-1px",color:C.a}}>D</span>
-        </div>
-
-        {/* SEARCH */}
+        <Logo size={20}/>
         <div style={{flex:1,position:"relative",maxWidth:420,margin:"0 16px"}}>
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={T.search}
             style={{width:"100%",padding:"9px 14px 9px 38px",borderRadius:24,border:`1.5px solid ${C.b}`,fontSize:13,background:C.gl,outline:"none",boxSizing:"border-box"}}/>
-          <span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",fontSize:15,color:C.g}}>🔍</span>
+          <span style={{position:"absolute",left:13,top:"50%",transform:"translateY(-50%)",color:C.g}}>🔍</span>
         </div>
-
-        {/* RIGHT ACTIONS */}
         <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
-          {/* LANG SWITCH */}
           <div style={{display:"flex",background:C.gl,borderRadius:20,overflow:"hidden",border:`1px solid ${C.b}`}}>
             {["FR","EN"].map(l=>(
               <button key={l} onClick={()=>setLang(l)}
-                style={{padding:"6px 12px",fontSize:12,fontWeight:700,border:"none",cursor:"pointer",background:lang===l?C.p:"transparent",color:lang===l?"#fff":C.g,transition:"all .15s"}}>
+                style={{padding:"6px 12px",fontSize:12,fontWeight:700,border:"none",cursor:"pointer",background:lang===l?C.p:"transparent",color:lang===l?"#fff":C.g}}>
                 {l}
               </button>
             ))}
           </div>
-
           {user?(
             <>
-              <button onClick={()=>go("sell")}
-                style={{background:C.p,color:"#fff",border:"none",borderRadius:24,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                {T.sell}
-              </button>
-              <button onClick={()=>go("dashboard")}
-                style={{background:C.gl,border:`1px solid ${C.b}`,borderRadius:24,padding:"8px 14px",fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-                <div style={{width:24,height:24,borderRadius:"50%",background:profile?.user_type==="pro"?C.warnl:C.pl,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:profile?.user_type==="pro"?C.warn:C.pd}}>
+              <button onClick={()=>go("sell")} style={{background:C.p,color:"#fff",border:"none",borderRadius:24,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer"}}>{T.sell}</button>
+              <button onClick={()=>go("dashboard")} style={{background:C.gl,border:`1px solid ${C.b}`,borderRadius:24,padding:"8px 14px",fontSize:13,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+                <div style={{width:26,height:26,borderRadius:"50%",background:C.pl,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:C.pd}}>
                   {profile?.name?.charAt(0)||"?"}
                 </div>
                 {profile?.name?.split(" ")[0]||T.account}
@@ -372,14 +316,8 @@ function Home({user,profile,annonces,search,setSearch,filterCat,setFilterCat,fil
             </>
           ):(
             <>
-              <button onClick={()=>go("auth")}
-                style={{background:"transparent",border:`1px solid ${C.b}`,borderRadius:24,padding:"8px 18px",fontSize:13,fontWeight:600,cursor:"pointer",color:C.t}}>
-                {T.login}
-              </button>
-              <button onClick={()=>go("auth")}
-                style={{background:C.p,color:"#fff",border:"none",borderRadius:24,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                {T.register}
-              </button>
+              <button onClick={()=>go("auth")} style={{background:"transparent",border:`1px solid ${C.b}`,borderRadius:24,padding:"8px 18px",fontSize:13,fontWeight:600,cursor:"pointer"}}>{T.login}</button>
+              <button onClick={()=>go("auth")} style={{background:C.p,color:"#fff",border:"none",borderRadius:24,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer"}}>{T.register}</button>
             </>
           )}
         </div>
@@ -387,53 +325,44 @@ function Home({user,profile,annonces,search,setSearch,filterCat,setFilterCat,fil
 
       {/* HERO */}
       <div style={{background:`linear-gradient(135deg,${C.pl},#fff)`,padding:"40px 20px",textAlign:"center"}}>
-        <div style={{display:"inline-block",background:C.pl,color:C.pd,borderRadius:20,padding:"4px 14px",fontSize:12,fontWeight:600,marginBottom:14}}>
-          {T.ecoLabel}
-        </div>
-        <h1 style={{fontSize:32,fontWeight:900,margin:"0 0 10px",lineHeight:1.2}}>
-          {T.hero1}<br/><span style={{color:C.p}}>{T.hero2}</span>
-        </h1>
+        <div style={{display:"inline-block",background:C.pl,color:C.pd,borderRadius:20,padding:"4px 14px",fontSize:12,fontWeight:600,marginBottom:14}}>{T.eco}</div>
+        <h1 style={{fontSize:32,fontWeight:900,margin:"0 0 10px",lineHeight:1.2}}>{T.hero1}<br/><span style={{color:C.p}}>{T.hero2}</span></h1>
         <p style={{color:C.m,fontSize:14,margin:"0 0 24px"}}>{T.hero3}</p>
-        <div style={{display:"flex",gap:32,justifyContent:"center",flexWrap:"wrap",marginBottom:24}}>
-          {[["🎾","Sports de raquette"],["🌍","Multilingue FR/EN"],["🔒","Paiement sécurisé"],["🚚","Livraison intégrée"]].map(([i,l])=>(
-            <div key={l} style={{textAlign:"center"}}>
-              <div style={{fontSize:20}}>{i}</div>
-              <div style={{fontSize:11,color:C.m,marginTop:2}}>{l}</div>
-            </div>
+        <div style={{display:"flex",gap:28,justifyContent:"center",flexWrap:"wrap",marginBottom:24}}>
+          {[["🎾","Sports de raquette"],["🌍","FR / EN"],["🔒","Paiement sécurisé"],["🚚","Livraison intégrée"]].map(([i,l])=>(
+            <div key={l} style={{textAlign:"center"}}><div style={{fontSize:20}}>{i}</div><div style={{fontSize:11,color:C.m,marginTop:2}}>{l}</div></div>
           ))}
         </div>
         {!user&&(
           <div style={{display:"flex",gap:10,justifyContent:"center"}}>
             <Btn onClick={()=>go("auth")} style={{padding:"12px 28px",fontSize:15}}>{T.join}</Btn>
-            <Btn onClick={()=>go("auth")} variant="outline" style={{padding:"12px 28px",fontSize:15}}>{T.proSeller}</Btn>
+            <Btn onClick={()=>go("auth")} variant="outline" style={{padding:"12px 28px",fontSize:15}}>{T.pro}</Btn>
           </div>
         )}
       </div>
 
-      {/* CATEGORIES */}
-      <div style={{padding:"20px 20px 0",overflowX:"auto"}}>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-          {["Tous",...CATS].map(c=>(
-            <button key={c} onClick={()=>setFilterCat(c)}
-              style={{background:filterCat===c?C.p:C.w,color:filterCat===c?"#fff":C.t,border:`1px solid ${filterCat===c?C.p:C.b}`,borderRadius:20,padding:"7px 16px",fontSize:13,cursor:"pointer",fontWeight:filterCat===c?700:400,whiteSpace:"nowrap"}}>
-              {ICONS[c]||""} {c}
-            </button>
-          ))}
-        </div>
+      {/* CATS */}
+      <div style={{padding:"16px 20px 0",display:"flex",gap:8,flexWrap:"wrap"}}>
+        {["Tous",...CATS].map(c=>(
+          <button key={c} onClick={()=>setFilterCat(c)}
+            style={{background:filterCat===c?C.p:C.w,color:filterCat===c?"#fff":C.t,border:`1px solid ${filterCat===c?C.p:C.b}`,borderRadius:20,padding:"7px 16px",fontSize:13,cursor:"pointer",fontWeight:filterCat===c?700:400,whiteSpace:"nowrap"}}>
+            {ICONS[c]||""} {c}
+          </button>
+        ))}
       </div>
 
       {/* FILTERS */}
-      <div style={{padding:"12px 20px 0",display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+      <div style={{padding:"10px 20px 0",display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
         <select value={filterState} onChange={e=>setFilterState(e.target.value)}
           style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${C.b}`,fontSize:13,background:C.w,cursor:"pointer"}}>
-          <option value="Tous">{T.allStates}</option>
+          <option value="Tous">Tous les états</option>
           {STATES.map(s=><option key={s}>{s}</option>)}
         </select>
         <input type="number" value={filterPrice.min} onChange={e=>setFilterPrice(f=>({...f,min:e.target.value}))} placeholder="Prix min €"
           style={{width:90,padding:"7px 12px",borderRadius:8,border:`1px solid ${C.b}`,fontSize:13}}/>
         <input type="number" value={filterPrice.max} onChange={e=>setFilterPrice(f=>({...f,max:e.target.value}))} placeholder="Prix max €"
           style={{width:90,padding:"7px 12px",borderRadius:8,border:`1px solid ${C.b}`,fontSize:13}}/>
-        <span style={{fontSize:13,color:C.m,marginLeft:"auto"}}>{annonces.length} {T.items}{annonces.length!==1?"s":""}</span>
+        <span style={{marginLeft:"auto",fontSize:13,color:C.m}}>{annonces.length} article{annonces.length!==1?"s":""}</span>
       </div>
 
       {/* GRID */}
@@ -449,13 +378,15 @@ function Home({user,profile,annonces,search,setSearch,filterCat,setFilterCat,fil
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:14}}>
             {annonces.map(a=>(
               <div key={a.id} onClick={()=>go("article",a)} style={{background:C.w,border:`1px solid ${C.b}`,borderRadius:14,overflow:"hidden",cursor:"pointer"}}>
-                <div style={{background:C.gl,height:140,display:"flex",alignItems:"center",justifyContent:"center",fontSize:60,position:"relative"}}>
-                  {ICONS[a.category]||"📦"}
-                  {a.user_type==="pro"&&<span style={{position:"absolute",top:8,left:8,background:C.a,color:"#fff",fontSize:10,fontWeight:700,borderRadius:4,padding:"2px 7px"}}>PRO</span>}
+                <div style={{background:C.gl,height:160,display:"flex",alignItems:"center",justifyContent:"center",fontSize:60,position:"relative",overflow:"hidden"}}>
+                  {a.photo_url
+                    ?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                    :<span>{ICONS[a.category]||"📦"}</span>
+                  }
                 </div>
                 <div style={{padding:"12px 14px"}}>
                   <div style={{fontSize:11,color:C.m,marginBottom:2}}>{a.brand||"—"} · {a.category}</div>
-                  <div style={{fontSize:14,fontWeight:700,marginBottom:6,lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
+                  <div style={{fontSize:14,fontWeight:700,marginBottom:6,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
                   <Badge label={a.state}/>
                   <div style={{fontSize:18,fontWeight:900,marginTop:8}}>{a.price} €</div>
                 </div>
@@ -468,13 +399,13 @@ function Home({user,profile,annonces,search,setSearch,filterCat,setFilterCat,fil
       {/* FOOTER */}
       <footer style={{background:C.pd,color:"#a8d5c5",padding:"28px 20px",display:"flex",gap:24,flexWrap:"wrap",justifyContent:"space-between",fontSize:13}}>
         <div>
-          <div style={{color:"#fff",fontWeight:900,fontSize:20,marginBottom:8,letterSpacing:"-0.5px"}}>SMASH<span style={{color:"#f4a07a"}}>D</span></div>
+          <div style={{color:"#fff",fontWeight:900,fontSize:20,marginBottom:8}}>SMASH<span style={{color:"#f4a07a"}}>D</span></div>
           <div style={{maxWidth:220,lineHeight:1.6}}>Marketplace de seconde main dédiée aux sports de raquette.</div>
         </div>
-        {[["Acheter",["Catalogue","Nouveautés","Bons plans"]],["Vendre",["Déposer une annonce","Espace Pro","Tarifs"]],["Aide",["FAQ","Livraison","Contact"]]].map(([t,ls])=>(
-          <div key={t}>
-            <div style={{color:"#fff",fontWeight:700,marginBottom:8}}>{t}</div>
-            {ls.map(l=><div key={l} style={{marginBottom:4,cursor:"pointer"}}>{l}</div>)}
+        {[["Acheter",["Catalogue","Nouveautés","Bons plans"]],["Vendre",["Déposer une annonce","Espace Pro","Tarifs"]],["Aide",["FAQ","Livraison","Contact"]]].map(([title,links])=>(
+          <div key={title}>
+            <div style={{color:"#fff",fontWeight:700,marginBottom:8}}>{title}</div>
+            {links.map(l=><div key={l} style={{marginBottom:4,cursor:"pointer"}}>{l}</div>)}
           </div>
         ))}
       </footer>
@@ -482,50 +413,37 @@ function Home({user,profile,annonces,search,setSearch,filterCat,setFilterCat,fil
   );
 }
 
-// ═══════════════════════════════════════════════
-// AUTH
-// ═══════════════════════════════════════════════
-function Auth({login,register,loading,go}){
+// ═══════════ AUTH ═══════════
+function Auth({login,register,loading,go}) {
   const [mode,setMode]=useState("login");
   const [step,setStep]=useState(0);
   const [userType,setUserType]=useState("particulier");
-  const [f,setF]=useState({email:"",pwd:"",pwd2:"",name:"",phone:"",siret:"",company:"",cgv:false});
+  const [f,setF]=useState({email:"",pwd:"",pwd2:"",name:"",siret:"",company:"",cgv:false});
   const [err,setErr]=useState({});
   const set=(k,v)=>setF(x=>({...x,[k]:v}));
 
-  const validate0=()=>{
+  const v0=()=>{
     const e={};
     if(!f.email||!/\S+@\S+\.\S+/.test(f.email))e.email="Email invalide";
     if(!f.pwd||f.pwd.length<6)e.pwd="6 caractères minimum";
-    if(mode==="register"&&f.pwd!==f.pwd2)e.pwd2="Les mots de passe ne correspondent pas";
+    if(mode==="register"&&f.pwd!==f.pwd2)e.pwd2="Mots de passe différents";
     setErr(e);return!Object.keys(e).length;
   };
-  const validate1=()=>{
+  const v1=()=>{
     const e={};
     if(!f.name)e.name="Nom requis";
     if(userType==="pro"&&!f.siret)e.siret="SIRET requis";
-    if(!f.cgv)e.cgv="Vous devez accepter les CGV";
+    if(!f.cgv)e.cgv="Acceptez les CGV";
     setErr(e);return!Object.keys(e).length;
   };
 
-  const doLogin=async()=>{
-    if(!validate0())return;
-    try{await login(f.email,f.pwd)}
-    catch(e){setErr({email:"Email ou mot de passe incorrect"})}
-  };
+  const doLogin=async()=>{if(!v0())return;try{await login(f.email,f.pwd)}catch(e){setErr({email:"Email ou mot de passe incorrect"})}};
+  const doRegister=async()=>{if(!v1())return;try{await register(f.email,f.pwd,f.name,userType,f.siret,f.company)}catch(e){setErr({email:e.message})}};
 
-  const doRegister=async()=>{
-    if(!validate1())return;
-    try{await register(f.email,f.pwd,f.name,userType,f.siret,f.company)}
-    catch(e){setErr({email:e.message})}
-  };
-
-  return(
+  return (
     <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}}>
       <div style={{background:C.w,border:`1px solid ${C.b}`,borderRadius:18,padding:"32px 28px",maxWidth:420,width:"100%"}}>
         <div style={{textAlign:"center",marginBottom:24}}><Logo size={26}/></div>
-
-        {/* MODE TABS */}
         <div style={{display:"flex",gap:8,marginBottom:24}}>
           {[["login","Connexion"],["register","Inscription"]].map(([m,l])=>(
             <button key={m} onClick={()=>{setMode(m);setErr({});setStep(0)}}
@@ -533,35 +451,25 @@ function Auth({login,register,loading,go}){
           ))}
         </div>
 
-        {/* LOGIN */}
         {mode==="login"&&(
           <>
             <Input label="Email" type="email" value={f.email} onChange={e=>set("email",e.target.value)} placeholder="vous@exemple.com" error={err.email} required/>
             <Input label="Mot de passe" type="password" value={f.pwd} onChange={e=>set("pwd",e.target.value)} placeholder="••••••••" error={err.pwd} required/>
-            <Btn onClick={doLogin} disabled={loading} style={{width:"100%",marginBottom:12,padding:"13px"}}>
-              {loading?"Connexion…":"Se connecter"}
-            </Btn>
+            <Btn onClick={doLogin} disabled={loading} style={{width:"100%",padding:"13px"}}>{loading?"Connexion…":"Se connecter"}</Btn>
           </>
         )}
 
-        {/* REGISTER */}
         {mode==="register"&&(
           <>
-            {/* Type user */}
-            <div style={{display:"flex",gap:8,marginBottom:18}}>
+            <div style={{display:"flex",gap:8,marginBottom:16}}>
               {[["particulier","👤 Particulier"],["pro","🏪 Vendeur Pro"]].map(([id,l])=>(
                 <button key={id} onClick={()=>setUserType(id)}
                   style={{flex:1,background:userType===id?C.p:C.w,color:userType===id?"#fff":C.t,border:`2px solid ${userType===id?C.p:C.b}`,borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>{l}</button>
               ))}
             </div>
-            {userType==="pro"&&(
-              <div style={{background:C.warnl,border:`1px solid ${C.warn}`,borderRadius:8,padding:"10px 14px",fontSize:12,color:C.warn,marginBottom:14}}>
-                🏅 Compte Pro — Abonnement annuel 99€/an. Vendez vos invendus et accédez à l'espace publicitaire.
-              </div>
-            )}
+            {userType==="pro"&&<div style={{background:C.warnl,border:`1px solid ${C.warn}`,borderRadius:8,padding:"10px 14px",fontSize:12,color:C.warn,marginBottom:14}}>🏅 Abonnement Pro 99€/an — Invendus + espace publicitaire</div>}
 
-            {/* Stepper */}
-            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:20}}>
+            <div style={{display:"flex",gap:6,marginBottom:18,alignItems:"center"}}>
               {["Compte","Profil"].map((s,i)=>(
                 <React.Fragment key={s}>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -577,17 +485,16 @@ function Auth({login,register,loading,go}){
               <>
                 <Input label="Email" type="email" value={f.email} onChange={e=>set("email",e.target.value)} placeholder="vous@exemple.com" error={err.email} required/>
                 <Input label="Mot de passe" type="password" value={f.pwd} onChange={e=>set("pwd",e.target.value)} placeholder="6 caractères minimum" error={err.pwd} required/>
-                <Input label="Confirmer le mot de passe" type="password" value={f.pwd2} onChange={e=>set("pwd2",e.target.value)} placeholder="Répétez le mot de passe" error={err.pwd2} required/>
-                <Btn onClick={()=>validate0()&&setStep(1)} style={{width:"100%",padding:"13px"}}>Continuer →</Btn>
+                <Input label="Confirmer" type="password" value={f.pwd2} onChange={e=>set("pwd2",e.target.value)} placeholder="Répétez" error={err.pwd2} required/>
+                <Btn onClick={()=>v0()&&setStep(1)} style={{width:"100%",padding:"13px"}}>Continuer →</Btn>
               </>
             )}
             {step===1&&(
               <>
                 <Input label={userType==="pro"?"Nom du responsable":"Nom complet"} value={f.name} onChange={e=>set("name",e.target.value)} placeholder="Jean Dupont" error={err.name} required/>
-                <Input label="Téléphone" type="tel" value={f.phone} onChange={e=>set("phone",e.target.value)} placeholder="+33 6 00 00 00 00"/>
                 {userType==="pro"&&(
                   <>
-                    <Input label="Numéro SIRET" value={f.siret} onChange={e=>set("siret",e.target.value)} placeholder="123 456 789 00012" error={err.siret} required/>
+                    <Input label="SIRET" value={f.siret} onChange={e=>set("siret",e.target.value)} placeholder="123 456 789 00012" error={err.siret} required/>
                     <Input label="Nom commercial" value={f.company} onChange={e=>set("company",e.target.value)} placeholder="Mon Shop Tennis"/>
                   </>
                 )}
@@ -600,15 +507,12 @@ function Auth({login,register,loading,go}){
                 </div>
                 <div style={{display:"flex",gap:8}}>
                   <Btn onClick={()=>setStep(0)} variant="ghost" style={{flex:1,padding:"12px"}}>← Retour</Btn>
-                  <Btn onClick={doRegister} disabled={loading} style={{flex:2,padding:"12px"}}>
-                    {loading?"Création…":userType==="pro"?"Créer compte Pro":"Créer mon compte"}
-                  </Btn>
+                  <Btn onClick={doRegister} disabled={loading} style={{flex:2,padding:"12px"}}>{loading?"Création…":userType==="pro"?"Créer compte Pro":"Créer mon compte"}</Btn>
                 </div>
               </>
             )}
           </>
         )}
-
         {err.email&&mode==="register"&&step===0&&<div style={{background:C.errl,color:C.err,borderRadius:8,padding:"10px 14px",fontSize:13,marginTop:12}}>❌ {err.email}</div>}
         <button onClick={()=>go("home")} style={{width:"100%",background:"none",border:"none",color:C.m,fontSize:13,cursor:"pointer",marginTop:16}}>← Retour à l'accueil</button>
       </div>
@@ -616,32 +520,26 @@ function Auth({login,register,loading,go}){
   );
 }
 
-// ═══════════════════════════════════════════════
-// SELL
-// ═══════════════════════════════════════════════
-function Sell({publishAnnonce,loading,go,profile}){
+// ═══════════ SELL ═══════════
+function Sell({publishAnnonce,loading,go}) {
   const [step,setStep]=useState(0);
-  const [f,setF]=useState({title:"",description:"",category:"",sub_category:"",brand:"",state:"",price:"",size:"",surface:"",env:"",shipping:"mondial"});
+  const [f,setF]=useState({title:"",description:"",category:"",brand:"",state:"",price:"",shipping:"mondial"});
   const [photos,setPhotos]=useState([]);
-  const [photoUploading,setPhotoUploading]=useState(false);
+  const [uploading,setUploading]=useState(false);
   const fileRef=useRef();
   const set=(k,v)=>setF(x=>({...x,[k]:v}));
+  const STEPS=["Catégorie","Photos","Détails","Prix","Expédition","Confirmation"];
   const commission=f.price?(f.price*0.08).toFixed(2):0;
   const gain=f.price?(f.price*0.92).toFixed(2):0;
-  const STEPS=["Catégorie","Photos","Détails","Prix","Expédition","Confirmation"];
 
-  const handlePhotoUpload=async(e)=>{
+  const handleUpload=async(e)=>{
     const files=Array.from(e.target.files);
-    if(photos.length+files.length>8){alert("Maximum 8 photos");return}
-    setPhotoUploading(true);
-    try{
-      const urls=await Promise.all(files.map(f=>uploadPhoto(f)));
-      setPhotos(p=>[...p,...urls]);
-    }catch(e){alert("Erreur upload, réessayez")}
-    finally{setPhotoUploading(false)}
+    if(photos.length+files.length>8){alert("Max 8 photos");return}
+    setUploading(true);
+    try{const urls=await Promise.all(files.map(f=>uploadPhoto(f)));setPhotos(p=>[...p,...urls])}
+    catch(e){alert("Erreur upload, réessayez")}
+    finally{setUploading(false)}
   };
-
-  const removePhoto=(i)=>setPhotos(p=>p.filter((_,idx)=>idx!==i));
 
   const canNext=()=>{
     if(step===0)return f.category;
@@ -652,7 +550,7 @@ function Sell({publishAnnonce,loading,go,profile}){
     return true;
   };
 
-  return(
+  return (
     <div style={{minHeight:"100vh",background:C.bg}}>
       <nav style={{background:C.w,borderBottom:`1px solid ${C.b}`,padding:"0 20px",display:"flex",alignItems:"center",height:56,gap:12}}>
         <button onClick={()=>go("home")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer"}}>←</button>
@@ -660,18 +558,15 @@ function Sell({publishAnnonce,loading,go,profile}){
         <span style={{fontSize:13,color:C.m}}>› Vendre un article</span>
       </nav>
 
-      {/* Stepper */}
-      <div style={{background:C.w,borderBottom:`1px solid ${C.b}`,padding:"14px 20px",overflowX:"auto"}}>
-        <div style={{display:"flex",alignItems:"center",minWidth:"max-content",margin:"0 auto"}}>
+      <div style={{background:C.w,borderBottom:`1px solid ${C.b}`,padding:"12px 20px",overflowX:"auto"}}>
+        <div style={{display:"flex",alignItems:"center",gap:0,minWidth:"max-content"}}>
           {STEPS.map((s,i)=>(
             <React.Fragment key={s}>
               <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <div style={{width:26,height:26,borderRadius:"50%",background:i<step?C.p:i===step?C.p:C.gl,color:i<=step?"#fff":C.g,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>
-                  {i<step?"✓":i+1}
-                </div>
+                <div style={{width:26,height:26,borderRadius:"50%",background:i<step?C.p:i===step?C.p:C.gl,color:i<=step?"#fff":C.g,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,flexShrink:0}}>{i<step?"✓":i+1}</div>
                 <span style={{fontSize:11,color:i===step?C.t:C.m,fontWeight:i===step?700:400,whiteSpace:"nowrap"}}>{s}</span>
               </div>
-              {i<STEPS.length-1&&<div style={{width:24,height:1,background:i<step?C.p:C.b,margin:"0 6px",flexShrink:0}}/>}
+              {i<STEPS.length-1&&<div style={{width:20,height:1,background:i<step?C.p:C.b,margin:"0 6px",flexShrink:0}}/>}
             </React.Fragment>
           ))}
         </div>
@@ -679,7 +574,6 @@ function Sell({publishAnnonce,loading,go,profile}){
 
       <div style={{maxWidth:600,margin:"28px auto",padding:"0 20px"}}>
 
-        {/* STEP 0 - Catégorie */}
         {step===0&&(
           <div>
             <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Quelle catégorie ?</h2>
@@ -687,73 +581,55 @@ function Sell({publishAnnonce,loading,go,profile}){
             <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:10}}>
               {CATS.map(c=>(
                 <button key={c} onClick={()=>set("category",c)}
-                  style={{background:f.category===c?C.pl:C.w,border:`2px solid ${f.category===c?C.p:C.b}`,borderRadius:12,padding:"16px 8px",cursor:"pointer",textAlign:"center",fontWeight:f.category===c?700:400}}>
+                  style={{background:f.category===c?C.pl:C.w,border:`2px solid ${f.category===c?C.p:C.b}`,borderRadius:12,padding:"16px 8px",cursor:"pointer",textAlign:"center"}}>
                   <div style={{fontSize:28}}>{ICONS[c]}</div>
-                  <div style={{fontSize:13,marginTop:6}}>{c}</div>
+                  <div style={{fontSize:13,marginTop:6,fontWeight:f.category===c?700:400}}>{c}</div>
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* STEP 1 - Photos */}
         {step===1&&(
           <div>
             <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Photos de l'article</h2>
-            <p style={{color:C.m,fontSize:14,marginBottom:20}}>Ajoutez jusqu'à 8 photos. La première sera la photo principale.</p>
-
-            {/* Zone upload */}
-            <div onClick={()=>!photoUploading&&fileRef.current.click()}
+            <p style={{color:C.m,fontSize:14,marginBottom:20}}>Jusqu'à 8 photos. La première sera la principale.</p>
+            <div onClick={()=>!uploading&&fileRef.current.click()}
               style={{border:`2px dashed ${C.p}`,borderRadius:14,padding:"28px",textAlign:"center",cursor:"pointer",background:C.pl,marginBottom:16}}>
               <div style={{fontSize:36,marginBottom:8}}>📸</div>
-              <div style={{fontSize:14,fontWeight:600,color:C.pd}}>
-                {photoUploading?"Upload en cours…":"Cliquez pour ajouter des photos"}
-              </div>
-              <div style={{fontSize:12,color:C.m,marginTop:4}}>JPG, PNG · Max 8 photos · 10MB par photo</div>
-              <input ref={fileRef} type="file" accept="image/*" multiple onChange={handlePhotoUpload}
-                style={{display:"none"}}/>
+              <div style={{fontSize:14,fontWeight:600,color:C.pd}}>{uploading?"Upload en cours…":"Cliquez pour ajouter des photos"}</div>
+              <div style={{fontSize:12,color:C.m,marginTop:4}}>JPG, PNG · Max 8 photos</div>
+              <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleUpload} style={{display:"none"}}/>
             </div>
-
-            {/* Aperçu photos */}
             {photos.length>0&&(
               <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
                 {photos.map((url,i)=>(
                   <div key={i} style={{position:"relative",aspectRatio:"1",borderRadius:10,overflow:"hidden",border:`2px solid ${i===0?C.p:C.b}`}}>
                     <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
                     {i===0&&<span style={{position:"absolute",bottom:4,left:4,background:C.p,color:"#fff",fontSize:9,borderRadius:4,padding:"2px 6px",fontWeight:700}}>Principale</span>}
-                    <button onClick={()=>removePhoto(i)}
-                      style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",borderRadius:"50%",width:22,height:22,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+                    <button onClick={()=>setPhotos(p=>p.filter((_,idx)=>idx!==i))}
+                      style={{position:"absolute",top:4,right:4,background:"rgba(0,0,0,0.6)",color:"#fff",border:"none",borderRadius:"50%",width:22,height:22,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
                   </div>
                 ))}
                 {photos.length<8&&(
                   <div onClick={()=>fileRef.current.click()}
-                    style={{aspectRatio:"1",borderRadius:10,border:`2px dashed ${C.b}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:24,color:C.g,background:C.gl}}>
-                    +
-                  </div>
+                    style={{aspectRatio:"1",borderRadius:10,border:`2px dashed ${C.b}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",fontSize:24,color:C.g,background:C.gl}}>+</div>
                 )}
               </div>
             )}
-
-            {photos.length===0&&(
-              <div style={{background:C.warnl,borderRadius:8,padding:"10px 14px",fontSize:13,color:C.warn}}>
-                ⚠️ Au moins 1 photo est requise pour publier votre annonce.
-              </div>
-            )}
+            {photos.length===0&&<div style={{background:C.warnl,borderRadius:8,padding:"10px 14px",fontSize:13,color:C.warn,marginTop:8}}>⚠️ Au moins 1 photo requise</div>}
           </div>
         )}
 
-        {/* STEP 2 - Détails */}
         {step===2&&(
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             <h2 style={{fontSize:20,fontWeight:800,margin:0}}>Décrivez votre article</h2>
             <div>
               <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:8}}>Marque *</label>
               <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                {(BRANDS[f.category]||["Autre"]).concat(["Autre"]).filter((v,i,a)=>a.indexOf(v)===i).map(b=>(
+                {[...(BRANDS[f.category]||[]),"Autre"].filter((v,i,a)=>a.indexOf(v)===i).map(b=>(
                   <button key={b} onClick={()=>set("brand",b)}
-                    style={{background:f.brand===b?C.p:C.w,color:f.brand===b?"#fff":C.t,border:`1px solid ${f.brand===b?C.p:C.b}`,borderRadius:20,padding:"7px 14px",fontSize:13,cursor:"pointer"}}>
-                    {b}
-                  </button>
+                    style={{background:f.brand===b?C.p:C.w,color:f.brand===b?"#fff":C.t,border:`1px solid ${f.brand===b?C.p:C.b}`,borderRadius:20,padding:"7px 14px",fontSize:13,cursor:"pointer"}}>{b}</button>
                 ))}
               </div>
             </div>
@@ -762,36 +638,31 @@ function Sell({publishAnnonce,loading,go,profile}){
               <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
                 {STATES.map(s=>(
                   <button key={s} onClick={()=>set("state",s)}
-                    style={{background:f.state===s?C.p:C.w,color:f.state===s?"#fff":C.t,border:`1px solid ${f.state===s?C.p:C.b}`,borderRadius:20,padding:"7px 14px",fontSize:13,cursor:"pointer"}}>
-                    {s}
-                  </button>
+                    style={{background:f.state===s?C.p:C.w,color:f.state===s?"#fff":C.t,border:`1px solid ${f.state===s?C.p:C.b}`,borderRadius:20,padding:"7px 14px",fontSize:13,cursor:"pointer"}}>{s}</button>
                 ))}
               </div>
             </div>
-            <Input label="Titre de l'annonce" value={f.title} onChange={e=>set("title",e.target.value)} placeholder={`Ex: ${f.brand||"Wilson"} ${f.category} — ${f.state||"Très bon état"}`} required/>
+            <Input label="Titre de l'annonce" value={f.title} onChange={e=>set("title",e.target.value)} placeholder={`Ex: ${f.brand||"Wilson"} ${f.category}`} required/>
             <div>
               <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>Description</label>
               <textarea value={f.description} onChange={e=>set("description",e.target.value)} rows={4}
-                placeholder="Décrivez l'article : modèle, année, raison de la vente, défauts éventuels…"
+                placeholder="Décrivez l'article…"
                 style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1px solid ${C.b}`,fontSize:14,resize:"vertical",boxSizing:"border-box"}}/>
             </div>
           </div>
         )}
 
-        {/* STEP 3 - Prix */}
         {step===3&&(
           <div>
             <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Fixez votre prix</h2>
-            <p style={{color:C.m,fontSize:14,marginBottom:20}}>Entrez le prix de vente de votre article.</p>
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20,marginTop:16}}>
               <input type="number" value={f.price} onChange={e=>set("price",e.target.value)} placeholder="0"
                 style={{width:140,padding:"14px 16px",borderRadius:10,border:`2px solid ${C.p}`,fontSize:24,fontWeight:800,textAlign:"center"}}/>
               <span style={{fontSize:24,fontWeight:700,color:C.m}}>€</span>
             </div>
             {f.price>0&&(
               <Card style={{background:C.pl}}>
-                <div style={{fontSize:13,color:C.m,marginBottom:10}}>Récapitulatif</div>
-                {[["Prix de vente",`${f.price} €`],["Commission SMASHD (8%)",`- ${commission} €`]].map(([k,v])=>(
+                {[["Prix de vente",`${f.price} €`],["Commission (8%)",`- ${commission} €`]].map(([k,v])=>(
                   <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6}}><span style={{color:C.m}}>{k}</span><span>{v}</span></div>
                 ))}
                 <div style={{borderTop:`1px solid ${C.b}`,paddingTop:8,display:"flex",justifyContent:"space-between",fontSize:16,fontWeight:900}}>
@@ -802,37 +673,29 @@ function Sell({publishAnnonce,loading,go,profile}){
           </div>
         )}
 
-        {/* STEP 4 - Expédition */}
         {step===4&&(
           <div>
             <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Mode d'expédition</h2>
-            <p style={{color:C.m,fontSize:14,marginBottom:20}}>L'étiquette est générée automatiquement après la vente.</p>
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:16}}>
               {SHIPPING.map(s=>(
                 <button key={s.id} onClick={()=>set("shipping",s.id)}
                   style={{background:f.shipping===s.id?C.pl:C.w,border:`2px solid ${f.shipping===s.id?C.p:C.b}`,borderRadius:12,padding:"16px 20px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",textAlign:"left"}}>
-                  <div>
-                    <div style={{fontWeight:700,fontSize:15}}>{s.label}</div>
-                    <div style={{fontSize:12,color:C.m,marginTop:2}}>Délai : {s.delay}</div>
-                  </div>
-                  <div style={{fontWeight:800,fontSize:16,color:f.shipping===s.id?C.p:C.t}}>{s.price===0?"Gratuit":`${s.price} €`}</div>
+                  <div><div style={{fontWeight:700,fontSize:15}}>{s.label}</div><div style={{fontSize:12,color:C.m,marginTop:2}}>Délai : {s.delay}</div></div>
+                  <div style={{fontWeight:800,color:f.shipping===s.id?C.p:C.t}}>{s.price===0?"Gratuit":`${s.price} €`}</div>
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* STEP 5 - Confirmation */}
         {step===5&&(
           <div>
             <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Vérifiez votre annonce</h2>
-            <p style={{color:C.m,fontSize:14,marginBottom:20}}>Tout est correct ? Publiez en un clic.</p>
             <Card>
-              {photos.length>0?(
-                <img src={photos[0]} alt="" style={{width:"100%",height:200,objectFit:"cover",borderRadius:10,marginBottom:16}}/>
-              ):(
-                <div style={{background:C.gl,borderRadius:10,height:140,display:"flex",alignItems:"center",justifyContent:"center",fontSize:64,marginBottom:16}}>{ICONS[f.category]||"📦"}</div>
-              )}
+              {photos.length>0
+                ?<img src={photos[0]} alt="" style={{width:"100%",height:200,objectFit:"cover",borderRadius:10,marginBottom:16}}/>
+                :<div style={{background:C.gl,borderRadius:10,height:140,display:"flex",alignItems:"center",justifyContent:"center",fontSize:64,marginBottom:16}}>{ICONS[f.category]||"📦"}</div>
+              }
               {photos.length>1&&(
                 <div style={{display:"flex",gap:6,marginBottom:14}}>
                   {photos.slice(1,5).map((url,i)=>(
@@ -842,26 +705,18 @@ function Sell({publishAnnonce,loading,go,profile}){
               )}
               <div style={{fontSize:12,color:C.m}}>{f.brand} · {f.category}</div>
               <div style={{fontSize:18,fontWeight:800,margin:"4px 0 8px"}}>{f.title}</div>
-              <div style={{display:"flex",gap:8,marginBottom:12}}><Badge label={f.state}/></div>
-              <div style={{fontSize:24,fontWeight:900}}>{f.price} €</div>
+              <Badge label={f.state}/>
+              <div style={{fontSize:24,fontWeight:900,marginTop:10}}>{f.price} €</div>
               <div style={{fontSize:12,color:C.m,marginTop:2}}>Vous recevrez {gain} € · Via {SHIPPING.find(s=>s.id===f.shipping)?.label}</div>
             </Card>
           </div>
         )}
 
-        {/* NAV BUTTONS */}
         <div style={{display:"flex",justifyContent:"space-between",marginTop:28,paddingBottom:40}}>
-          {step>0
-            ?<Btn onClick={()=>setStep(s=>s-1)} variant="ghost" style={{padding:"11px 24px"}}>← Retour</Btn>
-            :<div/>
-          }
+          {step>0?<Btn onClick={()=>setStep(s=>s-1)} variant="ghost" style={{padding:"11px 24px"}}>← Retour</Btn>:<div/>}
           {step<STEPS.length-1
-            ?<Btn onClick={()=>canNext()&&setStep(s=>s+1)} disabled={!canNext()||photoUploading} style={{padding:"11px 28px"}}>
-              {photoUploading?"Upload…":"Continuer →"}
-            </Btn>
-            :<Btn onClick={()=>publishAnnonce({...f,photos,photo_url:photos[0]||null})} disabled={loading} style={{padding:"11px 28px"}}>
-              {loading?"Publication…":"🚀 Publier l'annonce"}
-            </Btn>
+            ?<Btn onClick={()=>canNext()&&setStep(s=>s+1)} disabled={!canNext()||uploading} style={{padding:"11px 28px"}}>{uploading?"Upload…":"Continuer →"}</Btn>
+            :<Btn onClick={()=>publishAnnonce({...f,photo_url:photos[0]||null,photos})} disabled={loading} style={{padding:"11px 28px"}}>{loading?"Publication…":"🚀 Publier l'annonce"}</Btn>
           }
         </div>
       </div>
@@ -869,212 +724,29 @@ function Sell({publishAnnonce,loading,go,profile}){
   );
 }
 
-  const canNext=()=>{
-    if(step===0)return f.category;
-    if(step===1)return f.brand&&f.state&&f.title;
-    if(step===2)return f.price>0;
-    if(step===3)return f.shipping;
-    return true;
-  };
-
-  return(
-    <div style={{minHeight:"100vh",background:C.bg}}>
-      <nav style={{background:C.w,borderBottom:`1px solid ${C.b}`,padding:"0 20px",display:"flex",alignItems:"center",height:56,gap:12}}>
-        <button onClick={()=>go("home")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer"}}>←</button>
-        <Logo size={18}/>
-        <span style={{fontSize:13,color:C.m}}>› Vendre un article</span>
-      </nav>
-
-      {/* Stepper */}
-      <div style={{background:C.w,borderBottom:`1px solid ${C.b}`,padding:"14px 20px"}}>
-        <div style={{display:"flex",alignItems:"center",maxWidth:600,margin:"0 auto"}}>
-          {STEPS.map((s,i)=>(
-            <React.Fragment key={s}>
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <div style={{width:26,height:26,borderRadius:"50%",background:i<step?C.p:i===step?C.p:C.gl,color:i<=step?"#fff":C.g,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700}}>
-                  {i<step?"✓":i+1}
-                </div>
-                <span style={{fontSize:11,color:i===step?C.t:C.m,fontWeight:i===step?700:400,whiteSpace:"nowrap"}}>{s}</span>
-              </div>
-              {i<STEPS.length-1&&<div style={{flex:1,height:1,background:i<step?C.p:C.b,margin:"0 6px"}}/>}
-            </React.Fragment>
-          ))}
-        </div>
-      </div>
-
-      <div style={{maxWidth:600,margin:"28px auto",padding:"0 20px"}}>
-        {/* STEP 0 - Catégorie */}
-        {step===0&&(
-          <div>
-            <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Quelle catégorie ?</h2>
-            <p style={{color:C.m,fontSize:14,marginBottom:20}}>Sélectionnez le sport de votre article.</p>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:10}}>
-              {CATS.map(c=>(
-                <button key={c} onClick={()=>set("category",c)}
-                  style={{background:f.category===c?C.pl:C.w,border:`2px solid ${f.category===c?C.p:C.b}`,borderRadius:12,padding:"16px 8px",cursor:"pointer",textAlign:"center",fontWeight:f.category===c?700:400}}>
-                  <div style={{fontSize:28}}>{ICONS[c]}</div>
-                  <div style={{fontSize:13,marginTop:6}}>{c}</div>
-                </button>
-              ))}
-            </div>
-            {profile?.user_type==="pro"&&(
-              <div style={{marginTop:16,background:C.warnl,borderRadius:10,padding:"12px 16px",fontSize:13,color:C.warn}}>
-                🏪 <strong>Espace Pro</strong> — Vous pouvez également publier des invendus dans la catégorie "Invendus Pro"
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* STEP 1 - Détails */}
-        {step===1&&(
-          <div style={{display:"flex",flexDirection:"column",gap:14}}>
-            <h2 style={{fontSize:20,fontWeight:800,margin:0}}>Décrivez votre article</h2>
-            <div>
-              <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:8}}>Marque *</label>
-              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                {(BRANDS[f.category]||["Autre"]).concat(["Autre"]).filter((v,i,a)=>a.indexOf(v)===i).map(b=>(
-                  <button key={b} onClick={()=>set("brand",b)}
-                    style={{background:f.brand===b?C.p:C.w,color:f.brand===b?"#fff":C.t,border:`1px solid ${f.brand===b?C.p:C.b}`,borderRadius:20,padding:"7px 14px",fontSize:13,cursor:"pointer"}}>
-                    {b}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:8}}>État *</label>
-              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-                {STATES.map(s=>(
-                  <button key={s} onClick={()=>set("state",s)}
-                    style={{background:f.state===s?C.p:C.w,color:f.state===s?"#fff":C.t,border:`1px solid ${f.state===s?C.p:C.b}`,borderRadius:20,padding:"7px 14px",fontSize:13,cursor:"pointer"}}>
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <Input label="Titre de l'annonce" value={f.title} onChange={e=>set("title",e.target.value)} placeholder={`Ex: ${f.brand||"Wilson"} ${f.category} — ${f.state||"Très bon état"}`} required/>
-            <div>
-              <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>Description</label>
-              <textarea value={f.description} onChange={e=>set("description",e.target.value)} rows={4}
-                placeholder="Décrivez l'article : modèle, année, raison de la vente, défauts éventuels…"
-                style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1px solid ${C.b}`,fontSize:14,resize:"vertical",boxSizing:"border-box"}}/>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 2 - Prix */}
-        {step===2&&(
-          <div>
-            <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Fixez votre prix</h2>
-            <p style={{color:C.m,fontSize:14,marginBottom:20}}>Entrez le prix de vente de votre article.</p>
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
-              <input type="number" value={f.price} onChange={e=>set("price",e.target.value)} placeholder="0"
-                style={{width:140,padding:"14px 16px",borderRadius:10,border:`2px solid ${C.p}`,fontSize:24,fontWeight:800,textAlign:"center"}}/>
-              <span style={{fontSize:24,fontWeight:700,color:C.m}}>€</span>
-            </div>
-            {f.price>0&&(
-              <Card style={{background:C.pl}}>
-                <div style={{fontSize:13,color:C.m,marginBottom:10}}>Récapitulatif</div>
-                {[["Prix de vente",`${f.price} €`],["Commission SMASHD (8%)",`- ${commission} €`]].map(([k,v])=>(
-                  <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6}}><span style={{color:C.m}}>{k}</span><span>{v}</span></div>
-                ))}
-                <div style={{borderTop:`1px solid ${C.b}`,paddingTop:8,display:"flex",justifyContent:"space-between",fontSize:16,fontWeight:900}}>
-                  <span>Vous recevez</span><span style={{color:C.p}}>{gain} €</span>
-                </div>
-              </Card>
-            )}
-          </div>
-        )}
-
-        {/* STEP 3 - Expédition */}
-        {step===3&&(
-          <div>
-            <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Mode d'expédition</h2>
-            <p style={{color:C.m,fontSize:14,marginBottom:20}}>L'étiquette est générée automatiquement après la vente.</p>
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              {SHIPPING.map(s=>(
-                <button key={s.id} onClick={()=>set("shipping",s.id)}
-                  style={{background:f.shipping===s.id?C.pl:C.w,border:`2px solid ${f.shipping===s.id?C.p:C.b}`,borderRadius:12,padding:"16px 20px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",textAlign:"left"}}>
-                  <div>
-                    <div style={{fontWeight:700,fontSize:15}}>{s.label}</div>
-                    <div style={{fontSize:12,color:C.m,marginTop:2}}>Délai : {s.delay}</div>
-                  </div>
-                  <div style={{fontWeight:800,fontSize:16,color:f.shipping===s.id?C.p:C.t}}>{s.price===0?"Gratuit":`${s.price} €`}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* STEP 4 - Confirmation */}
-        {step===4&&(
-          <div>
-            <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Vérifiez votre annonce</h2>
-            <p style={{color:C.m,fontSize:14,marginBottom:20}}>Tout est correct ? Publiez en un clic.</p>
-            <Card>
-              <div style={{background:C.gl,borderRadius:10,height:120,display:"flex",alignItems:"center",justifyContent:"center",fontSize:64,marginBottom:16}}>{ICONS[f.category]||"📦"}</div>
-              <div style={{fontSize:12,color:C.m}}>{f.brand} · {f.category}</div>
-              <div style={{fontSize:18,fontWeight:800,margin:"4px 0 8px"}}>{f.title}</div>
-              <div style={{display:"flex",gap:8,marginBottom:12}}>
-                <Badge label={f.state}/>
-              </div>
-              <div style={{fontSize:24,fontWeight:900}}>{f.price} €</div>
-              <div style={{fontSize:12,color:C.m,marginTop:2}}>Vous recevrez {gain} € · Via {SHIPPING.find(s=>s.id===f.shipping)?.label}</div>
-            </Card>
-          </div>
-        )}
-
-        {/* NAV BUTTONS */}
-        <div style={{display:"flex",justifyContent:"space-between",marginTop:28,paddingBottom:40}}>
-          {step>0
-            ?<Btn onClick={()=>setStep(s=>s-1)} variant="ghost" style={{padding:"11px 24px"}}>← Retour</Btn>
-            :<div/>
-          }
-          {step<STEPS.length-1
-            ?<Btn onClick={()=>canNext()&&setStep(s=>s+1)} disabled={!canNext()} style={{padding:"11px 28px"}}>Continuer →</Btn>
-            :<Btn onClick={()=>publishAnnonce(f)} disabled={loading} style={{padding:"11px 28px"}}>
-              {loading?"Publication…":"🚀 Publier l'annonce"}
-            </Btn>
-          }
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════
-// ARTICLE
-// ═══════════════════════════════════════════════
-function Article({selected,go,user,placeOrder,loading,sendMessage}){
+// ═══════════ ARTICLE ═══════════
+function Article({selected,go,user,placeOrder,loading}) {
   const a=selected;
   const [tab,setTab]=useState("desc");
   const [shipping,setShipping]=useState("mondial");
   const [offer,setOffer]=useState("");
   const [offerSent,setOfferSent]=useState(false);
-  const [msgText,setMsgText]=useState("");
   const [checkout,setCheckout]=useState(false);
   const [ordered,setOrdered]=useState(false);
+  const [mainPhoto,setMainPhoto]=useState(0);
   if(!a)return null;
+  const photos=a.photos&&a.photos.length>0?a.photos:(a.photo_url?[a.photo_url]:[]);
   const commission=(a.price*0.08).toFixed(2);
   const shippingCost=SHIPPING.find(s=>s.id===shipping)?.price||0;
   const total=(parseFloat(a.price)+parseFloat(commission)+shippingCost).toFixed(2);
 
-  const doOrder=async()=>{
-    await placeOrder(a,shipping);
-    setOrdered(true);
-  };
+  const doOrder=async()=>{const ok=await placeOrder(a,shipping);if(ok)setOrdered(true)};
 
-  const doMsg=async()=>{
-    if(!msgText.trim())return;
-    await sendMessage(a.id,a.user_id,msgText);
-    setMsgText("");
-  };
-
-  return(
+  return (
     <div style={{minHeight:"100vh",background:C.bg}}>
       <nav style={{background:C.w,borderBottom:`1px solid ${C.b}`,padding:"0 20px",display:"flex",alignItems:"center",height:56,gap:12,position:"sticky",top:0,zIndex:100}}>
         <button onClick={()=>go("home")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer"}}>←</button>
         <Logo size={18}/>
-        <span style={{fontSize:13,color:C.m}}>› {a.category} › {a.title}</span>
       </nav>
 
       {checkout&&!ordered&&(
@@ -1082,12 +754,12 @@ function Article({selected,go,user,placeOrder,loading,sendMessage}){
           <Card style={{maxWidth:440,width:"100%"}}>
             <h3 style={{fontSize:18,fontWeight:800,marginBottom:16}}>Finaliser l'achat</h3>
             <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:16,background:C.gl,borderRadius:10,padding:"12px"}}>
-              <div style={{fontSize:32}}>{ICONS[a.category]}</div>
-              <div><div style={{fontWeight:700}}>{a.title}</div><div style={{fontSize:12,color:C.m}}>{a.state}</div></div>
-              <div style={{marginLeft:"auto",fontWeight:900}}>{a.price} €</div>
+              <div style={{fontSize:32}}>{photos.length>0?<img src={photos[0]} alt="" style={{width:48,height:48,objectFit:"cover",borderRadius:8}}/>:ICONS[a.category]}</div>
+              <div style={{flex:1}}><div style={{fontWeight:700}}>{a.title}</div><div style={{fontSize:12,color:C.m}}>{a.state}</div></div>
+              <div style={{fontWeight:900}}>{a.price} €</div>
             </div>
             <div style={{marginBottom:14}}>
-              <div style={{fontSize:13,fontWeight:600,marginBottom:8}}>Mode de livraison</div>
+              <div style={{fontSize:13,fontWeight:600,marginBottom:8}}>Livraison</div>
               {SHIPPING.map(s=>(
                 <button key={s.id} onClick={()=>setShipping(s.id)}
                   style={{width:"100%",background:shipping===s.id?C.pl:C.w,border:`1.5px solid ${shipping===s.id?C.p:C.b}`,borderRadius:10,padding:"10px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",marginBottom:6,textAlign:"left"}}>
@@ -1104,12 +776,10 @@ function Article({selected,go,user,placeOrder,loading,sendMessage}){
                 <span>Total</span><span style={{color:C.p}}>{total} €</span>
               </div>
             </div>
-            <div style={{fontSize:11,color:C.m,marginBottom:14}}>🔒 Paiement sécurisé · Fonds libérés après confirmation de réception</div>
+            <div style={{fontSize:11,color:C.m,marginBottom:14}}>🔒 Paiement sécurisé · Fonds libérés après réception</div>
             <div style={{display:"flex",gap:10}}>
               <Btn onClick={()=>setCheckout(false)} variant="ghost" style={{flex:1,padding:"12px"}}>Annuler</Btn>
-              <Btn onClick={doOrder} disabled={loading} style={{flex:2,padding:"12px",background:C.a}}>
-                {loading?"Traitement…":`Payer ${total} €`}
-              </Btn>
+              <Btn onClick={doOrder} disabled={loading} style={{flex:2,padding:"12px",background:C.a}}>{loading?"Traitement…":`Payer ${total} €`}</Btn>
             </div>
           </Card>
         </div>
@@ -1120,36 +790,39 @@ function Article({selected,go,user,placeOrder,loading,sendMessage}){
           <Card style={{maxWidth:380,width:"100%",textAlign:"center",padding:"40px 28px"}}>
             <div style={{fontSize:56,marginBottom:14}}>🎉</div>
             <h3 style={{fontSize:20,fontWeight:800,marginBottom:8}}>Commande confirmée !</h3>
-            <p style={{color:C.m,fontSize:14,marginBottom:24}}>Le vendeur a 7 jours pour expédier. Vous serez notifié dès l'envoi.</p>
+            <p style={{color:C.m,fontSize:14,marginBottom:24}}>Le vendeur a 7 jours pour expédier.</p>
             <Btn onClick={()=>go("dashboard")} style={{width:"100%",padding:"13px"}}>Voir mes commandes</Btn>
           </Card>
         </div>
       )}
 
       <div style={{maxWidth:960,margin:"24px auto",padding:"0 20px",display:"grid",gridTemplateColumns:"1fr 320px",gap:24}}>
-        {/* LEFT */}
         <div>
-          <div style={{background:C.gl,borderRadius:14,height:300,display:"flex",alignItems:"center",justifyContent:"center",fontSize:110,marginBottom:12}}>{ICONS[a.category]||"📦"}</div>
-          <div style={{display:"flex",gap:8,marginBottom:24}}>
-            {[ICONS[a.category]||"📦","📷","🖼️","📸"].map((p,i)=>(
-              <div key={i} style={{width:64,height:64,borderRadius:8,border:`2px solid ${i===0?C.p:C.b}`,background:C.gl,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,cursor:"pointer"}}>{p}</div>
-            ))}
+          <div style={{background:C.gl,borderRadius:14,height:300,display:"flex",alignItems:"center",justifyContent:"center",fontSize:100,marginBottom:10,overflow:"hidden"}}>
+            {photos.length>0?<img src={photos[mainPhoto]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span>{ICONS[a.category]||"📦"}</span>}
           </div>
+          {photos.length>1&&(
+            <div style={{display:"flex",gap:8,marginBottom:20}}>
+              {photos.map((url,i)=>(
+                <div key={i} onClick={()=>setMainPhoto(i)}
+                  style={{width:64,height:64,borderRadius:8,border:`2px solid ${mainPhoto===i?C.p:C.b}`,overflow:"hidden",cursor:"pointer",flexShrink:0}}>
+                  <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                </div>
+              ))}
+            </div>
+          )}
 
-          {/* TABS */}
           <div style={{display:"flex",borderBottom:`1px solid ${C.b}`,marginBottom:20}}>
-            {[["desc","Description"],["specs","Caractéristiques"],["msg","Contacter le vendeur"]].map(([id,l])=>(
+            {[["desc","Description"],["specs","Caractéristiques"]].map(([id,l])=>(
               <button key={id} onClick={()=>setTab(id)}
-                style={{background:"none",border:"none",borderBottom:`3px solid ${tab===id?C.p:"transparent"}`,padding:"10px 16px",fontSize:13,fontWeight:tab===id?700:400,color:tab===id?C.p:C.m,cursor:"pointer"}}>
-                {l}
-              </button>
+                style={{background:"none",border:"none",borderBottom:`3px solid ${tab===id?C.p:"transparent"}`,padding:"10px 16px",fontSize:13,fontWeight:tab===id?700:400,color:tab===id?C.p:C.m,cursor:"pointer"}}>{l}</button>
             ))}
           </div>
 
-          {tab==="desc"&&<p style={{fontSize:14,lineHeight:1.8,color:C.m}}>{a.description||"Aucune description fournie."}</p>}
+          {tab==="desc"&&<p style={{fontSize:14,lineHeight:1.8,color:C.m}}>{a.description||"Aucune description."}</p>}
           {tab==="specs"&&(
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              {[["Catégorie",a.category],["Marque",a.brand||"—"],["État",a.state],["Surface",a.surface||"—"],["Environnement",a.env||"—"],["Taille",a.size||"—"]].map(([k,v])=>(
+              {[["Catégorie",a.category],["Marque",a.brand||"—"],["État",a.state],["Livraison",SHIPPING.find(s=>s.id===a.shipping)?.label||"—"]].map(([k,v])=>(
                 <Card key={k} style={{padding:"12px 14px"}}>
                   <div style={{fontSize:11,color:C.m,marginBottom:2}}>{k}</div>
                   <div style={{fontSize:14,fontWeight:600}}>{v}</div>
@@ -1157,34 +830,19 @@ function Article({selected,go,user,placeOrder,loading,sendMessage}){
               ))}
             </div>
           )}
-          {tab==="msg"&&(
-            <div>
-              <div style={{background:C.w,border:`1px solid ${C.b}`,borderRadius:12,padding:14,marginBottom:12,minHeight:120,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <span style={{color:C.m,fontSize:13}}>Connectez-vous pour envoyer un message au vendeur</span>
-              </div>
-              <div style={{display:"flex",gap:8}}>
-                <input value={msgText} onChange={e=>setMsgText(e.target.value)} placeholder="Votre message…"
-                  style={{flex:1,padding:"10px 14px",borderRadius:24,border:`1px solid ${C.b}`,fontSize:13}}/>
-                <Btn onClick={doMsg} style={{padding:"10px 18px",fontSize:13}}>Envoyer</Btn>
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* RIGHT - STICKY */}
         <div style={{position:"sticky",top:20,alignSelf:"start"}}>
           <Card>
             <div style={{fontSize:12,color:C.m,marginBottom:4}}>{a.brand} · {a.category}</div>
             <h1 style={{fontSize:17,fontWeight:800,margin:"0 0 10px",lineHeight:1.3}}>{a.title}</h1>
-            <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:4}}>
-              <span style={{fontSize:26,fontWeight:900}}>{a.price} €</span>
-            </div>
-            <div style={{fontSize:12,color:C.m,marginBottom:6}}>+ Protection acheteur : {commission} €</div>
+            <div style={{fontSize:26,fontWeight:900,marginBottom:4}}>{a.price} €</div>
+            <div style={{fontSize:12,color:C.m,marginBottom:8}}>+ Protection acheteur : {commission} €</div>
             <Badge label={a.state}/>
 
             {offerSent&&(
               <div style={{background:C.pl,border:`1px solid ${C.p}`,borderRadius:8,padding:"10px 14px",fontSize:13,color:C.pd,margin:"14px 0"}}>
-                ✅ Offre de <strong>{offer} €</strong> envoyée. En attente du vendeur.
+                ✅ Offre de <strong>{offer} €</strong> envoyée.
               </div>
             )}
 
@@ -1193,15 +851,7 @@ function Article({selected,go,user,placeOrder,loading,sendMessage}){
               <div style={{display:"flex",gap:8}}>
                 <input type="number" value={offer} onChange={e=>setOffer(e.target.value)} placeholder="Votre offre €"
                   style={{flex:1,padding:"10px 12px",borderRadius:10,border:`1px solid ${C.b}`,fontSize:14}}/>
-                <Btn onClick={()=>{if(offer){setOfferSent(true)}}} variant="outline" style={{padding:"10px 14px",fontSize:13}}>Offrir</Btn>
-              </div>
-            </div>
-
-            <div style={{borderTop:`1px solid ${C.b}`,paddingTop:14}}>
-              <div style={{fontSize:13,fontWeight:700,marginBottom:10}}>Vendeur</div>
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
-                <div style={{width:38,height:38,borderRadius:"50%",background:C.pl,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,color:C.pd}}>V</div>
-                <div><div style={{fontWeight:600,fontSize:14}}>Vendeur SMASHD</div><div style={{fontSize:12,color:C.m}}>⭐ 5.0 · Membre depuis 2024</div></div>
+                <Btn onClick={()=>offer&&setOfferSent(true)} variant="outline" style={{padding:"10px 14px",fontSize:13}}>Offrir</Btn>
               </div>
             </div>
 
@@ -1217,10 +867,8 @@ function Article({selected,go,user,placeOrder,loading,sendMessage}){
   );
 }
 
-// ═══════════════════════════════════════════════
-// DASHBOARD
-// ═══════════════════════════════════════════════
-function Dashboard({user,profile,go,logout,myAnnonces,myOrders,mySales,wallet,dashTab,setDashTab,toggleAnnonceStatus,deleteAnnonce,vacanceMode,setVacanceMode,loadMyData,showToast}){
+// ═══════════ DASHBOARD ═══════════
+function Dashboard({user,profile,go,logout,myAnnonces,myOrders,mySales,wallet,dashTab,setDashTab,toggleAnnonceStatus,deleteAnnonce,vacanceMode,setVacanceMode,showToast}) {
   const [boostId,setBoostId]=useState(null);
   const [boosted,setBoosted]=useState([]);
   const isPro=profile?.user_type==="pro";
@@ -1238,16 +886,13 @@ function Dashboard({user,profile,go,logout,myAnnonces,myOrders,mySales,wallet,da
     {id:"settings",icon:"⚙️",label:"Paramètres"},
   ];
 
-  return(
+  return (
     <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column"}}>
-      {/* TOP NAV */}
       <nav style={{background:C.w,borderBottom:`1px solid ${C.b}`,padding:"0 20px",display:"flex",alignItems:"center",height:56,gap:12,position:"sticky",top:0,zIndex:100}}>
         <button onClick={()=>go("home")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer"}}>←</button>
         <Logo size={18}/>
-        <span style={{fontSize:12,background:C.pl,color:C.pd,borderRadius:10,padding:"3px 10px",fontWeight:700}}>
-          {isPro?"🏪 Dashboard Pro":"Dashboard"}
-        </span>
-        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
+        <span style={{fontSize:12,background:isPro?C.warnl:C.pl,color:isPro?C.warn:C.pd,borderRadius:10,padding:"3px 10px",fontWeight:700}}>{isPro?"🏪 Dashboard Pro":"Dashboard"}</span>
+        <div style={{marginLeft:"auto"}}>
           <div style={{width:34,height:34,borderRadius:"50%",background:isPro?C.warnl:C.pl,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,color:isPro?C.warn:C.pd}}>
             {profile?.name?.charAt(0)||"?"}
           </div>
@@ -1255,12 +900,11 @@ function Dashboard({user,profile,go,logout,myAnnonces,myOrders,mySales,wallet,da
       </nav>
 
       <div style={{display:"flex",flex:1}}>
-        {/* SIDEBAR */}
         <aside style={{width:210,background:C.w,borderRight:`1px solid ${C.b}`,padding:"16px 10px",flexShrink:0}}>
           <div style={{marginBottom:16,padding:"10px 12px",background:C.gl,borderRadius:10}}>
-            <div style={{fontSize:13,fontWeight:700}}>{profile?.name||"Utilisateur"}</div>
-            <div style={{fontSize:11,color:C.m,marginTop:2}}>{profile?.email||""}</div>
-            {isPro&&<Badge label="Vendeur Pro" color="orange"/>}
+            <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{profile?.name||"Utilisateur"}</div>
+            <div style={{fontSize:11,color:C.m,marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{profile?.email||""}</div>
+            {isPro&&<div style={{marginTop:6}}><Badge label="Vendeur Pro" color="orange"/></div>}
           </div>
           {TABS.map(t=>(
             <button key={t.id} onClick={()=>setDashTab(t.id)}
@@ -1275,25 +919,25 @@ function Dashboard({user,profile,go,logout,myAnnonces,myOrders,mySales,wallet,da
           </div>
         </aside>
 
-        {/* MAIN */}
         <main style={{flex:1,padding:"24px",overflowY:"auto"}}>
 
-          {/* OVERVIEW */}
           {dashTab==="overview"&&(
             <div>
               <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Bonjour, {profile?.name?.split(" ")[0]||"là"} 👋</h2>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12,marginBottom:24}}>
-                <StatCard icon="💰" label="Revenus totaux" value={`${totalRevenu.toFixed(2)} €`} color={C.p}/>
+                <StatCard icon="💰" label="Revenus" value={`${totalRevenu.toFixed(2)} €`} color={C.p}/>
                 <StatCard icon="📦" label="Annonces actives" value={activeAnn}/>
-                <StatCard icon="🛒" label="Ventes réalisées" value={mySales.length}/>
-                <StatCard icon="📬" label="Achats effectués" value={myOrders.length}/>
+                <StatCard icon="🛒" label="Ventes" value={mySales.length}/>
+                <StatCard icon="📬" label="Achats" value={myOrders.length}/>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
                 <Card>
                   <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>Activité récente</div>
-                  {myAnnonces.slice(0,3).map(a=>(
+                  {myAnnonces.slice(0,4).map(a=>(
                     <div key={a.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:`1px solid ${C.b}`}}>
-                      <span style={{fontSize:20}}>{ICONS[a.category]||"📦"}</span>
+                      <div style={{width:36,height:36,borderRadius:8,overflow:"hidden",background:C.gl,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18}}>
+                        {a.photo_url?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:ICONS[a.category]||"📦"}
+                      </div>
                       <div style={{flex:1,minWidth:0}}>
                         <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
                         <div style={{fontSize:11,color:C.m}}>{a.price} €</div>
@@ -1301,7 +945,7 @@ function Dashboard({user,profile,go,logout,myAnnonces,myOrders,mySales,wallet,da
                       <Badge label={a.status==="active"?"En ligne":a.status==="pause"?"En pause":"Vendu"} color={a.status==="active"?"green":a.status==="pause"?"orange":"gray"}/>
                     </div>
                   ))}
-                  {myAnnonces.length===0&&<div style={{fontSize:13,color:C.m,textAlign:"center",padding:"20px 0"}}>Aucune annonce pour l'instant</div>}
+                  {myAnnonces.length===0&&<div style={{fontSize:13,color:C.m,textAlign:"center",padding:"20px 0"}}>Aucune annonce</div>}
                 </Card>
                 <Card>
                   <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>E-Wallet</div>
@@ -1313,51 +957,42 @@ function Dashboard({user,profile,go,logout,myAnnonces,myOrders,mySales,wallet,da
             </div>
           )}
 
-          {/* ANNONCES */}
           {dashTab==="annonces"&&(
             <div>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
                 <h2 style={{fontSize:20,fontWeight:800,margin:0}}>Mes annonces</h2>
-                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <div style={{display:"flex",gap:10,alignItems:"center"}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:C.m}}>
-                    🌴 Mode vacances
-                    <button onClick={()=>setVacanceMode(v=>!v)} style={{width:44,height:24,borderRadius:12,background:vacanceMode?C.p:C.gl,border:"none",cursor:"pointer",position:"relative",transition:"background .2s"}}>
+                    🌴
+                    <button onClick={()=>setVacanceMode(v=>!v)} style={{width:44,height:24,borderRadius:12,background:vacanceMode?C.p:C.gl,border:"none",cursor:"pointer",position:"relative"}}>
                       <div style={{width:18,height:18,borderRadius:"50%",background:C.w,position:"absolute",top:3,left:vacanceMode?23:3,transition:"left .2s"}}/>
                     </button>
+                    Mode vacances
                   </div>
                   <Btn onClick={()=>go("sell")} style={{padding:"8px 16px",fontSize:13}}>+ Nouvelle</Btn>
                 </div>
               </div>
-              {vacanceMode&&<div style={{background:C.warnl,border:`1px solid ${C.warn}`,borderRadius:10,padding:"10px 14px",fontSize:13,color:C.warn,marginBottom:16}}>🌴 Mode vacances actif — Vos annonces sont masquées aux acheteurs</div>}
+              {vacanceMode&&<div style={{background:C.warnl,border:`1px solid ${C.warn}`,borderRadius:10,padding:"10px 14px",fontSize:13,color:C.warn,marginBottom:16}}>🌴 Mode vacances actif</div>}
               <div style={{display:"flex",flexDirection:"column",gap:10}}>
                 {myAnnonces.map(a=>(
                   <Card key={a.id} style={{display:"flex",alignItems:"center",gap:14}}>
-                    <div style={{fontSize:32,background:C.gl,borderRadius:8,width:52,height:52,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{ICONS[a.category]||"📦"}</div>
+                    <div style={{width:52,height:52,borderRadius:8,overflow:"hidden",background:C.gl,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24}}>
+                      {a.photo_url?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:ICONS[a.category]||"📦"}
+                    </div>
                     <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:14,fontWeight:700,marginBottom:2}}>{a.title}</div>
-                      <div style={{fontSize:12,color:C.m}}>{a.category} · {a.state} · {a.price} €</div>
-                      <div style={{fontSize:11,color:C.m,marginTop:3}}>👁️ {a.views||0} vues · ❤️ {a.favs||0} favoris</div>
+                      <div style={{fontSize:14,fontWeight:700,marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
+                      <div style={{fontSize:12,color:C.m}}>{a.category} · {a.price} €</div>
                     </div>
                     <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
                       <Badge label={a.status==="active"?"En ligne":a.status==="pause"?"En pause":a.status==="vendu"?"Vendu":"Supprimé"} color={a.status==="active"?"green":a.status==="pause"?"orange":a.status==="vendu"?"blue":"gray"}/>
                       {a.status!=="vendu"&&a.status!=="supprimé"&&(
                         <div style={{display:"flex",gap:6}}>
-                          <button onClick={()=>toggleAnnonceStatus(a.id,a.status==="pause"?"active":"pause")}
-                            style={{fontSize:11,background:C.gl,border:"none",borderRadius:6,padding:"4px 8px",cursor:"pointer",color:C.m,fontWeight:600}}>
-                            {a.status==="pause"?"Activer":"Pause"}
-                          </button>
-                          {!boosted.includes(a.id)?(
-                            <button onClick={()=>setBoostId(a.id)}
-                              style={{fontSize:11,background:C.warnl,border:"none",borderRadius:6,padding:"4px 8px",cursor:"pointer",color:C.warn,fontWeight:600}}>
-                              🚀 Booster
-                            </button>
-                          ):(
-                            <Badge label="✅ Boosté" color="green"/>
-                          )}
-                          <button onClick={()=>deleteAnnonce(a.id)}
-                            style={{fontSize:11,background:C.errl,border:"none",borderRadius:6,padding:"4px 8px",cursor:"pointer",color:C.err,fontWeight:600}}>
-                            🗑️
-                          </button>
+                          <button onClick={()=>toggleAnnonceStatus(a.id,a.status==="pause"?"active":"pause")} style={{fontSize:11,background:C.gl,border:"none",borderRadius:6,padding:"4px 8px",cursor:"pointer",color:C.m,fontWeight:600}}>{a.status==="pause"?"Activer":"Pause"}</button>
+                          {!boosted.includes(a.id)
+                            ?<button onClick={()=>setBoostId(a.id)} style={{fontSize:11,background:C.warnl,border:"none",borderRadius:6,padding:"4px 8px",cursor:"pointer",color:C.warn,fontWeight:600}}>🚀 Booster</button>
+                            :<Badge label="✅ Boosté" color="green"/>
+                          }
+                          <button onClick={()=>deleteAnnonce(a.id)} style={{fontSize:11,background:C.errl,border:"none",borderRadius:6,padding:"4px 8px",cursor:"pointer",color:C.err,fontWeight:600}}>🗑️</button>
                         </div>
                       )}
                     </div>
@@ -1365,13 +1000,12 @@ function Dashboard({user,profile,go,logout,myAnnonces,myOrders,mySales,wallet,da
                 ))}
                 {myAnnonces.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.m}}>Aucune annonce. <span style={{color:C.p,cursor:"pointer",fontWeight:600}} onClick={()=>go("sell")}>Publiez votre premier article →</span></div>}
               </div>
-
               {boostId&&(
                 <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200}}>
                   <Card style={{maxWidth:360,width:"90%",textAlign:"center"}}>
                     <div style={{fontSize:40,marginBottom:10}}>🚀</div>
                     <h3 style={{fontSize:17,fontWeight:800,marginBottom:8}}>Booster cette annonce</h3>
-                    <p style={{fontSize:13,color:C.m,marginBottom:20}}>Mise en avant 7 jours pour <strong>3,50 €</strong>. Multipliez vos vues par 5 !</p>
+                    <p style={{fontSize:13,color:C.m,marginBottom:20}}>Mise en avant 7 jours pour <strong>3,50 €</strong>.</p>
                     <div style={{display:"flex",gap:10}}>
                       <Btn onClick={()=>setBoostId(null)} variant="ghost" style={{flex:1,padding:"11px"}}>Annuler</Btn>
                       <Btn onClick={()=>{setBoosted(b=>[...b,boostId]);setBoostId(null);showToast("Annonce boostée 🚀")}} style={{flex:2,padding:"11px",background:C.a}}>Payer 3,50 €</Btn>
@@ -1382,60 +1016,51 @@ function Dashboard({user,profile,go,logout,myAnnonces,myOrders,mySales,wallet,da
             </div>
           )}
 
-          {/* VENTES */}
           {dashTab==="ventes"&&(
             <div>
               <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Mes ventes</h2>
-              {mySales.length===0?(
-                <div style={{textAlign:"center",padding:"40px 0",color:C.m}}>Aucune vente pour l'instant.</div>
-              ):(
-                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {mySales.length===0
+                ?<div style={{textAlign:"center",padding:"40px 0",color:C.m}}>Aucune vente pour l'instant.</div>
+                :<div style={{display:"flex",flexDirection:"column",gap:10}}>
                   {mySales.map(v=>(
                     <Card key={v.id}>
                       <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
                         <div><div style={{fontSize:14,fontWeight:700}}>Commande #{v.id?.slice(0,8)}</div><div style={{fontSize:12,color:C.m}}>{new Date(v.created_at).toLocaleDateString("fr-FR")}</div></div>
-                        <Badge label={v.status} color={v.status==="livré"?"green":v.status==="expédié"?"blue":v.status==="en attente"?"orange":"gray"}/>
+                        <Badge label={v.status} color={v.status==="livré"?"green":v.status==="expédié"?"blue":"orange"}/>
                       </div>
                       <div style={{display:"flex",gap:16,fontSize:13}}>
                         <span><span style={{color:C.m}}>Prix : </span><strong>{v.price} €</strong></span>
                         <span><span style={{color:C.m}}>Commission : </span><span style={{color:C.a}}>- {v.commission} €</span></span>
-                        <span><span style={{color:C.m}}>Gain net : </span><strong style={{color:C.p}}>{v.gain} €</strong></span>
+                        <span><span style={{color:C.m}}>Net : </span><strong style={{color:C.p}}>{v.gain} €</strong></span>
                       </div>
-                      {v.status==="en attente"&&(
-                        <div style={{marginTop:10}}>
-                          <Btn style={{padding:"8px 16px",fontSize:12}}>📦 Imprimer l'étiquette</Btn>
-                        </div>
-                      )}
+                      {v.status==="en attente"&&<div style={{marginTop:10}}><Btn style={{padding:"8px 16px",fontSize:12}}>📦 Imprimer l'étiquette</Btn></div>}
                     </Card>
                   ))}
                 </div>
-              )}
+              }
             </div>
           )}
 
-          {/* ACHATS */}
           {dashTab==="achats"&&(
             <div>
               <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Mes achats</h2>
-              {myOrders.length===0?(
-                <div style={{textAlign:"center",padding:"40px 0",color:C.m}}>Aucun achat pour l'instant. <span style={{color:C.p,cursor:"pointer",fontWeight:600}} onClick={()=>go("home")}>Explorer le catalogue →</span></div>
-              ):(
-                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {myOrders.length===0
+                ?<div style={{textAlign:"center",padding:"40px 0",color:C.m}}>Aucun achat. <span style={{color:C.p,cursor:"pointer",fontWeight:600}} onClick={()=>go("home")}>Explorer le catalogue →</span></div>
+                :<div style={{display:"flex",flexDirection:"column",gap:10}}>
                   {myOrders.map(o=>(
                     <Card key={o.id}>
                       <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
                         <div><div style={{fontSize:14,fontWeight:700}}>Commande #{o.id?.slice(0,8)}</div><div style={{fontSize:12,color:C.m}}>{new Date(o.created_at).toLocaleDateString("fr-FR")}</div></div>
-                        <Badge label={o.status} color={o.status==="livré"?"green":o.status==="expédié"?"blue":o.status==="en attente"?"orange":"gray"}/>
+                        <Badge label={o.status} color={o.status==="livré"?"green":o.status==="expédié"?"blue":"orange"}/>
                       </div>
                       <div style={{fontSize:14,fontWeight:700}}>{o.price} € · {o.shipping_method}</div>
                     </Card>
                   ))}
                 </div>
-              )}
+              }
             </div>
           )}
 
-          {/* WALLET */}
           {dashTab==="wallet"&&(
             <div>
               <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Mon E-Wallet</h2>
@@ -1445,50 +1070,49 @@ function Dashboard({user,profile,go,logout,myAnnonces,myOrders,mySales,wallet,da
                 <Btn style={{background:"#fff",color:C.p,padding:"11px 28px"}}>🏦 Retirer les fonds</Btn>
               </div>
               <Card>
-                <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>Historique des transactions</div>
-                {mySales.length===0?(
-                  <div style={{textAlign:"center",padding:"20px 0",color:C.m,fontSize:13}}>Aucune transaction pour l'instant.</div>
-                ):(
-                  mySales.map((s,i)=>(
+                <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>Transactions</div>
+                {mySales.length===0
+                  ?<div style={{textAlign:"center",padding:"20px 0",color:C.m,fontSize:13}}>Aucune transaction.</div>
+                  :mySales.map((s,i)=>(
                     <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:i<mySales.length-1?`1px solid ${C.b}`:"none"}}>
                       <div><div style={{fontSize:13,fontWeight:600}}>Vente #{s.id?.slice(0,8)}</div><div style={{fontSize:11,color:C.m}}>{new Date(s.created_at).toLocaleDateString("fr-FR")}</div></div>
                       <div style={{fontSize:15,fontWeight:800,color:C.p}}>+{s.gain} €</div>
                     </div>
                   ))
-                )}
+                }
               </Card>
             </div>
           )}
 
-          {/* STATS */}
           {dashTab==="stats"&&(
             <div>
               <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Statistiques</h2>
               <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12,marginBottom:24}}>
                 <StatCard icon="👁️" label="Vues totales" value={myAnnonces.reduce((a,x)=>a+(x.views||0),0)}/>
-                <StatCard icon="❤️" label="Favoris" value={myAnnonces.reduce((a,x)=>a+(x.favs||0),0)} color={C.a}/>
                 <StatCard icon="🛒" label="Ventes" value={mySales.length} color={C.p}/>
                 <StatCard icon="💰" label="Revenus" value={`${totalRevenu.toFixed(0)} €`} color={C.p}/>
+                <StatCard icon="📦" label="Annonces" value={myAnnonces.length}/>
               </div>
               <Card>
                 <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>Performance par annonce</div>
-                {myAnnonces.map(a=>(
-                  <div key={a.id} style={{marginBottom:14}}>
-                    <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}>
-                      <span style={{fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"60%"}}>{a.title}</span>
-                      <span style={{color:C.m}}>{a.views||0} vues</span>
+                {myAnnonces.length===0
+                  ?<div style={{textAlign:"center",padding:"20px 0",color:C.m,fontSize:13}}>Pas encore de données.</div>
+                  :myAnnonces.map(a=>(
+                    <div key={a.id} style={{marginBottom:14}}>
+                      <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}>
+                        <span style={{fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"60%"}}>{a.title}</span>
+                        <span style={{color:C.m}}>{a.views||0} vues</span>
+                      </div>
+                      <div style={{background:C.gl,borderRadius:4,height:8,overflow:"hidden"}}>
+                        <div style={{background:C.p,height:"100%",borderRadius:4,width:`${Math.min((a.views||0)/Math.max(...myAnnonces.map(x=>x.views||1))*100,100)}%`}}/>
+                      </div>
                     </div>
-                    <div style={{background:C.gl,borderRadius:4,height:8,overflow:"hidden"}}>
-                      <div style={{background:C.p,height:"100%",borderRadius:4,width:`${Math.min((a.views||0)/Math.max(...myAnnonces.map(x=>x.views||1))*100,100)}%`}}/>
-                    </div>
-                  </div>
-                ))}
-                {myAnnonces.length===0&&<div style={{textAlign:"center",padding:"20px 0",color:C.m,fontSize:13}}>Pas encore de données.</div>}
+                  ))
+                }
               </Card>
             </div>
           )}
 
-          {/* PRO */}
           {dashTab==="pro"&&isPro&&(
             <div>
               <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Espace Vendeur Pro 🏪</h2>
@@ -1497,51 +1121,38 @@ function Dashboard({user,profile,go,logout,myAnnonces,myOrders,mySales,wallet,da
                 <Card style={{background:C.warnl,border:`1px solid ${C.warn}`}}>
                   <div style={{fontSize:22,marginBottom:8}}>🏅</div>
                   <div style={{fontSize:16,fontWeight:800,color:C.warn}}>Abonnement Pro</div>
-                  <div style={{fontSize:13,color:C.warn,marginTop:4}}>Actif · Renouvellement le 01/01/2027</div>
+                  <div style={{fontSize:13,color:C.warn,marginTop:4}}>Actif · 99€/an</div>
                 </Card>
                 <Card>
                   <div style={{fontSize:22,marginBottom:8}}>📢</div>
-                  <div style={{fontSize:16,fontWeight:800}}>Espace publicitaire</div>
-                  <div style={{fontSize:13,color:C.m,marginTop:4}}>Gérez vos bannières promotionnelles</div>
+                  <div style={{fontSize:16,fontWeight:800}}>Publicité</div>
+                  <div style={{fontSize:13,color:C.m,marginTop:4}}>Gérez vos bannières</div>
                 </Card>
               </div>
               <Card>
                 <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>Mes invendus</div>
                 <Btn onClick={()=>go("sell")} style={{padding:"10px 20px",fontSize:13}}>+ Ajouter un invendu</Btn>
-                <div style={{textAlign:"center",padding:"20px 0",color:C.m,fontSize:13,marginTop:10}}>Aucun invendu publié pour l'instant.</div>
               </Card>
             </div>
           )}
 
-          {/* SETTINGS */}
           {dashTab==="settings"&&(
             <div>
               <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Paramètres</h2>
-              <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                {[
-                  ["👤","Informations personnelles","Nom, email, téléphone"],
-                  ["🔒","Sécurité","Mot de passe, double authentification"],
-                  ["💳","Moyens de paiement","Carte bancaire, IBAN"],
-                  ["🔔","Notifications","Email, push, SMS"],
-                  ["🌍","Langue","Français / English"],
-                  ["🍪","Cookies & confidentialité","Gérer vos préférences"],
-                  ["🗑️","Supprimer mon compte","Action irréversible"],
-                ].map(([icon,title,sub])=>(
-                  <Card key={title} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",padding:"14px 18px"}}>
-                    <div style={{display:"flex",gap:12,alignItems:"center"}}>
-                      <span style={{fontSize:20}}>{icon}</span>
-                      <div>
-                        <div style={{fontSize:14,fontWeight:600,color:title.includes("Supprimer")?C.err:C.t}}>{title}</div>
-                        <div style={{fontSize:12,color:C.m}}>{sub}</div>
-                      </div>
+              {[["👤","Informations personnelles","Nom, email, téléphone"],["🔒","Sécurité","Mot de passe"],["💳","Moyens de paiement","Carte, IBAN"],["🔔","Notifications","Email, push"],["🌍","Langue","Français / English"],["🗑️","Supprimer mon compte","Action irréversible"]].map(([icon,title,sub])=>(
+                <Card key={title} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",padding:"14px 18px",marginBottom:10}}>
+                  <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                    <span style={{fontSize:20}}>{icon}</span>
+                    <div>
+                      <div style={{fontSize:14,fontWeight:600,color:title.includes("Supprimer")?C.err:C.t}}>{title}</div>
+                      <div style={{fontSize:12,color:C.m}}>{sub}</div>
                     </div>
-                    <span style={{color:C.m,fontSize:18}}>›</span>
-                  </Card>
-                ))}
-              </div>
+                  </div>
+                  <span style={{color:C.m,fontSize:18}}>›</span>
+                </Card>
+              ))}
             </div>
           )}
-
         </main>
       </div>
     </div>
