@@ -81,18 +81,11 @@ const STATES = ["Neuf avec étiquette","Neuf sans étiquette","Très bon état",
 const SHIPPING = [{id:"mondial",label:"Mondial Relay",price:3.99,delay:"3-5j"},{id:"colissimo",label:"Colissimo",price:5.49,delay:"2-3j"},{id:"chrono",label:"Chronopost",price:7.99,delay:"24h"},{id:"main",label:"Remise en main propre",price:0,delay:"À convenir"}];
 
 // API helpers
-const getToken = () => {
-  try {
-    const raw = localStorage.getItem("smashd_token");
-    return raw || SB_KEY;
-  } catch { return SB_KEY; }
-};
-const setToken = (token) => {
-  try { localStorage.setItem("smashd_token", token); } catch {}
-};
-const clearToken = () => {
-  try { localStorage.removeItem("smashd_token"); } catch {}
-};
+// Token stocké en mémoire (évite le blocage localStorage)
+let _token = SB_KEY;
+const getToken = () => _token;
+const setToken = (token) => { _token = token || SB_KEY; };
+const clearToken = () => { _token = SB_KEY; };
 
 const sbApi = async (path, opts={}) => {
   const token = getToken();
