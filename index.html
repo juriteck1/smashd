@@ -1,358 +1,1216 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SMASHD — Marketplace sports de raquette</title>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; background: #f8faf9; color: #2C2C2A; }
-    input, textarea, select, button { font-family: inherit; }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:system-ui,sans-serif;background:#f8faf9;color:#2C2C2A}
+    input,textarea,select,button{font-family:inherit}
+    ::-webkit-scrollbar{width:6px}
+    ::-webkit-scrollbar-track{background:#f1f1f1}
+    ::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px}
   </style>
 </head>
 <body>
-  <div id="root"></div>
-  <script type="text/babel">
-    const SUPABASE_URL = "https://gcnmgtwbouakwaufqswh.supabase.co";
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjbm1ndHdib3Vha3dhdWZxc3doIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTk4NDQsImV4cCI6MjA5MzgzNTg0NH0.qtHQ4si2Ybsriiaaj9F-1Z6WeN52sZ1ry7T7VpcIMpM";
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
 
-    const C = {
-      primary: "#1D9E75", primaryDark: "#0F6E56", primaryLight: "#E1F5EE",
-      accent: "#D85A30", bg: "#f8faf9", white: "#fff", gray: "#888780",
-      grayLight: "#F1EFE8", text: "#2C2C2A", muted: "#5F5E5A", border: "#e0ede8",
-      error: "#E24B4A", errorLight: "#FCEBEB",
-    };
+const SB_URL = "https://gcnmgtwbouakwaufqswh.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjbm1ndHdib3Vha3dhdWZxc3doIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTk4NDQsImV4cCI6MjA5MzgzNTg0NH0.qtHQ4si2Ybsriiaaj9F-1Z6WeN52sZ1ry7T7VpcIMpM";
 
-    const api = async (path, options = {}) => {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-        headers: {
-          "apikey": SUPABASE_KEY,
-          "Authorization": `Bearer ${SUPABASE_KEY}`,
-          "Content-Type": "application/json",
-          "Prefer": options.prefer || "return=representation",
-          ...options.headers,
-        },
-        ...options,
-      });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.message || "Erreur"); }
-      const t = await res.text();
-      return t ? JSON.parse(t) : [];
-    };
+const C = {
+  p:"#1D9E75",pd:"#0F6E56",pl:"#E1F5EE",
+  a:"#D85A30",al:"#FAECE7",
+  bg:"#f8faf9",w:"#fff",
+  g:"#888780",gl:"#F1EFE8",
+  t:"#2C2C2A",m:"#5F5E5A",b:"#e0ede8",
+  err:"#E24B4A",errl:"#FCEBEB",
+  warn:"#BA7517",warnl:"#FAEEDA",
+  info:"#185FA5",infol:"#E6F1FB",
+};
 
-    const authApi = async (endpoint, body) => {
-      const res = await fetch(`${SUPABASE_URL}/auth/v1/${endpoint}`, {
-        method: "POST",
-        headers: { "apikey": SUPABASE_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (data.error || data.error_description) throw new Error(data.error_description || data.error);
-      return data;
-    };
+const CATS = ["Tennis","Padel","Badminton","Squash","Ping-Pong","Pickleball","Raquetball","Pelote basque"];
+const ICONS = {Tennis:"🎾",Padel:"🟩",Badminton:"🏸",Squash:"🎯","Ping-Pong":"🏓",Pickleball:"🏅",Raquetball:"🔵","Pelote basque":"⚪"};
+const BRANDS = {Tennis:["Wilson","Babolat","Head","Yonex","Prince","Dunlop","Tecnifibre"],Padel:["Head","Bullpadel","Nox","Adidas","Wilson","Babolat"],Badminton:["Yonex","Victor","Li-Ning","Carlton","Forza"],Squash:["Dunlop","Head","Wilson","Tecnifibre","Prince"],"Ping-Pong":["Butterfly","Donic","Tibhar","Stiga","Joola"],Pickleball:["Selkirk","Engage","Paddletek","Head"],Raquetball:["Head","Wilson","Ektelon"],"Pelote basque":["Autre"]};
+const STATES = ["Neuf avec étiquette","Neuf sans étiquette","Très bon état","Bon état","Acceptable"];
+const SHIPPING = [{id:"mondial",label:"Mondial Relay",price:3.99,delay:"3-5j"},{id:"colissimo",label:"Colissimo",price:5.49,delay:"2-3j"},{id:"chrono",label:"Chronopost",price:7.99,delay:"24h"},{id:"main",label:"Remise en main propre",price:0,delay:"À convenir"}];
 
-    const categories = ["Tennis", "Padel", "Badminton", "Squash", "Ping-Pong", "Pickleball"];
-    const catIcons = { Tennis: "🎾", Padel: "🟩", Badminton: "🏸", Squash: "🎯", "Ping-Pong": "🏓", Pickleball: "🏅" };
-    const states = ["Neuf avec étiquette", "Neuf sans étiquette", "Très bon état", "Bon état", "Acceptable"];
+// API helpers
+const sbApi = async (path, opts={}) => {
+  const res = await fetch(`${SB_URL}/rest/v1/${path}`,{
+    headers:{"apikey":SB_KEY,"Authorization":`Bearer ${SB_KEY}`,"Content-Type":"application/json","Prefer":opts.prefer||"return=representation",...(opts.headers||{})},
+    ...opts
+  });
+  if(!res.ok){const e=await res.json();throw new Error(e.message||"Erreur API")}
+  const tx=await res.text();return tx?JSON.parse(tx):[];
+};
+const sbAuth = async (ep,body) => {
+  const res=await fetch(`${SB_URL}/auth/v1/${ep}`,{method:"POST",headers:{"apikey":SB_KEY,"Content-Type":"application/json"},body:JSON.stringify(body)});
+  const d=await res.json();
+  if(d.error||d.error_description)throw new Error(d.error_description||d.error);
+  return d;
+};
 
-    const Logo = ({ size = 20 }) => (
-      <span style={{ fontWeight: 900, fontSize: size, letterSpacing: "-0.5px" }}>
-        SMASH<span style={{ color: C.accent }}>D</span>
-      </span>
-    );
+// UI Components
+const Logo=({size=20})=><span style={{fontWeight:900,fontSize:size,letterSpacing:"-0.5px"}}>SMASH<span style={{color:C.a}}>D</span></span>;
 
-    const Toast = ({ msg, type }) => (
-      <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: type === "error" ? C.error : C.primary, color: "#fff", borderRadius: 24, padding: "12px 24px", fontSize: 14, fontWeight: 600, zIndex: 999 }}>
-        {type === "error" ? "❌" : "✅"} {msg}
-      </div>
-    );
+const Toast=({msg,type})=>(
+  <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:type==="error"?C.err:C.p,color:"#fff",borderRadius:24,padding:"12px 24px",fontSize:14,fontWeight:600,zIndex:9999,whiteSpace:"nowrap"}}>
+    {type==="error"?"❌":"✅"} {msg}
+  </div>
+);
 
-    const { useState, useEffect } = React;
+const Badge=({label,color="green"})=>{
+  const map={green:[C.pl,C.pd],orange:[C.warnl,C.warn],gray:[C.gl,C.m],blue:[C.infol,C.info],red:[C.errl,C.err]};
+  const [bg,tx]=map[color]||map.green;
+  return <span style={{background:bg,color:tx,fontSize:11,fontWeight:700,borderRadius:6,padding:"3px 9px",whiteSpace:"nowrap"}}>{label}</span>;
+};
 
-    function App() {
-      const [screen, setScreen] = useState("home");
-      const [user, setUser] = useState(null);
-      const [profile, setProfile] = useState(null);
-      const [annonces, setAnnonces] = useState([]);
-      const [loading, setLoading] = useState(false);
-      const [toast, setToast] = useState(null);
-      const [searchQ, setSearchQ] = useState("");
-      const [filterCat, setFilterCat] = useState("Tous");
-      const [selectedArticle, setSelectedArticle] = useState(null);
-      const [authMode, setAuthMode] = useState("login");
-      const [authEmail, setAuthEmail] = useState("");
-      const [authPwd, setAuthPwd] = useState("");
-      const [authName, setAuthName] = useState("");
-      const [authError, setAuthError] = useState("");
-      const [sellForm, setSellForm] = useState({ title: "", description: "", category: "", brand: "", state: "", price: "" });
+const Btn=({onClick,children,style={},disabled=false,variant="primary"})=>{
+  const variants={
+    primary:{background:disabled?"#9FE1CB":C.p,color:"#fff",border:"none"},
+    outline:{background:C.w,color:C.p,border:`2px solid ${C.p}`},
+    ghost:{background:C.gl,color:C.t,border:"none"},
+    danger:{background:C.errl,color:C.err,border:`1px solid ${C.err}`},
+  };
+  return <button onClick={onClick} disabled={disabled} style={{borderRadius:24,padding:"10px 20px",fontSize:14,fontWeight:700,cursor:disabled?"not-allowed":"pointer",...variants[variant],...style}}>{children}</button>;
+};
 
-      const showToast = (msg, type = "success") => {
-        setToast({ msg, type });
-        setTimeout(() => setToast(null), 3000);
-      };
+const Input=({label,type="text",value,onChange,placeholder,error,required})=>(
+  <div style={{marginBottom:14}}>
+    {label&&<label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>{label}{required&&<span style={{color:C.err}}> *</span>}</label>}
+    <input type={type} value={value} onChange={onChange} placeholder={placeholder}
+      style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${error?C.err:C.b}`,fontSize:14,outline:"none",boxSizing:"border-box"}}/>
+    {error&&<div style={{fontSize:12,color:C.err,marginTop:4}}>{error}</div>}
+  </div>
+);
 
-      const loadAnnonces = async () => {
-        try {
-          const data = await api("annonces?status=eq.active&order=created_at.desc&limit=20");
-          setAnnonces(data);
-        } catch (e) { console.error(e); }
-      };
+const Card=({children,style={}})=>(
+  <div style={{background:C.w,border:`1px solid ${C.b}`,borderRadius:14,padding:"20px",...style}}>{children}</div>
+);
 
-      useEffect(() => { loadAnnonces(); }, []);
+const StatCard=({icon,label,value,color})=>(
+  <Card style={{textAlign:"center"}}>
+    <div style={{fontSize:24,marginBottom:6}}>{icon}</div>
+    <div style={{fontSize:22,fontWeight:900,color:color||C.t}}>{value}</div>
+    <div style={{fontSize:12,color:C.m,marginTop:2}}>{label}</div>
+  </Card>
+);
 
-      const login = async () => {
-        setAuthError("");
-        if (!authEmail || !authPwd) { setAuthError("Remplissez tous les champs"); return; }
-        setLoading(true);
-        try {
-          const data = await authApi("token?grant_type=password", { email: authEmail, password: authPwd });
-          setUser(data.user);
-          const profiles = await api(`profiles?id=eq.${data.user.id}`);
-          setProfile(profiles[0] || null);
-          showToast("Connecté avec succès !");
-          setScreen("home");
-        } catch (e) { setAuthError("Email ou mot de passe incorrect"); }
-        finally { setLoading(false); }
-      };
+// ═══════════════════════════════════════════════
+// MAIN APP
+// ═══════════════════════════════════════════════
+function App() {
+  const [screen,setScreen]=useState("home");
+  const [user,setUser]=useState(null);
+  const [profile,setProfile]=useState(null);
+  const [annonces,setAnnonces]=useState([]);
+  const [myAnnonces,setMyAnnonces]=useState([]);
+  const [myOrders,setMyOrders]=useState([]);
+  const [mySales,setMySales]=useState([]);
+  const [messages,setMessages]=useState([]);
+  const [toast,setToast]=useState(null);
+  const [loading,setLoading]=useState(false);
+  const [search,setSearch]=useState("");
+  const [filterCat,setFilterCat]=useState("Tous");
+  const [filterState,setFilterState]=useState("Tous");
+  const [filterPrice,setFilterPrice]=useState({min:"",max:""});
+  const [selected,setSelected]=useState(null);
+  const [dashTab,setDashTab]=useState("overview");
+  const [vacanceMode,setVacanceMode]=useState(false);
 
-      const register = async () => {
-        setAuthError("");
-        if (!authEmail || !authPwd || !authName) { setAuthError("Remplissez tous les champs"); return; }
-        if (authPwd.length < 6) { setAuthError("Mot de passe : 6 caractères minimum"); return; }
-        setLoading(true);
-        try {
-          const data = await authApi("signup", { email: authEmail, password: authPwd });
-          if (data.user) {
-            await api("profiles", { method: "POST", body: JSON.stringify({ id: data.user.id, name: authName, email: authEmail, user_type: "particulier" }) });
-            setUser(data.user);
-            setProfile({ id: data.user.id, name: authName, email: authEmail });
-            showToast("Compte créé ! Bienvenue sur SMASHD 🎉");
-            setScreen("home");
-          }
-        } catch (e) { setAuthError(e.message || "Erreur lors de l'inscription"); }
-        finally { setLoading(false); }
-      };
+  const showToast=(msg,type="success")=>{setToast({msg,type});setTimeout(()=>setToast(null),3500)};
+  const go=(s,data=null)=>{setScreen(s);if(data)setSelected(data);window.scrollTo(0,0)};
 
-      const logout = () => { setUser(null); setProfile(null); showToast("Déconnecté"); setScreen("home"); };
+  const loadAnnonces=async()=>{
+    try{const d=await sbApi("annonces?status=eq.active&order=created_at.desc&limit=50");setAnnonces(d)}
+    catch(e){console.error(e)}
+  };
 
-      const publishAnnonce = async () => {
-        if (!user) { setScreen("auth"); return; }
-        const { title, category, state, price } = sellForm;
-        if (!title || !category || !state || !price) { showToast("Remplissez tous les champs requis", "error"); return; }
-        setLoading(true);
-        try {
-          await api("annonces", { method: "POST", body: JSON.stringify({ user_id: user.id, title, description: sellForm.description, category, brand: sellForm.brand, state, price: parseFloat(price), status: "active" }) });
-          showToast("Annonce publiée ! 🎉");
-          setSellForm({ title: "", description: "", category: "", brand: "", state: "", price: "" });
-          setScreen("home");
-          loadAnnonces();
-        } catch (e) { showToast("Erreur publication", "error"); }
-        finally { setLoading(false); }
-      };
+  const loadMyData=async(uid)=>{
+    try{
+      const [ann,orders,sales]=await Promise.all([
+        sbApi(`annonces?user_id=eq.${uid}&order=created_at.desc`),
+        sbApi(`commandes?buyer_id=eq.${uid}&order=created_at.desc`),
+        sbApi(`commandes?seller_id=eq.${uid}&order=created_at.desc`),
+      ]);
+      setMyAnnonces(ann);setMyOrders(orders);setMySales(sales);
+    }catch(e){console.error(e)}
+  };
 
-      const filtered = annonces
-        .filter(a => filterCat === "Tous" || a.category === filterCat)
-        .filter(a => !searchQ || a.title?.toLowerCase().includes(searchQ.toLowerCase()));
+  useEffect(()=>{loadAnnonces()},[]);
 
-      // HOME
-      if (screen === "home") return (
-        <div style={{ minHeight: "100vh", background: C.bg }}>
-          {toast && <Toast {...toast} />}
-          <nav style={{ background: C.white, borderBottom: `1px solid ${C.border}`, padding: "0 20px", display: "flex", alignItems: "center", height: 56, gap: 12, position: "sticky", top: 0, zIndex: 100 }}>
-            <Logo size={20} />
-            <div style={{ flex: 1, position: "relative", maxWidth: 360, margin: "0 12px" }}>
-              <input value={searchQ} onChange={e => setSearchQ(e.target.value)} placeholder="Rechercher une raquette…"
-                style={{ width: "100%", padding: "8px 14px 8px 34px", borderRadius: 20, border: `1px solid ${C.border}`, fontSize: 13, background: C.grayLight, outline: "none" }} />
-              <span style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }}>🔍</span>
+  const login=async(email,pwd)=>{
+    setLoading(true);
+    try{
+      const d=await sbAuth("token?grant_type=password",{email,password:pwd});
+      setUser(d.user);
+      const p=await sbApi(`profiles?id=eq.${d.user.id}`);
+      setProfile(p[0]||null);
+      await loadMyData(d.user.id);
+      showToast("Connecté avec succès !");
+      go("home");
+    }catch(e){throw e}
+    finally{setLoading(false)}
+  };
+
+  const register=async(email,pwd,name,userType,siret,company)=>{
+    setLoading(true);
+    try{
+      const d=await sbAuth("signup",{email,password:pwd});
+      if(d.user){
+        await sbApi("profiles",{method:"POST",body:JSON.stringify({id:d.user.id,name,email,user_type:userType,siret:siret||null,company:company||null})});
+        setUser(d.user);
+        setProfile({id:d.user.id,name,email,user_type:userType});
+        showToast("Bienvenue sur SMASHD ! 🎉");
+        go("home");
+      }
+    }catch(e){throw e}
+    finally{setLoading(false)}
+  };
+
+  const logout=()=>{setUser(null);setProfile(null);setMyAnnonces([]);setMyOrders([]);setMySales([]);showToast("Déconnecté");go("home")};
+
+  const publishAnnonce=async(form)=>{
+    if(!user){go("auth");return}
+    setLoading(true);
+    try{
+      await sbApi("annonces",{method:"POST",body:JSON.stringify({user_id:user.id,...form,status:"active"})});
+      showToast("Annonce publiée ! 🎉");
+      await loadAnnonces();
+      await loadMyData(user.id);
+      go("dashboard");setDashTab("annonces");
+    }catch(e){showToast("Erreur publication","error")}
+    finally{setLoading(false)}
+  };
+
+  const toggleAnnonceStatus=async(id,status)=>{
+    try{
+      await sbApi(`annonces?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({status})});
+      await loadMyData(user.id);
+      await loadAnnonces();
+      showToast(status==="active"?"Annonce activée":"Annonce mise en pause");
+    }catch(e){showToast("Erreur","error")}
+  };
+
+  const deleteAnnonce=async(id)=>{
+    try{
+      await sbApi(`annonces?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({status:"supprimé"})});
+      await loadMyData(user.id);
+      await loadAnnonces();
+      showToast("Annonce supprimée");
+    }catch(e){showToast("Erreur","error")}
+  };
+
+  const sendMessage=async(annonce_id,receiver_id,content)=>{
+    if(!user)return;
+    try{
+      await sbApi("messages",{method:"POST",body:JSON.stringify({annonce_id,sender_id:user.id,receiver_id,content})});
+      showToast("Message envoyé !");
+    }catch(e){showToast("Erreur envoi","error")}
+  };
+
+  const placeOrder=async(annonce,shippingMethod)=>{
+    if(!user){go("auth");return}
+    setLoading(true);
+    try{
+      const commission=parseFloat((annonce.price*0.08).toFixed(2));
+      const gain=parseFloat((annonce.price-commission).toFixed(2));
+      await sbApi("commandes",{method:"POST",body:JSON.stringify({annonce_id:annonce.id,buyer_id:user.id,seller_id:annonce.user_id,price:annonce.price,commission,gain,shipping_method:shippingMethod,status:"en attente"})});
+      await sbApi(`annonces?id=eq.${annonce.id}`,{method:"PATCH",body:JSON.stringify({status:"vendu"})});
+      await sbApi("transactions",{method:"POST",body:JSON.stringify({user_id:annonce.user_id,label:`Vente — ${annonce.title}`,amount:gain,type:"credit"})});
+      showToast("Commande confirmée ! 🎉");
+      await loadAnnonces();
+      await loadMyData(user.id);
+      go("dashboard");setDashTab("achats");
+    }catch(e){showToast("Erreur commande","error")}
+    finally{setLoading(false)}
+  };
+
+  const filtered=annonces
+    .filter(a=>filterCat==="Tous"||a.category===filterCat)
+    .filter(a=>filterState==="Tous"||a.state===filterState)
+    .filter(a=>!filterPrice.min||a.price>=parseFloat(filterPrice.min))
+    .filter(a=>!filterPrice.max||a.price<=parseFloat(filterPrice.max))
+    .filter(a=>!search||a.title?.toLowerCase().includes(search.toLowerCase())||a.brand?.toLowerCase().includes(search.toLowerCase()));
+
+  const wallet=(()=>{
+    const credits=mySales.reduce((acc,s)=>acc+s.gain,0);
+    return Math.round(credits*100)/100;
+  })();
+
+  const props={user,profile,loading,showToast,go,login,register,logout,publishAnnonce,toggleAnnonceStatus,deleteAnnonce,sendMessage,placeOrder,myAnnonces,myOrders,mySales,wallet,dashTab,setDashTab,vacanceMode,setVacanceMode,annonces:filtered,allAnnonces:annonces,search,setSearch,filterCat,setFilterCat,filterState,setFilterState,filterPrice,setFilterPrice,selected,setSelected,loadMyData};
+
+  return (
+    <div>
+      {toast&&<Toast {...toast}/>}
+      {screen==="home"&&<Home {...props}/>}
+      {screen==="auth"&&<Auth {...props}/>}
+      {screen==="sell"&&<Sell {...props}/>}
+      {screen==="article"&&<Article {...props}/>}
+      {screen==="dashboard"&&<Dashboard {...props}/>}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════
+// HOME
+// ═══════════════════════════════════════════════
+function Home({user,profile,annonces,search,setSearch,filterCat,setFilterCat,filterState,setFilterState,filterPrice,setFilterPrice,go,logout}){
+  return(
+    <div style={{minHeight:"100vh",background:C.bg}}>
+      <nav style={{background:C.w,borderBottom:`1px solid ${C.b}`,padding:"0 20px",display:"flex",alignItems:"center",height:58,gap:12,position:"sticky",top:0,zIndex:100}}>
+        <Logo size={20}/>
+        <div style={{flex:1,position:"relative",maxWidth:400,margin:"0 12px"}}>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher raquette, marque…"
+            style={{width:"100%",padding:"8px 14px 8px 36px",borderRadius:20,border:`1px solid ${C.b}`,fontSize:13,background:C.gl,outline:"none"}}/>
+          <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)"}}>🔍</span>
+        </div>
+        <div style={{marginLeft:"auto",display:"flex",gap:8,alignItems:"center"}}>
+          {user?(
+            <>
+              <Btn onClick={()=>go("sell")} style={{padding:"7px 16px",fontSize:13}}>+ Vendre</Btn>
+              <Btn onClick={()=>go("dashboard")} variant="ghost" style={{padding:"7px 14px",fontSize:13}}>
+                {profile?.user_type==="pro"?"🏪":"👤"} {profile?.name?.split(" ")[0]||"Mon compte"}
+              </Btn>
+            </>
+          ):(
+            <>
+              <Btn onClick={()=>go("auth")} variant="ghost" style={{padding:"7px 16px",fontSize:13}}>Connexion</Btn>
+              <Btn onClick={()=>go("auth")} style={{padding:"7px 16px",fontSize:13}}>S'inscrire</Btn>
+            </>
+          )}
+        </div>
+      </nav>
+
+      {/* HERO */}
+      <div style={{background:`linear-gradient(135deg,${C.pl},#fff)`,padding:"40px 20px",textAlign:"center"}}>
+        <div style={{display:"inline-block",background:C.pl,color:C.pd,borderRadius:20,padding:"4px 14px",fontSize:12,fontWeight:600,marginBottom:14}}>
+          🌿 Marketplace éco-responsable
+        </div>
+        <h1 style={{fontSize:32,fontWeight:900,margin:"0 0 10px",lineHeight:1.2}}>
+          Achetez & vendez vos<br/><span style={{color:C.p}}>équipements de raquette</span>
+        </h1>
+        <p style={{color:C.m,fontSize:14,margin:"0 0 24px"}}>Simple · Sécurisé · Éco-responsable</p>
+        <div style={{display:"flex",gap:32,justifyContent:"center",flexWrap:"wrap",marginBottom:24}}>
+          {[["🎾","Sports de raquette"],["🌍","Multilingue FR/EN"],["🔒","Paiement sécurisé"],["🚚","Livraison intégrée"]].map(([i,l])=>(
+            <div key={l} style={{textAlign:"center"}}>
+              <div style={{fontSize:20}}>{i}</div>
+              <div style={{fontSize:11,color:C.m,marginTop:2}}>{l}</div>
             </div>
-            <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-              {user ? (
-                <>
-                  <button onClick={() => setScreen("sell")} style={{ background: C.primary, color: "#fff", border: "none", borderRadius: 20, padding: "7px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>+ Vendre</button>
-                  <button onClick={logout} style={{ background: C.grayLight, border: "none", borderRadius: 20, padding: "7px 14px", fontSize: 13, cursor: "pointer" }}>👤 {profile?.name?.split(" ")[0] || "Compte"}</button>
-                </>
-              ) : (
-                <>
-                  <button onClick={() => { setAuthMode("login"); setScreen("auth"); }} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 20, padding: "7px 16px", fontSize: 13, cursor: "pointer" }}>Connexion</button>
-                  <button onClick={() => { setAuthMode("register"); setScreen("auth"); }} style={{ background: C.primary, color: "#fff", border: "none", borderRadius: 20, padding: "7px 16px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>S'inscrire</button>
-                </>
-              )}
-            </div>
-          </nav>
-
-          <div style={{ background: C.primaryLight, padding: "32px 20px", textAlign: "center" }}>
-            <h1 style={{ fontSize: 28, fontWeight: 900, margin: "0 0 8px" }}>Achetez & vendez vos <span style={{ color: C.primary }}>équipements de raquette</span></h1>
-            <p style={{ color: C.muted, fontSize: 14, margin: "0 0 20px" }}>Marketplace éco-responsable · Simple · Sécurisé</p>
-            {!user && <button onClick={() => { setAuthMode("register"); setScreen("auth"); }} style={{ background: C.primary, color: "#fff", border: "none", borderRadius: 24, padding: "12px 28px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Rejoindre SMASHD gratuitement</button>}
+          ))}
+        </div>
+        {!user&&(
+          <div style={{display:"flex",gap:10,justifyContent:"center"}}>
+            <Btn onClick={()=>go("auth")} style={{padding:"12px 28px",fontSize:15}}>Rejoindre SMASHD</Btn>
+            <Btn onClick={()=>go("auth")} variant="outline" style={{padding:"12px 28px",fontSize:15}}>Vendeur Pro 🏪</Btn>
           </div>
+        )}
+      </div>
 
-          <div style={{ padding: "16px 20px 0" }}>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {["Tous", ...categories].map(c => (
-                <button key={c} onClick={() => setFilterCat(c)} style={{ background: filterCat === c ? C.primary : C.white, color: filterCat === c ? "#fff" : C.text, border: `1px solid ${filterCat === c ? C.primary : C.border}`, borderRadius: 20, padding: "7px 16px", fontSize: 13, cursor: "pointer", fontWeight: filterCat === c ? 700 : 400 }}>
-                  {catIcons[c] || ""} {c}
+      {/* CATEGORIES */}
+      <div style={{padding:"20px 20px 0",overflowX:"auto"}}>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          {["Tous",...CATS].map(c=>(
+            <button key={c} onClick={()=>setFilterCat(c)}
+              style={{background:filterCat===c?C.p:C.w,color:filterCat===c?"#fff":C.t,border:`1px solid ${filterCat===c?C.p:C.b}`,borderRadius:20,padding:"7px 16px",fontSize:13,cursor:"pointer",fontWeight:filterCat===c?700:400,whiteSpace:"nowrap"}}>
+              {ICONS[c]||""} {c}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* FILTERS */}
+      <div style={{padding:"12px 20px 0",display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+        <select value={filterState} onChange={e=>setFilterState(e.target.value)}
+          style={{padding:"7px 12px",borderRadius:8,border:`1px solid ${C.b}`,fontSize:13,background:C.w,cursor:"pointer"}}>
+          <option value="Tous">Tous les états</option>
+          {STATES.map(s=><option key={s}>{s}</option>)}
+        </select>
+        <input type="number" value={filterPrice.min} onChange={e=>setFilterPrice(f=>({...f,min:e.target.value}))} placeholder="Prix min €"
+          style={{width:90,padding:"7px 12px",borderRadius:8,border:`1px solid ${C.b}`,fontSize:13}}/>
+        <input type="number" value={filterPrice.max} onChange={e=>setFilterPrice(f=>({...f,max:e.target.value}))} placeholder="Prix max €"
+          style={{width:90,padding:"7px 12px",borderRadius:8,border:`1px solid ${C.b}`,fontSize:13}}/>
+        <span style={{fontSize:13,color:C.m,marginLeft:"auto"}}>{annonces.length} article{annonces.length!==1?"s":""}</span>
+      </div>
+
+      {/* GRID */}
+      <div style={{padding:"16px 20px 48px"}}>
+        {annonces.length===0?(
+          <div style={{textAlign:"center",padding:"60px 0",color:C.m}}>
+            <div style={{fontSize:56,marginBottom:14}}>🎾</div>
+            <div style={{fontSize:16,fontWeight:700,marginBottom:8}}>Aucune annonce pour l'instant</div>
+            <div style={{fontSize:13,marginBottom:20}}>Soyez le premier à vendre sur SMASHD !</div>
+            {user&&<Btn onClick={()=>go("sell")}>Publier une annonce</Btn>}
+          </div>
+        ):(
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:14}}>
+            {annonces.map(a=>(
+              <div key={a.id} onClick={()=>go("article",a)} style={{background:C.w,border:`1px solid ${C.b}`,borderRadius:14,overflow:"hidden",cursor:"pointer"}}>
+                <div style={{background:C.gl,height:140,display:"flex",alignItems:"center",justifyContent:"center",fontSize:60,position:"relative"}}>
+                  {ICONS[a.category]||"📦"}
+                  {a.user_type==="pro"&&<span style={{position:"absolute",top:8,left:8,background:C.a,color:"#fff",fontSize:10,fontWeight:700,borderRadius:4,padding:"2px 7px"}}>PRO</span>}
+                </div>
+                <div style={{padding:"12px 14px"}}>
+                  <div style={{fontSize:11,color:C.m,marginBottom:2}}>{a.brand||"—"} · {a.category}</div>
+                  <div style={{fontSize:14,fontWeight:700,marginBottom:6,lineHeight:1.3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
+                  <Badge label={a.state}/>
+                  <div style={{fontSize:18,fontWeight:900,marginTop:8}}>{a.price} €</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* FOOTER */}
+      <footer style={{background:C.pd,color:"#a8d5c5",padding:"28px 20px",display:"flex",gap:24,flexWrap:"wrap",justifyContent:"space-between",fontSize:13}}>
+        <div>
+          <div style={{color:"#fff",fontWeight:900,fontSize:18,marginBottom:8}}>SMASH<span style={{color:"#f4a07a"}}>D</span></div>
+          <div style={{maxWidth:220}}>Marketplace de seconde main dédiée aux sports de raquette.</div>
+        </div>
+        {[["Acheter",["Catalogue","Nouveautés","Bons plans"]],["Vendre",["Déposer une annonce","Espace Pro","Tarifs"]],["Aide",["FAQ","Livraison","Contact"]]].map(([t,ls])=>(
+          <div key={t}>
+            <div style={{color:"#fff",fontWeight:700,marginBottom:8}}>{t}</div>
+            {ls.map(l=><div key={l} style={{marginBottom:4,cursor:"pointer"}}>{l}</div>)}
+          </div>
+        ))}
+      </footer>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════════
+function Auth({login,register,loading,go}){
+  const [mode,setMode]=useState("login");
+  const [step,setStep]=useState(0);
+  const [userType,setUserType]=useState("particulier");
+  const [f,setF]=useState({email:"",pwd:"",pwd2:"",name:"",phone:"",siret:"",company:"",cgv:false});
+  const [err,setErr]=useState({});
+  const set=(k,v)=>setF(x=>({...x,[k]:v}));
+
+  const validate0=()=>{
+    const e={};
+    if(!f.email||!/\S+@\S+\.\S+/.test(f.email))e.email="Email invalide";
+    if(!f.pwd||f.pwd.length<6)e.pwd="6 caractères minimum";
+    if(mode==="register"&&f.pwd!==f.pwd2)e.pwd2="Les mots de passe ne correspondent pas";
+    setErr(e);return!Object.keys(e).length;
+  };
+  const validate1=()=>{
+    const e={};
+    if(!f.name)e.name="Nom requis";
+    if(userType==="pro"&&!f.siret)e.siret="SIRET requis";
+    if(!f.cgv)e.cgv="Vous devez accepter les CGV";
+    setErr(e);return!Object.keys(e).length;
+  };
+
+  const doLogin=async()=>{
+    if(!validate0())return;
+    try{await login(f.email,f.pwd)}
+    catch(e){setErr({email:"Email ou mot de passe incorrect"})}
+  };
+
+  const doRegister=async()=>{
+    if(!validate1())return;
+    try{await register(f.email,f.pwd,f.name,userType,f.siret,f.company)}
+    catch(e){setErr({email:e.message})}
+  };
+
+  return(
+    <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div style={{background:C.w,border:`1px solid ${C.b}`,borderRadius:18,padding:"32px 28px",maxWidth:420,width:"100%"}}>
+        <div style={{textAlign:"center",marginBottom:24}}><Logo size={26}/></div>
+
+        {/* MODE TABS */}
+        <div style={{display:"flex",gap:8,marginBottom:24}}>
+          {[["login","Connexion"],["register","Inscription"]].map(([m,l])=>(
+            <button key={m} onClick={()=>{setMode(m);setErr({});setStep(0)}}
+              style={{flex:1,background:mode===m?C.p:C.w,color:mode===m?"#fff":C.m,border:`1.5px solid ${mode===m?C.p:C.b}`,borderRadius:10,padding:"10px",fontSize:14,fontWeight:700,cursor:"pointer"}}>{l}</button>
+          ))}
+        </div>
+
+        {/* LOGIN */}
+        {mode==="login"&&(
+          <>
+            <Input label="Email" type="email" value={f.email} onChange={e=>set("email",e.target.value)} placeholder="vous@exemple.com" error={err.email} required/>
+            <Input label="Mot de passe" type="password" value={f.pwd} onChange={e=>set("pwd",e.target.value)} placeholder="••••••••" error={err.pwd} required/>
+            <Btn onClick={doLogin} disabled={loading} style={{width:"100%",marginBottom:12,padding:"13px"}}>
+              {loading?"Connexion…":"Se connecter"}
+            </Btn>
+          </>
+        )}
+
+        {/* REGISTER */}
+        {mode==="register"&&(
+          <>
+            {/* Type user */}
+            <div style={{display:"flex",gap:8,marginBottom:18}}>
+              {[["particulier","👤 Particulier"],["pro","🏪 Vendeur Pro"]].map(([id,l])=>(
+                <button key={id} onClick={()=>setUserType(id)}
+                  style={{flex:1,background:userType===id?C.p:C.w,color:userType===id?"#fff":C.t,border:`2px solid ${userType===id?C.p:C.b}`,borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>{l}</button>
+              ))}
+            </div>
+            {userType==="pro"&&(
+              <div style={{background:C.warnl,border:`1px solid ${C.warn}`,borderRadius:8,padding:"10px 14px",fontSize:12,color:C.warn,marginBottom:14}}>
+                🏅 Compte Pro — Abonnement annuel 99€/an. Vendez vos invendus et accédez à l'espace publicitaire.
+              </div>
+            )}
+
+            {/* Stepper */}
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:20}}>
+              {["Compte","Profil"].map((s,i)=>(
+                <React.Fragment key={s}>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{width:24,height:24,borderRadius:"50%",background:step>=i?C.p:C.gl,color:step>=i?"#fff":C.g,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700}}>{step>i?"✓":i+1}</div>
+                    <span style={{fontSize:12,color:step===i?C.t:C.m,fontWeight:step===i?700:400}}>{s}</span>
+                  </div>
+                  {i===0&&<div style={{flex:1,height:1,background:step>0?C.p:C.b}}/>}
+                </React.Fragment>
+              ))}
+            </div>
+
+            {step===0&&(
+              <>
+                <Input label="Email" type="email" value={f.email} onChange={e=>set("email",e.target.value)} placeholder="vous@exemple.com" error={err.email} required/>
+                <Input label="Mot de passe" type="password" value={f.pwd} onChange={e=>set("pwd",e.target.value)} placeholder="6 caractères minimum" error={err.pwd} required/>
+                <Input label="Confirmer le mot de passe" type="password" value={f.pwd2} onChange={e=>set("pwd2",e.target.value)} placeholder="Répétez le mot de passe" error={err.pwd2} required/>
+                <Btn onClick={()=>validate0()&&setStep(1)} style={{width:"100%",padding:"13px"}}>Continuer →</Btn>
+              </>
+            )}
+            {step===1&&(
+              <>
+                <Input label={userType==="pro"?"Nom du responsable":"Nom complet"} value={f.name} onChange={e=>set("name",e.target.value)} placeholder="Jean Dupont" error={err.name} required/>
+                <Input label="Téléphone" type="tel" value={f.phone} onChange={e=>set("phone",e.target.value)} placeholder="+33 6 00 00 00 00"/>
+                {userType==="pro"&&(
+                  <>
+                    <Input label="Numéro SIRET" value={f.siret} onChange={e=>set("siret",e.target.value)} placeholder="123 456 789 00012" error={err.siret} required/>
+                    <Input label="Nom commercial" value={f.company} onChange={e=>set("company",e.target.value)} placeholder="Mon Shop Tennis"/>
+                  </>
+                )}
+                <div style={{marginBottom:16}}>
+                  <label style={{display:"flex",alignItems:"flex-start",gap:10,cursor:"pointer",fontSize:13,color:C.m}}>
+                    <input type="checkbox" checked={f.cgv} onChange={e=>set("cgv",e.target.checked)} style={{marginTop:2,accentColor:C.p}}/>
+                    <span>J'accepte les <span style={{color:C.p,fontWeight:600}}>CGV</span> et la <span style={{color:C.p,fontWeight:600}}>Politique de confidentialité</span></span>
+                  </label>
+                  {err.cgv&&<div style={{fontSize:12,color:C.err,marginTop:4}}>{err.cgv}</div>}
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <Btn onClick={()=>setStep(0)} variant="ghost" style={{flex:1,padding:"12px"}}>← Retour</Btn>
+                  <Btn onClick={doRegister} disabled={loading} style={{flex:2,padding:"12px"}}>
+                    {loading?"Création…":userType==="pro"?"Créer compte Pro":"Créer mon compte"}
+                  </Btn>
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {err.email&&mode==="register"&&step===0&&<div style={{background:C.errl,color:C.err,borderRadius:8,padding:"10px 14px",fontSize:13,marginTop:12}}>❌ {err.email}</div>}
+        <button onClick={()=>go("home")} style={{width:"100%",background:"none",border:"none",color:C.m,fontSize:13,cursor:"pointer",marginTop:16}}>← Retour à l'accueil</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════
+// SELL
+// ═══════════════════════════════════════════════
+function Sell({publishAnnonce,loading,go,profile}){
+  const [step,setStep]=useState(0);
+  const [f,setF]=useState({title:"",description:"",category:"",sub_category:"",brand:"",state:"",price:"",size:"",surface:"",env:"",shipping:"mondial"});
+  const set=(k,v)=>setF(x=>({...x,[k]:v}));
+  const commission=f.price?(f.price*0.08).toFixed(2):0;
+  const gain=f.price?(f.price*0.92).toFixed(2):0;
+  const STEPS=["Catégorie","Détails","Prix","Expédition","Confirmation"];
+
+  const canNext=()=>{
+    if(step===0)return f.category;
+    if(step===1)return f.brand&&f.state&&f.title;
+    if(step===2)return f.price>0;
+    if(step===3)return f.shipping;
+    return true;
+  };
+
+  return(
+    <div style={{minHeight:"100vh",background:C.bg}}>
+      <nav style={{background:C.w,borderBottom:`1px solid ${C.b}`,padding:"0 20px",display:"flex",alignItems:"center",height:56,gap:12}}>
+        <button onClick={()=>go("home")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer"}}>←</button>
+        <Logo size={18}/>
+        <span style={{fontSize:13,color:C.m}}>› Vendre un article</span>
+      </nav>
+
+      {/* Stepper */}
+      <div style={{background:C.w,borderBottom:`1px solid ${C.b}`,padding:"14px 20px"}}>
+        <div style={{display:"flex",alignItems:"center",maxWidth:600,margin:"0 auto"}}>
+          {STEPS.map((s,i)=>(
+            <React.Fragment key={s}>
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <div style={{width:26,height:26,borderRadius:"50%",background:i<step?C.p:i===step?C.p:C.gl,color:i<=step?"#fff":C.g,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700}}>
+                  {i<step?"✓":i+1}
+                </div>
+                <span style={{fontSize:11,color:i===step?C.t:C.m,fontWeight:i===step?700:400,whiteSpace:"nowrap"}}>{s}</span>
+              </div>
+              {i<STEPS.length-1&&<div style={{flex:1,height:1,background:i<step?C.p:C.b,margin:"0 6px"}}/>}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+
+      <div style={{maxWidth:600,margin:"28px auto",padding:"0 20px"}}>
+        {/* STEP 0 - Catégorie */}
+        {step===0&&(
+          <div>
+            <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Quelle catégorie ?</h2>
+            <p style={{color:C.m,fontSize:14,marginBottom:20}}>Sélectionnez le sport de votre article.</p>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:10}}>
+              {CATS.map(c=>(
+                <button key={c} onClick={()=>set("category",c)}
+                  style={{background:f.category===c?C.pl:C.w,border:`2px solid ${f.category===c?C.p:C.b}`,borderRadius:12,padding:"16px 8px",cursor:"pointer",textAlign:"center",fontWeight:f.category===c?700:400}}>
+                  <div style={{fontSize:28}}>{ICONS[c]}</div>
+                  <div style={{fontSize:13,marginTop:6}}>{c}</div>
+                </button>
+              ))}
+            </div>
+            {profile?.user_type==="pro"&&(
+              <div style={{marginTop:16,background:C.warnl,borderRadius:10,padding:"12px 16px",fontSize:13,color:C.warn}}>
+                🏪 <strong>Espace Pro</strong> — Vous pouvez également publier des invendus dans la catégorie "Invendus Pro"
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* STEP 1 - Détails */}
+        {step===1&&(
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <h2 style={{fontSize:20,fontWeight:800,margin:0}}>Décrivez votre article</h2>
+            <div>
+              <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:8}}>Marque *</label>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                {(BRANDS[f.category]||["Autre"]).concat(["Autre"]).filter((v,i,a)=>a.indexOf(v)===i).map(b=>(
+                  <button key={b} onClick={()=>set("brand",b)}
+                    style={{background:f.brand===b?C.p:C.w,color:f.brand===b?"#fff":C.t,border:`1px solid ${f.brand===b?C.p:C.b}`,borderRadius:20,padding:"7px 14px",fontSize:13,cursor:"pointer"}}>
+                    {b}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:8}}>État *</label>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                {STATES.map(s=>(
+                  <button key={s} onClick={()=>set("state",s)}
+                    style={{background:f.state===s?C.p:C.w,color:f.state===s?"#fff":C.t,border:`1px solid ${f.state===s?C.p:C.b}`,borderRadius:20,padding:"7px 14px",fontSize:13,cursor:"pointer"}}>
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Input label="Titre de l'annonce" value={f.title} onChange={e=>set("title",e.target.value)} placeholder={`Ex: ${f.brand||"Wilson"} ${f.category} — ${f.state||"Très bon état"}`} required/>
+            <div>
+              <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>Description</label>
+              <textarea value={f.description} onChange={e=>set("description",e.target.value)} rows={4}
+                placeholder="Décrivez l'article : modèle, année, raison de la vente, défauts éventuels…"
+                style={{width:"100%",padding:"11px 14px",borderRadius:10,border:`1px solid ${C.b}`,fontSize:14,resize:"vertical",boxSizing:"border-box"}}/>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 2 - Prix */}
+        {step===2&&(
+          <div>
+            <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Fixez votre prix</h2>
+            <p style={{color:C.m,fontSize:14,marginBottom:20}}>Entrez le prix de vente de votre article.</p>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+              <input type="number" value={f.price} onChange={e=>set("price",e.target.value)} placeholder="0"
+                style={{width:140,padding:"14px 16px",borderRadius:10,border:`2px solid ${C.p}`,fontSize:24,fontWeight:800,textAlign:"center"}}/>
+              <span style={{fontSize:24,fontWeight:700,color:C.m}}>€</span>
+            </div>
+            {f.price>0&&(
+              <Card style={{background:C.pl}}>
+                <div style={{fontSize:13,color:C.m,marginBottom:10}}>Récapitulatif</div>
+                {[["Prix de vente",`${f.price} €`],["Commission SMASHD (8%)",`- ${commission} €`]].map(([k,v])=>(
+                  <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6}}><span style={{color:C.m}}>{k}</span><span>{v}</span></div>
+                ))}
+                <div style={{borderTop:`1px solid ${C.b}`,paddingTop:8,display:"flex",justifyContent:"space-between",fontSize:16,fontWeight:900}}>
+                  <span>Vous recevez</span><span style={{color:C.p}}>{gain} €</span>
+                </div>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* STEP 3 - Expédition */}
+        {step===3&&(
+          <div>
+            <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Mode d'expédition</h2>
+            <p style={{color:C.m,fontSize:14,marginBottom:20}}>L'étiquette est générée automatiquement après la vente.</p>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {SHIPPING.map(s=>(
+                <button key={s.id} onClick={()=>set("shipping",s.id)}
+                  style={{background:f.shipping===s.id?C.pl:C.w,border:`2px solid ${f.shipping===s.id?C.p:C.b}`,borderRadius:12,padding:"16px 20px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",textAlign:"left"}}>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:15}}>{s.label}</div>
+                    <div style={{fontSize:12,color:C.m,marginTop:2}}>Délai : {s.delay}</div>
+                  </div>
+                  <div style={{fontWeight:800,fontSize:16,color:f.shipping===s.id?C.p:C.t}}>{s.price===0?"Gratuit":`${s.price} €`}</div>
                 </button>
               ))}
             </div>
           </div>
+        )}
 
-          <div style={{ padding: "16px 20px 40px" }}>
-            {filtered.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "60px 0", color: C.muted }}>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>🎾</div>
-                <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Aucune annonce pour l'instant</div>
-                <div style={{ fontSize: 13, marginBottom: 20 }}>Soyez le premier à vendre sur SMASHD !</div>
-                {user && <button onClick={() => setScreen("sell")} style={{ background: C.primary, color: "#fff", border: "none", borderRadius: 20, padding: "10px 24px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Publier une annonce</button>}
+        {/* STEP 4 - Confirmation */}
+        {step===4&&(
+          <div>
+            <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Vérifiez votre annonce</h2>
+            <p style={{color:C.m,fontSize:14,marginBottom:20}}>Tout est correct ? Publiez en un clic.</p>
+            <Card>
+              <div style={{background:C.gl,borderRadius:10,height:120,display:"flex",alignItems:"center",justifyContent:"center",fontSize:64,marginBottom:16}}>{ICONS[f.category]||"📦"}</div>
+              <div style={{fontSize:12,color:C.m}}>{f.brand} · {f.category}</div>
+              <div style={{fontSize:18,fontWeight:800,margin:"4px 0 8px"}}>{f.title}</div>
+              <div style={{display:"flex",gap:8,marginBottom:12}}>
+                <Badge label={f.state}/>
               </div>
-            ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14, marginTop: 16 }}>
-                {filtered.map(a => (
-                  <div key={a.id} onClick={() => { setSelectedArticle(a); setScreen("article"); }} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 14, overflow: "hidden", cursor: "pointer" }}>
-                    <div style={{ background: C.grayLight, height: 140, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 56 }}>{catIcons[a.category] || "📦"}</div>
-                    <div style={{ padding: "12px 14px" }}>
-                      <div style={{ fontSize: 11, color: C.muted, marginBottom: 3 }}>{a.brand || "—"} · {a.category}</div>
-                      <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{a.title}</div>
-                      <div style={{ display: "inline-block", background: C.primaryLight, color: C.primaryDark, fontSize: 11, borderRadius: 4, padding: "2px 8px", marginBottom: 8 }}>{a.state}</div>
-                      <div style={{ fontSize: 18, fontWeight: 900 }}>{a.price} €</div>
+              <div style={{fontSize:24,fontWeight:900}}>{f.price} €</div>
+              <div style={{fontSize:12,color:C.m,marginTop:2}}>Vous recevrez {gain} € · Via {SHIPPING.find(s=>s.id===f.shipping)?.label}</div>
+            </Card>
+          </div>
+        )}
+
+        {/* NAV BUTTONS */}
+        <div style={{display:"flex",justifyContent:"space-between",marginTop:28,paddingBottom:40}}>
+          {step>0
+            ?<Btn onClick={()=>setStep(s=>s-1)} variant="ghost" style={{padding:"11px 24px"}}>← Retour</Btn>
+            :<div/>
+          }
+          {step<STEPS.length-1
+            ?<Btn onClick={()=>canNext()&&setStep(s=>s+1)} disabled={!canNext()} style={{padding:"11px 28px"}}>Continuer →</Btn>
+            :<Btn onClick={()=>publishAnnonce(f)} disabled={loading} style={{padding:"11px 28px"}}>
+              {loading?"Publication…":"🚀 Publier l'annonce"}
+            </Btn>
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════
+// ARTICLE
+// ═══════════════════════════════════════════════
+function Article({selected,go,user,placeOrder,loading,sendMessage}){
+  const a=selected;
+  const [tab,setTab]=useState("desc");
+  const [shipping,setShipping]=useState("mondial");
+  const [offer,setOffer]=useState("");
+  const [offerSent,setOfferSent]=useState(false);
+  const [msgText,setMsgText]=useState("");
+  const [checkout,setCheckout]=useState(false);
+  const [ordered,setOrdered]=useState(false);
+  if(!a)return null;
+  const commission=(a.price*0.08).toFixed(2);
+  const shippingCost=SHIPPING.find(s=>s.id===shipping)?.price||0;
+  const total=(parseFloat(a.price)+parseFloat(commission)+shippingCost).toFixed(2);
+
+  const doOrder=async()=>{
+    await placeOrder(a,shipping);
+    setOrdered(true);
+  };
+
+  const doMsg=async()=>{
+    if(!msgText.trim())return;
+    await sendMessage(a.id,a.user_id,msgText);
+    setMsgText("");
+  };
+
+  return(
+    <div style={{minHeight:"100vh",background:C.bg}}>
+      <nav style={{background:C.w,borderBottom:`1px solid ${C.b}`,padding:"0 20px",display:"flex",alignItems:"center",height:56,gap:12,position:"sticky",top:0,zIndex:100}}>
+        <button onClick={()=>go("home")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer"}}>←</button>
+        <Logo size={18}/>
+        <span style={{fontSize:13,color:C.m}}>› {a.category} › {a.title}</span>
+      </nav>
+
+      {checkout&&!ordered&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
+          <Card style={{maxWidth:440,width:"100%"}}>
+            <h3 style={{fontSize:18,fontWeight:800,marginBottom:16}}>Finaliser l'achat</h3>
+            <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:16,background:C.gl,borderRadius:10,padding:"12px"}}>
+              <div style={{fontSize:32}}>{ICONS[a.category]}</div>
+              <div><div style={{fontWeight:700}}>{a.title}</div><div style={{fontSize:12,color:C.m}}>{a.state}</div></div>
+              <div style={{marginLeft:"auto",fontWeight:900}}>{a.price} €</div>
+            </div>
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:13,fontWeight:600,marginBottom:8}}>Mode de livraison</div>
+              {SHIPPING.map(s=>(
+                <button key={s.id} onClick={()=>setShipping(s.id)}
+                  style={{width:"100%",background:shipping===s.id?C.pl:C.w,border:`1.5px solid ${shipping===s.id?C.p:C.b}`,borderRadius:10,padding:"10px 14px",cursor:"pointer",display:"flex",justifyContent:"space-between",marginBottom:6,textAlign:"left"}}>
+                  <div><div style={{fontSize:13,fontWeight:600}}>{s.label}</div><div style={{fontSize:11,color:C.m}}>{s.delay}</div></div>
+                  <div style={{fontWeight:700,color:shipping===s.id?C.p:C.t}}>{s.price===0?"Gratuit":`${s.price} €`}</div>
+                </button>
+              ))}
+            </div>
+            <div style={{background:C.gl,borderRadius:10,padding:"12px 14px",marginBottom:16}}>
+              {[["Article",`${a.price} €`],["Livraison",`${shippingCost} €`],["Protection acheteur",`${commission} €`]].map(([k,v])=>(
+                <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}><span style={{color:C.m}}>{k}</span><span>{v}</span></div>
+              ))}
+              <div style={{borderTop:`1px solid ${C.b}`,paddingTop:8,display:"flex",justifyContent:"space-between",fontWeight:900,fontSize:16}}>
+                <span>Total</span><span style={{color:C.p}}>{total} €</span>
+              </div>
+            </div>
+            <div style={{fontSize:11,color:C.m,marginBottom:14}}>🔒 Paiement sécurisé · Fonds libérés après confirmation de réception</div>
+            <div style={{display:"flex",gap:10}}>
+              <Btn onClick={()=>setCheckout(false)} variant="ghost" style={{flex:1,padding:"12px"}}>Annuler</Btn>
+              <Btn onClick={doOrder} disabled={loading} style={{flex:2,padding:"12px",background:C.a}}>
+                {loading?"Traitement…":`Payer ${total} €`}
+              </Btn>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {ordered&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
+          <Card style={{maxWidth:380,width:"100%",textAlign:"center",padding:"40px 28px"}}>
+            <div style={{fontSize:56,marginBottom:14}}>🎉</div>
+            <h3 style={{fontSize:20,fontWeight:800,marginBottom:8}}>Commande confirmée !</h3>
+            <p style={{color:C.m,fontSize:14,marginBottom:24}}>Le vendeur a 7 jours pour expédier. Vous serez notifié dès l'envoi.</p>
+            <Btn onClick={()=>go("dashboard")} style={{width:"100%",padding:"13px"}}>Voir mes commandes</Btn>
+          </Card>
+        </div>
+      )}
+
+      <div style={{maxWidth:960,margin:"24px auto",padding:"0 20px",display:"grid",gridTemplateColumns:"1fr 320px",gap:24}}>
+        {/* LEFT */}
+        <div>
+          <div style={{background:C.gl,borderRadius:14,height:300,display:"flex",alignItems:"center",justifyContent:"center",fontSize:110,marginBottom:12}}>{ICONS[a.category]||"📦"}</div>
+          <div style={{display:"flex",gap:8,marginBottom:24}}>
+            {[ICONS[a.category]||"📦","📷","🖼️","📸"].map((p,i)=>(
+              <div key={i} style={{width:64,height:64,borderRadius:8,border:`2px solid ${i===0?C.p:C.b}`,background:C.gl,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,cursor:"pointer"}}>{p}</div>
+            ))}
+          </div>
+
+          {/* TABS */}
+          <div style={{display:"flex",borderBottom:`1px solid ${C.b}`,marginBottom:20}}>
+            {[["desc","Description"],["specs","Caractéristiques"],["msg","Contacter le vendeur"]].map(([id,l])=>(
+              <button key={id} onClick={()=>setTab(id)}
+                style={{background:"none",border:"none",borderBottom:`3px solid ${tab===id?C.p:"transparent"}`,padding:"10px 16px",fontSize:13,fontWeight:tab===id?700:400,color:tab===id?C.p:C.m,cursor:"pointer"}}>
+                {l}
+              </button>
+            ))}
+          </div>
+
+          {tab==="desc"&&<p style={{fontSize:14,lineHeight:1.8,color:C.m}}>{a.description||"Aucune description fournie."}</p>}
+          {tab==="specs"&&(
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              {[["Catégorie",a.category],["Marque",a.brand||"—"],["État",a.state],["Surface",a.surface||"—"],["Environnement",a.env||"—"],["Taille",a.size||"—"]].map(([k,v])=>(
+                <Card key={k} style={{padding:"12px 14px"}}>
+                  <div style={{fontSize:11,color:C.m,marginBottom:2}}>{k}</div>
+                  <div style={{fontSize:14,fontWeight:600}}>{v}</div>
+                </Card>
+              ))}
+            </div>
+          )}
+          {tab==="msg"&&(
+            <div>
+              <div style={{background:C.w,border:`1px solid ${C.b}`,borderRadius:12,padding:14,marginBottom:12,minHeight:120,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <span style={{color:C.m,fontSize:13}}>Connectez-vous pour envoyer un message au vendeur</span>
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <input value={msgText} onChange={e=>setMsgText(e.target.value)} placeholder="Votre message…"
+                  style={{flex:1,padding:"10px 14px",borderRadius:24,border:`1px solid ${C.b}`,fontSize:13}}/>
+                <Btn onClick={doMsg} style={{padding:"10px 18px",fontSize:13}}>Envoyer</Btn>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT - STICKY */}
+        <div style={{position:"sticky",top:20,alignSelf:"start"}}>
+          <Card>
+            <div style={{fontSize:12,color:C.m,marginBottom:4}}>{a.brand} · {a.category}</div>
+            <h1 style={{fontSize:17,fontWeight:800,margin:"0 0 10px",lineHeight:1.3}}>{a.title}</h1>
+            <div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:4}}>
+              <span style={{fontSize:26,fontWeight:900}}>{a.price} €</span>
+            </div>
+            <div style={{fontSize:12,color:C.m,marginBottom:6}}>+ Protection acheteur : {commission} €</div>
+            <Badge label={a.state}/>
+
+            {offerSent&&(
+              <div style={{background:C.pl,border:`1px solid ${C.p}`,borderRadius:8,padding:"10px 14px",fontSize:13,color:C.pd,margin:"14px 0"}}>
+                ✅ Offre de <strong>{offer} €</strong> envoyée. En attente du vendeur.
+              </div>
+            )}
+
+            <div style={{display:"flex",flexDirection:"column",gap:10,margin:"16px 0"}}>
+              <Btn onClick={()=>user?setCheckout(true):go("auth")} style={{padding:"14px",fontSize:15,width:"100%"}}>Acheter maintenant</Btn>
+              <div style={{display:"flex",gap:8}}>
+                <input type="number" value={offer} onChange={e=>setOffer(e.target.value)} placeholder="Votre offre €"
+                  style={{flex:1,padding:"10px 12px",borderRadius:10,border:`1px solid ${C.b}`,fontSize:14}}/>
+                <Btn onClick={()=>{if(offer){setOfferSent(true)}}} variant="outline" style={{padding:"10px 14px",fontSize:13}}>Offrir</Btn>
+              </div>
+            </div>
+
+            <div style={{borderTop:`1px solid ${C.b}`,paddingTop:14}}>
+              <div style={{fontSize:13,fontWeight:700,marginBottom:10}}>Vendeur</div>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12}}>
+                <div style={{width:38,height:38,borderRadius:"50%",background:C.pl,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,color:C.pd}}>V</div>
+                <div><div style={{fontWeight:600,fontSize:14}}>Vendeur SMASHD</div><div style={{fontSize:12,color:C.m}}>⭐ 5.0 · Membre depuis 2024</div></div>
+              </div>
+            </div>
+
+            <div style={{borderTop:`1px solid ${C.b}`,paddingTop:12}}>
+              {[["🚚","Livraison dès 3,99 €"],["🔒","Paiement sécurisé"],["✅","Protection acheteur"],["↩️","Retour 14 jours"]].map(([i,l])=>(
+                <div key={l} style={{display:"flex",gap:8,fontSize:12,color:C.m,marginBottom:6}}><span>{i}</span><span>{l}</span></div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════
+function Dashboard({user,profile,go,logout,myAnnonces,myOrders,mySales,wallet,dashTab,setDashTab,toggleAnnonceStatus,deleteAnnonce,vacanceMode,setVacanceMode,loadMyData,showToast}){
+  const [boostId,setBoostId]=useState(null);
+  const [boosted,setBoosted]=useState([]);
+  const isPro=profile?.user_type==="pro";
+  const totalRevenu=mySales.reduce((acc,s)=>acc+(s.gain||0),0);
+  const activeAnn=myAnnonces.filter(a=>a.status==="active").length;
+
+  const TABS=[
+    {id:"overview",icon:"📊",label:"Tableau de bord"},
+    {id:"annonces",icon:"📦",label:"Mes annonces"},
+    {id:"ventes",icon:"🛒",label:"Mes ventes"},
+    {id:"achats",icon:"📬",label:"Mes achats"},
+    {id:"wallet",icon:"💰",label:"E-Wallet"},
+    {id:"stats",icon:"📈",label:"Statistiques"},
+    ...(isPro?[{id:"pro",icon:"🏪",label:"Espace Pro"}]:[]),
+    {id:"settings",icon:"⚙️",label:"Paramètres"},
+  ];
+
+  return(
+    <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column"}}>
+      {/* TOP NAV */}
+      <nav style={{background:C.w,borderBottom:`1px solid ${C.b}`,padding:"0 20px",display:"flex",alignItems:"center",height:56,gap:12,position:"sticky",top:0,zIndex:100}}>
+        <button onClick={()=>go("home")} style={{background:"none",border:"none",fontSize:20,cursor:"pointer"}}>←</button>
+        <Logo size={18}/>
+        <span style={{fontSize:12,background:C.pl,color:C.pd,borderRadius:10,padding:"3px 10px",fontWeight:700}}>
+          {isPro?"🏪 Dashboard Pro":"Dashboard"}
+        </span>
+        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
+          <div style={{width:34,height:34,borderRadius:"50%",background:isPro?C.warnl:C.pl,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:13,color:isPro?C.warn:C.pd}}>
+            {profile?.name?.charAt(0)||"?"}
+          </div>
+        </div>
+      </nav>
+
+      <div style={{display:"flex",flex:1}}>
+        {/* SIDEBAR */}
+        <aside style={{width:210,background:C.w,borderRight:`1px solid ${C.b}`,padding:"16px 10px",flexShrink:0}}>
+          <div style={{marginBottom:16,padding:"10px 12px",background:C.gl,borderRadius:10}}>
+            <div style={{fontSize:13,fontWeight:700}}>{profile?.name||"Utilisateur"}</div>
+            <div style={{fontSize:11,color:C.m,marginTop:2}}>{profile?.email||""}</div>
+            {isPro&&<Badge label="Vendeur Pro" color="orange"/>}
+          </div>
+          {TABS.map(t=>(
+            <button key={t.id} onClick={()=>setDashTab(t.id)}
+              style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:"none",background:dashTab===t.id?C.pl:"transparent",color:dashTab===t.id?C.pd:C.m,fontWeight:dashTab===t.id?700:400,fontSize:13,cursor:"pointer",marginBottom:2,textAlign:"left"}}>
+              <span>{t.icon}</span>{t.label}
+            </button>
+          ))}
+          <div style={{borderTop:`1px solid ${C.b}`,marginTop:12,paddingTop:12}}>
+            <button onClick={logout} style={{width:"100%",display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:10,border:"none",background:"transparent",color:C.err,fontSize:13,cursor:"pointer",fontWeight:600}}>
+              🚪 Déconnexion
+            </button>
+          </div>
+        </aside>
+
+        {/* MAIN */}
+        <main style={{flex:1,padding:"24px",overflowY:"auto"}}>
+
+          {/* OVERVIEW */}
+          {dashTab==="overview"&&(
+            <div>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Bonjour, {profile?.name?.split(" ")[0]||"là"} 👋</h2>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12,marginBottom:24}}>
+                <StatCard icon="💰" label="Revenus totaux" value={`${totalRevenu.toFixed(2)} €`} color={C.p}/>
+                <StatCard icon="📦" label="Annonces actives" value={activeAnn}/>
+                <StatCard icon="🛒" label="Ventes réalisées" value={mySales.length}/>
+                <StatCard icon="📬" label="Achats effectués" value={myOrders.length}/>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+                <Card>
+                  <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>Activité récente</div>
+                  {myAnnonces.slice(0,3).map(a=>(
+                    <div key={a.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:`1px solid ${C.b}`}}>
+                      <span style={{fontSize:20}}>{ICONS[a.category]||"📦"}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
+                        <div style={{fontSize:11,color:C.m}}>{a.price} €</div>
+                      </div>
+                      <Badge label={a.status==="active"?"En ligne":a.status==="pause"?"En pause":"Vendu"} color={a.status==="active"?"green":a.status==="pause"?"orange":"gray"}/>
+                    </div>
+                  ))}
+                  {myAnnonces.length===0&&<div style={{fontSize:13,color:C.m,textAlign:"center",padding:"20px 0"}}>Aucune annonce pour l'instant</div>}
+                </Card>
+                <Card>
+                  <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>E-Wallet</div>
+                  <div style={{fontSize:32,fontWeight:900,color:C.p,marginBottom:6}}>{wallet.toFixed(2)} €</div>
+                  <div style={{fontSize:12,color:C.m,marginBottom:16}}>Solde disponible</div>
+                  <Btn onClick={()=>setDashTab("wallet")} variant="outline" style={{width:"100%",padding:"10px"}}>Gérer mon wallet</Btn>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {/* ANNONCES */}
+          {dashTab==="annonces"&&(
+            <div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+                <h2 style={{fontSize:20,fontWeight:800,margin:0}}>Mes annonces</h2>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,fontSize:13,color:C.m}}>
+                    🌴 Mode vacances
+                    <button onClick={()=>setVacanceMode(v=>!v)} style={{width:44,height:24,borderRadius:12,background:vacanceMode?C.p:C.gl,border:"none",cursor:"pointer",position:"relative",transition:"background .2s"}}>
+                      <div style={{width:18,height:18,borderRadius:"50%",background:C.w,position:"absolute",top:3,left:vacanceMode?23:3,transition:"left .2s"}}/>
+                    </button>
+                  </div>
+                  <Btn onClick={()=>go("sell")} style={{padding:"8px 16px",fontSize:13}}>+ Nouvelle</Btn>
+                </div>
+              </div>
+              {vacanceMode&&<div style={{background:C.warnl,border:`1px solid ${C.warn}`,borderRadius:10,padding:"10px 14px",fontSize:13,color:C.warn,marginBottom:16}}>🌴 Mode vacances actif — Vos annonces sont masquées aux acheteurs</div>}
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                {myAnnonces.map(a=>(
+                  <Card key={a.id} style={{display:"flex",alignItems:"center",gap:14}}>
+                    <div style={{fontSize:32,background:C.gl,borderRadius:8,width:52,height:52,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{ICONS[a.category]||"📦"}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:14,fontWeight:700,marginBottom:2}}>{a.title}</div>
+                      <div style={{fontSize:12,color:C.m}}>{a.category} · {a.state} · {a.price} €</div>
+                      <div style={{fontSize:11,color:C.m,marginTop:3}}>👁️ {a.views||0} vues · ❤️ {a.favs||0} favoris</div>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end"}}>
+                      <Badge label={a.status==="active"?"En ligne":a.status==="pause"?"En pause":a.status==="vendu"?"Vendu":"Supprimé"} color={a.status==="active"?"green":a.status==="pause"?"orange":a.status==="vendu"?"blue":"gray"}/>
+                      {a.status!=="vendu"&&a.status!=="supprimé"&&(
+                        <div style={{display:"flex",gap:6}}>
+                          <button onClick={()=>toggleAnnonceStatus(a.id,a.status==="pause"?"active":"pause")}
+                            style={{fontSize:11,background:C.gl,border:"none",borderRadius:6,padding:"4px 8px",cursor:"pointer",color:C.m,fontWeight:600}}>
+                            {a.status==="pause"?"Activer":"Pause"}
+                          </button>
+                          {!boosted.includes(a.id)?(
+                            <button onClick={()=>setBoostId(a.id)}
+                              style={{fontSize:11,background:C.warnl,border:"none",borderRadius:6,padding:"4px 8px",cursor:"pointer",color:C.warn,fontWeight:600}}>
+                              🚀 Booster
+                            </button>
+                          ):(
+                            <Badge label="✅ Boosté" color="green"/>
+                          )}
+                          <button onClick={()=>deleteAnnonce(a.id)}
+                            style={{fontSize:11,background:C.errl,border:"none",borderRadius:6,padding:"4px 8px",cursor:"pointer",color:C.err,fontWeight:600}}>
+                            🗑️
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+                {myAnnonces.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:C.m}}>Aucune annonce. <span style={{color:C.p,cursor:"pointer",fontWeight:600}} onClick={()=>go("sell")}>Publiez votre premier article →</span></div>}
+              </div>
+
+              {boostId&&(
+                <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200}}>
+                  <Card style={{maxWidth:360,width:"90%",textAlign:"center"}}>
+                    <div style={{fontSize:40,marginBottom:10}}>🚀</div>
+                    <h3 style={{fontSize:17,fontWeight:800,marginBottom:8}}>Booster cette annonce</h3>
+                    <p style={{fontSize:13,color:C.m,marginBottom:20}}>Mise en avant 7 jours pour <strong>3,50 €</strong>. Multipliez vos vues par 5 !</p>
+                    <div style={{display:"flex",gap:10}}>
+                      <Btn onClick={()=>setBoostId(null)} variant="ghost" style={{flex:1,padding:"11px"}}>Annuler</Btn>
+                      <Btn onClick={()=>{setBoosted(b=>[...b,boostId]);setBoostId(null);showToast("Annonce boostée 🚀")}} style={{flex:2,padding:"11px",background:C.a}}>Payer 3,50 €</Btn>
+                    </div>
+                  </Card>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* VENTES */}
+          {dashTab==="ventes"&&(
+            <div>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Mes ventes</h2>
+              {mySales.length===0?(
+                <div style={{textAlign:"center",padding:"40px 0",color:C.m}}>Aucune vente pour l'instant.</div>
+              ):(
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  {mySales.map(v=>(
+                    <Card key={v.id}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
+                        <div><div style={{fontSize:14,fontWeight:700}}>Commande #{v.id?.slice(0,8)}</div><div style={{fontSize:12,color:C.m}}>{new Date(v.created_at).toLocaleDateString("fr-FR")}</div></div>
+                        <Badge label={v.status} color={v.status==="livré"?"green":v.status==="expédié"?"blue":v.status==="en attente"?"orange":"gray"}/>
+                      </div>
+                      <div style={{display:"flex",gap:16,fontSize:13}}>
+                        <span><span style={{color:C.m}}>Prix : </span><strong>{v.price} €</strong></span>
+                        <span><span style={{color:C.m}}>Commission : </span><span style={{color:C.a}}>- {v.commission} €</span></span>
+                        <span><span style={{color:C.m}}>Gain net : </span><strong style={{color:C.p}}>{v.gain} €</strong></span>
+                      </div>
+                      {v.status==="en attente"&&(
+                        <div style={{marginTop:10}}>
+                          <Btn style={{padding:"8px 16px",fontSize:12}}>📦 Imprimer l'étiquette</Btn>
+                        </div>
+                      )}
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ACHATS */}
+          {dashTab==="achats"&&(
+            <div>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Mes achats</h2>
+              {myOrders.length===0?(
+                <div style={{textAlign:"center",padding:"40px 0",color:C.m}}>Aucun achat pour l'instant. <span style={{color:C.p,cursor:"pointer",fontWeight:600}} onClick={()=>go("home")}>Explorer le catalogue →</span></div>
+              ):(
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  {myOrders.map(o=>(
+                    <Card key={o.id}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                        <div><div style={{fontSize:14,fontWeight:700}}>Commande #{o.id?.slice(0,8)}</div><div style={{fontSize:12,color:C.m}}>{new Date(o.created_at).toLocaleDateString("fr-FR")}</div></div>
+                        <Badge label={o.status} color={o.status==="livré"?"green":o.status==="expédié"?"blue":o.status==="en attente"?"orange":"gray"}/>
+                      </div>
+                      <div style={{fontSize:14,fontWeight:700}}>{o.price} € · {o.shipping_method}</div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* WALLET */}
+          {dashTab==="wallet"&&(
+            <div>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Mon E-Wallet</h2>
+              <div style={{background:C.p,borderRadius:16,padding:"28px 24px",marginBottom:20,color:"#fff",textAlign:"center"}}>
+                <div style={{fontSize:13,opacity:.8,marginBottom:6}}>Solde disponible</div>
+                <div style={{fontSize:42,fontWeight:900,marginBottom:16}}>{wallet.toFixed(2)} €</div>
+                <Btn style={{background:"#fff",color:C.p,padding:"11px 28px"}}>🏦 Retirer les fonds</Btn>
+              </div>
+              <Card>
+                <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>Historique des transactions</div>
+                {mySales.length===0?(
+                  <div style={{textAlign:"center",padding:"20px 0",color:C.m,fontSize:13}}>Aucune transaction pour l'instant.</div>
+                ):(
+                  mySales.map((s,i)=>(
+                    <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:i<mySales.length-1?`1px solid ${C.b}`:"none"}}>
+                      <div><div style={{fontSize:13,fontWeight:600}}>Vente #{s.id?.slice(0,8)}</div><div style={{fontSize:11,color:C.m}}>{new Date(s.created_at).toLocaleDateString("fr-FR")}</div></div>
+                      <div style={{fontSize:15,fontWeight:800,color:C.p}}>+{s.gain} €</div>
+                    </div>
+                  ))
+                )}
+              </Card>
+            </div>
+          )}
+
+          {/* STATS */}
+          {dashTab==="stats"&&(
+            <div>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Statistiques</h2>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12,marginBottom:24}}>
+                <StatCard icon="👁️" label="Vues totales" value={myAnnonces.reduce((a,x)=>a+(x.views||0),0)}/>
+                <StatCard icon="❤️" label="Favoris" value={myAnnonces.reduce((a,x)=>a+(x.favs||0),0)} color={C.a}/>
+                <StatCard icon="🛒" label="Ventes" value={mySales.length} color={C.p}/>
+                <StatCard icon="💰" label="Revenus" value={`${totalRevenu.toFixed(0)} €`} color={C.p}/>
+              </div>
+              <Card>
+                <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>Performance par annonce</div>
+                {myAnnonces.map(a=>(
+                  <div key={a.id} style={{marginBottom:14}}>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}>
+                      <span style={{fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"60%"}}>{a.title}</span>
+                      <span style={{color:C.m}}>{a.views||0} vues</span>
+                    </div>
+                    <div style={{background:C.gl,borderRadius:4,height:8,overflow:"hidden"}}>
+                      <div style={{background:C.p,height:"100%",borderRadius:4,width:`${Math.min((a.views||0)/Math.max(...myAnnonces.map(x=>x.views||1))*100,100)}%`}}/>
                     </div>
                   </div>
                 ))}
-              </div>
-            )}
-          </div>
-        </div>
-      );
+                {myAnnonces.length===0&&<div style={{textAlign:"center",padding:"20px 0",color:C.m,fontSize:13}}>Pas encore de données.</div>}
+              </Card>
+            </div>
+          )}
 
-      // AUTH
-      if (screen === "auth") return (
-        <div style={{ minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-          {toast && <Toast {...toast} />}
-          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 18, padding: "32px 28px", maxWidth: 400, width: "100%" }}>
-            <div style={{ textAlign: "center", marginBottom: 24 }}><Logo size={26} /></div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
-              {[["login", "Connexion"], ["register", "Inscription"]].map(([m, l]) => (
-                <button key={m} onClick={() => { setAuthMode(m); setAuthError(""); }} style={{ flex: 1, background: authMode === m ? C.primary : C.white, color: authMode === m ? "#fff" : C.muted, border: `1.5px solid ${authMode === m ? C.primary : C.border}`, borderRadius: 10, padding: "10px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>{l}</button>
-              ))}
-            </div>
-            {authMode === "register" && (
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 5 }}>Nom complet *</label>
-                <input value={authName} onChange={e => setAuthName(e.target.value)} placeholder="Jean Dupont" style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 14 }} />
+          {/* PRO */}
+          {dashTab==="pro"&&isPro&&(
+            <div>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:6}}>Espace Vendeur Pro 🏪</h2>
+              <p style={{color:C.m,fontSize:14,marginBottom:20}}>Gérez vos invendus et votre espace publicitaire.</p>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
+                <Card style={{background:C.warnl,border:`1px solid ${C.warn}`}}>
+                  <div style={{fontSize:22,marginBottom:8}}>🏅</div>
+                  <div style={{fontSize:16,fontWeight:800,color:C.warn}}>Abonnement Pro</div>
+                  <div style={{fontSize:13,color:C.warn,marginTop:4}}>Actif · Renouvellement le 01/01/2027</div>
+                </Card>
+                <Card>
+                  <div style={{fontSize:22,marginBottom:8}}>📢</div>
+                  <div style={{fontSize:16,fontWeight:800}}>Espace publicitaire</div>
+                  <div style={{fontSize:13,color:C.m,marginTop:4}}>Gérez vos bannières promotionnelles</div>
+                </Card>
               </div>
-            )}
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 5 }}>Email *</label>
-              <input type="email" value={authEmail} onChange={e => setAuthEmail(e.target.value)} placeholder="vous@exemple.com" style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 14 }} />
+              <Card>
+                <div style={{fontSize:14,fontWeight:700,marginBottom:14}}>Mes invendus</div>
+                <Btn onClick={()=>go("sell")} style={{padding:"10px 20px",fontSize:13}}>+ Ajouter un invendu</Btn>
+                <div style={{textAlign:"center",padding:"20px 0",color:C.m,fontSize:13,marginTop:10}}>Aucun invendu publié pour l'instant.</div>
+              </Card>
             </div>
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 5 }}>Mot de passe *</label>
-              <input type="password" value={authPwd} onChange={e => setAuthPwd(e.target.value)} placeholder="6 caractères minimum" style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 14 }} />
-            </div>
-            {authError && <div style={{ background: C.errorLight, color: C.error, borderRadius: 8, padding: "10px 14px", fontSize: 13, marginBottom: 16 }}>❌ {authError}</div>}
-            <button onClick={authMode === "login" ? login : register} disabled={loading} style={{ width: "100%", background: loading ? "#9FE1CB" : C.primary, color: "#fff", border: "none", borderRadius: 24, padding: "13px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
-              {loading ? "Chargement…" : authMode === "login" ? "Se connecter" : "Créer mon compte"}
-            </button>
-            <button onClick={() => setScreen("home")} style={{ width: "100%", background: "none", border: "none", color: C.muted, fontSize: 13, cursor: "pointer", marginTop: 16 }}>← Retour</button>
-          </div>
-        </div>
-      );
+          )}
 
-      // SELL
-      if (screen === "sell") return (
-        <div style={{ minHeight: "100vh", background: C.bg }}>
-          {toast && <Toast {...toast} />}
-          <nav style={{ background: C.white, borderBottom: `1px solid ${C.border}`, padding: "0 20px", display: "flex", alignItems: "center", height: 56, gap: 12 }}>
-            <button onClick={() => setScreen("home")} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer" }}>←</button>
-            <Logo size={18} />
-          </nav>
-          <div style={{ maxWidth: 560, margin: "28px auto", padding: "0 20px" }}>
-            <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 20 }}>Publier une annonce</h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Catégorie *</label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {categories.map(c => (
-                    <button key={c} onClick={() => setSellForm(f => ({ ...f, category: c }))} style={{ background: sellForm.category === c ? C.primary : C.white, color: sellForm.category === c ? "#fff" : C.text, border: `1px solid ${sellForm.category === c ? C.primary : C.border}`, borderRadius: 20, padding: "7px 14px", fontSize: 13, cursor: "pointer" }}>
-                      {catIcons[c]} {c}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Titre *</label>
-                <input value={sellForm.title} onChange={e => setSellForm(f => ({ ...f, title: e.target.value }))} placeholder="Ex : Wilson Pro Staff 97" style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 14 }} />
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Marque</label>
-                  <input value={sellForm.brand} onChange={e => setSellForm(f => ({ ...f, brand: e.target.value }))} placeholder="Wilson, Babolat…" style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 14 }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Prix (€) *</label>
-                  <input type="number" value={sellForm.price} onChange={e => setSellForm(f => ({ ...f, price: e.target.value }))} placeholder="85" style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 14 }} />
-                </div>
-              </div>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>État *</label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {states.map(s => (
-                    <button key={s} onClick={() => setSellForm(f => ({ ...f, state: s }))} style={{ background: sellForm.state === s ? C.primary : C.white, color: sellForm.state === s ? "#fff" : C.text, border: `1px solid ${sellForm.state === s ? C.primary : C.border}`, borderRadius: 20, padding: "7px 14px", fontSize: 12, cursor: "pointer" }}>{s}</button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: "block", marginBottom: 6 }}>Description</label>
-                <textarea value={sellForm.description} onChange={e => setSellForm(f => ({ ...f, description: e.target.value }))} rows={4} placeholder="Décrivez votre article…" style={{ width: "100%", padding: "11px 14px", borderRadius: 10, border: `1px solid ${C.border}`, fontSize: 14, resize: "vertical" }} />
-              </div>
-              {sellForm.price > 0 && (
-                <div style={{ background: C.primaryLight, borderRadius: 10, padding: "14px 16px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}><span style={{ color: C.muted }}>Prix de vente</span><strong>{sellForm.price} €</strong></div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}><span style={{ color: C.muted }}>Commission (8%)</span><span style={{ color: C.accent }}>- {(sellForm.price * 0.08).toFixed(2)} €</span></div>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 15, fontWeight: 800, borderTop: `1px solid ${C.border}`, paddingTop: 8, marginTop: 4 }}><span>Vous recevez</span><span style={{ color: C.primary }}>{(sellForm.price * 0.92).toFixed(2)} €</span></div>
-                </div>
-              )}
-              <button onClick={publishAnnonce} disabled={loading} style={{ background: loading ? "#9FE1CB" : C.primary, color: "#fff", border: "none", borderRadius: 24, padding: "14px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>
-                {loading ? "Publication…" : "🚀 Publier l'annonce"}
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-
-      // ARTICLE
-      if (screen === "article" && selectedArticle) {
-        const a = selectedArticle;
-        return (
-          <div style={{ minHeight: "100vh", background: C.bg }}>
-            {toast && <Toast {...toast} />}
-            <nav style={{ background: C.white, borderBottom: `1px solid ${C.border}`, padding: "0 20px", display: "flex", alignItems: "center", height: 56, gap: 12 }}>
-              <button onClick={() => setScreen("home")} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer" }}>←</button>
-              <Logo size={18} />
-            </nav>
-            <div style={{ maxWidth: 680, margin: "24px auto", padding: "0 20px" }}>
-              <div style={{ background: C.grayLight, borderRadius: 14, height: 260, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 100, marginBottom: 20 }}>{catIcons[a.category] || "📦"}</div>
-              <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 14, padding: "20px" }}>
-                <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>{a.brand} · {a.category}</div>
-                <h1 style={{ fontSize: 20, fontWeight: 800, margin: "0 0 10px" }}>{a.title}</h1>
-                <div style={{ display: "inline-block", background: C.primaryLight, color: C.primaryDark, fontSize: 12, borderRadius: 6, padding: "3px 10px", marginBottom: 14 }}>{a.state}</div>
-                <div style={{ fontSize: 28, fontWeight: 900, marginBottom: 6 }}>{a.price} €</div>
-                {a.description && <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, marginBottom: 20 }}>{a.description}</p>}
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button style={{ flex: 2, background: C.primary, color: "#fff", border: "none", borderRadius: 24, padding: "13px", fontSize: 15, fontWeight: 700, cursor: "pointer" }}>Acheter maintenant</button>
-                  <button style={{ flex: 1, background: C.white, color: C.primary, border: `2px solid ${C.primary}`, borderRadius: 24, padding: "13px", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Faire une offre</button>
-                </div>
+          {/* SETTINGS */}
+          {dashTab==="settings"&&(
+            <div>
+              <h2 style={{fontSize:20,fontWeight:800,marginBottom:20}}>Paramètres</h2>
+              <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                {[
+                  ["👤","Informations personnelles","Nom, email, téléphone"],
+                  ["🔒","Sécurité","Mot de passe, double authentification"],
+                  ["💳","Moyens de paiement","Carte bancaire, IBAN"],
+                  ["🔔","Notifications","Email, push, SMS"],
+                  ["🌍","Langue","Français / English"],
+                  ["🍪","Cookies & confidentialité","Gérer vos préférences"],
+                  ["🗑️","Supprimer mon compte","Action irréversible"],
+                ].map(([icon,title,sub])=>(
+                  <Card key={title} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",padding:"14px 18px"}}>
+                    <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                      <span style={{fontSize:20}}>{icon}</span>
+                      <div>
+                        <div style={{fontSize:14,fontWeight:600,color:title.includes("Supprimer")?C.err:C.t}}>{title}</div>
+                        <div style={{fontSize:12,color:C.m}}>{sub}</div>
+                      </div>
+                    </div>
+                    <span style={{color:C.m,fontSize:18}}>›</span>
+                  </Card>
+                ))}
               </div>
             </div>
-          </div>
-        );
-      }
+          )}
 
-      return null;
-    }
+        </main>
+      </div>
+    </div>
+  );
+}
 
-    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-  </script>
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
 </body>
 </html>
