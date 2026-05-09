@@ -612,7 +612,7 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
             {a.photo_url?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:44,height:44,background:CBG[a.category]||C.g,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>{CAT_TREE[a.category]?.icon||"🏅"}</div>}
             <button onClick={e=>{e.stopPropagation();setFavs(f=>({...f,[a.id]:!f[a.id]}))}} style={{position:"absolute",top:10,right:10,width:30,height:30,borderRadius:"50%",background:C.w,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:favs[a.id]?C.o:C.f400}}><Ico.heart(favs[a.id])/></button>
             {a.brand&&<div style={{position:"absolute",bottom:8,left:8,background:"rgba(0,0,0,.65)",color:C.w,fontSize:11,fontWeight:700,borderRadius:6,padding:"3px 8px"}}>{a.brand}</div>}
-            <div style={{position:"absolute",top:8,left:8,background:"rgba(10,42,30,.85)",color:C.ga,fontSize:9,fontWeight:700,borderRadius:6,padding:"2px 7px",display:"flex",alignItems:"center",gap:3}}><Ico.drop/>Drop</div>
+            <div style={{position:"absolute",top:8,left:8,background:"rgba(10,42,30,.85)",color:C.ga,fontSize:9,fontWeight:700,borderRadius:6,padding:"2px 7px",display:"flex",alignItems:"center",gap:3}}><Ico.drop/><span>Drop</span></div>
           </div>
           <div style={{padding:"12px 14px"}}>
             <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:5}}><Tag state={a.state}/>{a.sub_category&&<span style={{fontSize:10,fontWeight:600,color:C.f400}}>· {a.sub_category}</span>}</div>
@@ -984,7 +984,7 @@ function Article({sel,go,user,placeOrder,load,favs,setFavs}){
         <div style={{display:"flex",gap:7,marginBottom:10,flexWrap:"wrap"}}>
           <span style={{background:C.gl,color:C.g,fontSize:11,fontWeight:700,borderRadius:6,padding:"3px 9px"}}>{CAT_TREE[a.category]?.icon} {a.category}</span>
           {a.sub_category&&<span style={{background:C.f100,color:C.f600,fontSize:11,fontWeight:600,borderRadius:6,padding:"3px 9px"}}>{a.sub_category}</span>}
-          <span style={{background:C.k,color:C.ga,fontSize:11,fontWeight:700,borderRadius:6,padding:"3px 9px",display:"flex",alignItems:"center",gap:4}}><Ico.drop/>Drop</span>
+          <span style={{background:C.k,color:C.ga,fontSize:11,fontWeight:700,borderRadius:6,padding:"3px 9px",display:"flex",alignItems:"center",gap:4}}><Ico.drop/><span>Drop</span></span>
         </div>
         <h1 style={{fontSize:20,fontWeight:900,letterSpacing:"-0.5px",marginBottom:7,lineHeight:1.2}}>{a.title}</h1>
         <Tag state={a.state}/>
