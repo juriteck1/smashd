@@ -500,14 +500,74 @@ function App(){
   const register=async(email,pwd,name,ut,siret,company)=>{setLoad(true);try{const d=await authApi("signup",{email,password:pwd});if(d.user){if(d.access_token)st(d.access_token);await api("profiles",{method:"POST",body:JSON.stringify({id:d.user.id,name,email,user_type:ut,siret:siret||null,company:company||null})});setUser(d.user);setProf({id:d.user.id,name,email,user_type:ut});tw("Compte créé !");go("home")}}catch(e){throw e}finally{setLoad(false)}};
   const logout=()=>{ct();setUser(null);setProf(null);setMyA([]);setMyO([]);setMyS([]);go("home")};
  
+  const[myDropsV,setMyDropsV]=useState([]);
+  const[myDropsA,setMyDropsA]=useState([]);
+ 
   const publish=async f=>{if(!user){go("auth");return}setLoad(true);try{await api("annonces",{method:"POST",body:JSON.stringify({user_id:user.id,...f,status:"active"})});tw("Annonce publiée !");await loadA();await loadMy(user.id);go("dashboard");setDtab("annonces")}catch(e){tw("Erreur : "+e.message,"error")}finally{setLoad(false)}};
   const toggleA=async(id,status)=>{try{await api(`annonces?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({status})});await loadMy(user.id);await loadA()}catch(e){}};
   const deleteA=async id=>{try{await api(`annonces?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({status:"supprimé"})});await loadMy(user.id);await loadA()}catch(e){}};
-  const placeOrder=async(a,sm)=>{if(!user){go("auth");return false}setLoad(true);try{const c=parseFloat((a.price*.08).toFixed(2)),g=parseFloat((a.price-c).toFixed(2));await api("commandes",{method:"POST",body:JSON.stringify({annonce_id:a.id,buyer_id:user.id,seller_id:a.user_id,price:a.price,commission:c,gain:g,shipping_method:sm,status:"en attente"})});await api(`annonces?id=eq.${a.id}`,{method:"PATCH",body:JSON.stringify({status:"vendu"})});tw("Commande confirmée !");await loadA();await loadMy(user.id);return true}catch(e){tw("Erreur","error");return false}finally{setLoad(false)}};
+ 
+  const loadDrops=async uid=>{
+    try{
+      const[dv,da]=await Promise.all([
+        api(`drop_remises?vendeur_id=eq.${uid}&order=created_at.desc`),
+        api(`drop_remises?acheteur_id=eq.${uid}&order=created_at.desc`)
+      ]);
+      setMyDropsV(dv);setMyDropsA(da);
+    }catch(e){}
+  };
+ 
+  const placeOrder=async(a,sm)=>{
+    if(!user){go("auth");return false}
+    setLoad(true);
+    try{
+      const c=parseFloat((a.price*.08).toFixed(2)),g=parseFloat((a.price-c).toFixed(2));
+      const cmds=await api("commandes",{method:"POST",body:JSON.stringify({
+        annonce_id:a.id,buyer_id:user.id,seller_id:a.user_id,
+        price:a.price,commission:c,gain:g,
+        shipping_method:sm,status:"en attente",drop_status:"en_attente"
+      })});
+      const cmd=cmds[0];
+      let dropI={};try{if(a.drop_info)dropI=JSON.parse(a.drop_info)}catch(e){}
+      if(dropI.code&&cmd?.id){
+        await api("drop_remises",{method:"POST",body:JSON.stringify({
+          commande_id:cmd.id,annonce_id:a.id,
+          vendeur_id:a.user_id,acheteur_id:user.id,
+          code:dropI.code,mode:dropI.mode||"meet",
+          lieu:dropI.lieu||"",drop_info:dropI,status:"en_attente"
+        })});
+      }
+      await api(`annonces?id=eq.${a.id}`,{method:"PATCH",body:JSON.stringify({status:"vendu"})});
+      tw("Commande confirmée !");
+      await loadA();await loadMy(user.id);await loadDrops(user.id);
+      return true;
+    }catch(e){tw("Erreur","error");return false}
+    finally{setLoad(false)}
+  };
+ 
+  const confirmDrop=async(remiseId,cmdId,gain)=>{
+    try{
+      await api(`drop_remises?id=eq.${remiseId}`,{method:"PATCH",body:JSON.stringify({status:"confirmé",confirmed_at:new Date().toISOString()})});
+      if(cmdId)await api(`commandes?id=eq.${cmdId}`,{method:"PATCH",body:JSON.stringify({status:"livré",drop_status:"confirmé"})});
+      tw("Remise confirmée ! Fonds crédités 🎉");
+      await loadDrops(user.id);await loadMy(user.id);
+    }catch(e){tw("Erreur","error")}
+  };
+ 
+  const signalLitige=async(remiseId,raison)=>{
+    try{
+      await api("drop_litiges",{method:"POST",body:JSON.stringify({remise_id:remiseId,signalé_par:user.id,raison})});
+      await api(`drop_remises?id=eq.${remiseId}`,{method:"PATCH",body:JSON.stringify({status:"litigé"})});
+      tw("Litige signalé. Notre équipe vous contacte sous 24h.");
+      await loadDrops(user.id);
+    }catch(e){tw("Erreur","error")}
+  };
+ 
+  useEffect(()=>{if(user?.id)loadDrops(user.id)},[user?.id]);
  
   const fil=ann.filter(a=>fcat==="Tous"||a.category===fcat||a.sub_category===fcat).filter(a=>fst==="Tous"||a.state===fst).filter(a=>!fpr.min||a.price>=parseFloat(fpr.min)).filter(a=>!fpr.max||a.price<=parseFloat(fpr.max)).filter(a=>!srch||a.title?.toLowerCase().includes(srch.toLowerCase())||a.brand?.toLowerCase().includes(srch.toLowerCase()));
-  const wal=Math.round(myS.reduce((acc,s)=>acc+(s.gain||0),0)*100)/100;
-  const p={user,prof,load,tw,go,login,register,logout,publish,toggleA,deleteA,placeOrder,myA,myO,myS,wal,dtab,setDtab,ann:fil,allAnn:ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,sel,loadMy,lang,setLang,favs,setFavs};
+  const wal=Math.round(myS.filter(s=>myDropsV.find(d=>d.commande_id===s.id&&d.status==="confirmé")).reduce((acc,s)=>acc+(s.gain||0),0)*100)/100;
+  const p={user,prof,load,tw,go,login,register,logout,publish,toggleA,deleteA,placeOrder,confirmDrop,signalLitige,myA,myO,myS,myDropsV,myDropsA,wal,dtab,setDtab,ann:fil,allAnn:ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,sel,loadMy,lang,setLang,favs,setFavs};
   return<div>{toast&&<Toast {...toast}/>}{sc==="home"&&<Home {...p}/>}{sc==="auth"&&<Auth {...p}/>}{sc==="sell"&&<Sell {...p}/>}{sc==="article"&&<Article {...p}/>}{sc==="dashboard"&&<Dash {...p}/>}</div>;
 }
  
@@ -1111,116 +1171,479 @@ function Article({sel,go,user,placeOrder,load,favs,setFavs}){
   </div>;
 }
  
-// ═══ DASHBOARD (inchangé) ═══
-function Dash({user,prof,go,logout,myA,myO,myS,wal,dtab,setDtab,toggleA,deleteA,tw}){
+// ═══ DASHBOARD COMPLET avec Drop ═══
+function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,wal,dtab,setDtab,toggleA,deleteA,tw,confirmDrop,signalLitige}){
   const[boosted,setBoosted]=useState([]);
   const[boostId,setBoostId]=useState(null);
+  const[litigeId,setLitigeId]=useState(null);
+  const[litigeText,setLitigeText]=useState("");
+  const[codeInput,setCodeInput]=useState({});
+  const[codeErr,setCodeErr]=useState({});
   const isPro=prof?.user_type==="pro";
-  const rev=myS.reduce((acc,s)=>acc+(s.gain||0),0);
+  const rev=myS.filter(s=>myDropsV.find(d=>d.commande_id===s.id&&d.status==="confirmé")).reduce((acc,s)=>acc+(s.gain||0),0);
   const fn=prof?.name?.split(" ")[0]||"là";
-  const DTABS=[{id:"overview",l:"Vue d'ensemble"},{id:"annonces",l:"Mes annonces"},{id:"ventes",l:"Mes ventes"},{id:"achats",l:"Mes achats"},{id:"wallet",l:"E-Wallet"},{id:"stats",l:"Statistiques"},...(isPro?[{id:"pro",l:"Espace Pro"}]:[]),{id:"settings",l:"Paramètres"}];
-  return<div style={{minHeight:"100vh",background:C.f50}}>
-    <nav style={{background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"0 20px",height:54,display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,zIndex:100}}>
-      <button onClick={()=>go("home")} style={{background:"none",border:"none",cursor:"pointer",color:C.f600,display:"flex",alignItems:"center",fontSize:14}}><Ico.chL/></button>
-      <Logo s={18}/>
-      <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
-        <button onClick={()=>go("sell")} className="btn" style={{background:C.o,color:C.w,border:"none",borderRadius:100,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><Ico.plus/> Vendre</button>
-        <button onClick={logout} className="btn" style={{background:C.f100,color:C.r,border:`1px solid ${C.f200}`,borderRadius:100,padding:"8px 14px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Déconnexion</button>
-      </div>
-    </nav>
-    <div style={{maxWidth:1060,margin:"0 auto",padding:"24px 20px",display:"grid",gridTemplateColumns:"190px 1fr",gap:20}} className="g1m">
-      <div className="hm" style={{display:"flex",flexDirection:"column",gap:4}}>
-        <div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:14,padding:"14px",marginBottom:10}}>
-          <div style={{fontSize:15,fontWeight:700}}>{fn}</div>
-          <div style={{fontSize:12,color:C.f400,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{prof?.email}</div>
-          {isPro&&<div style={{marginTop:7,background:C.k,color:C.w,borderRadius:6,padding:"2px 9px",fontSize:11,fontWeight:700,display:"inline-block"}}>PRO</div>}
+  const pendingDropsV=myDropsV.filter(d=>d.status==="en_attente").length;
+  const pendingDropsA=myDropsA.filter(d=>d.status==="en_attente").length;
+  const DTABS=[
+    {id:"overview",l:"Vue d'ensemble"},
+    {id:"annonces",l:"Mes annonces"},
+    {id:"drop-vendeur",l:"Drop Vendeur"+(pendingDropsV>0?` (${pendingDropsV})`:"")},
+    {id:"drop-acheteur",l:"Drop Acheteur"+(pendingDropsA>0?` (${pendingDropsA})`:"")},
+    {id:"ventes",l:"Mes ventes"},
+    {id:"achats",l:"Mes achats"},
+    {id:"wallet",l:"E-Wallet"},
+    {id:"stats",l:"Statistiques"},
+    ...(isPro?[{id:"pro",l:"Espace Pro"}]:[]),
+    {id:"settings",l:"Paramètres"}
+  ];
+ 
+  const DropStatusBadge=({status})=>{
+    const map={en_attente:{bg:"#FFF3E0",c:"#C25A00",l:"En attente"},confirmé:{bg:C.gl,c:C.gm,l:"Confirmé ✓"},litigé:{bg:C.rl,c:C.r,l:"Litige ⚠️"},remboursé:{bg:C.f100,c:C.f400,l:"Remboursé"}};
+    const s=map[status]||map["en_attente"];
+    return<span style={{fontSize:10,fontWeight:700,background:s.bg,color:s.c,borderRadius:100,padding:"3px 9px",textTransform:"uppercase",letterSpacing:".5px"}}>{s.l}</span>;
+  };
+ 
+  const handleConfirmCode=async(drop)=>{
+    const input=(codeInput[drop.id]||"").trim().toUpperCase();
+    if(input!==drop.code){setCodeErr(e=>({...e,[drop.id]:"Code incorrect"}));return;}
+    setCodeErr(e=>({...e,[drop.id]:""}));
+    await confirmDrop(drop.id,drop.commande_id,drop.gain);
+  };
+ 
+  return(
+    <div style={{minHeight:"100vh",background:C.f50}}>
+      <nav style={{background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"0 20px",height:54,display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,zIndex:100}}>
+        <button onClick={()=>go("home")} style={{background:"none",border:"none",cursor:"pointer",color:C.f600,display:"flex",alignItems:"center",fontSize:14}}><Ico.chL/></button>
+        <Logo s={18}/>
+        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
+          {(pendingDropsV+pendingDropsA)>0&&<div style={{background:C.o,color:"#fff",borderRadius:100,padding:"4px 10px",fontSize:12,fontWeight:700}}>{pendingDropsV+pendingDropsA} Drop en attente</div>}
+          <button onClick={()=>go("sell")} className="btn" style={{background:C.o,color:C.w,border:"none",borderRadius:100,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><Ico.plus/> Vendre</button>
+          <button onClick={logout} className="btn" style={{background:C.f100,color:C.r,border:`1px solid ${C.f200}`,borderRadius:100,padding:"8px 14px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Déconnexion</button>
         </div>
-        <div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:14,padding:"8px"}}>
-          {DTABS.map(t=><button key={t.id} onClick={()=>setDtab(t.id)} style={{width:"100%",display:"block",padding:"9px 12px",borderRadius:10,border:"none",background:dtab===t.id?C.k:"transparent",color:dtab===t.id?C.w:C.f600,fontWeight:dtab===t.id?700:500,fontSize:13,cursor:"pointer",marginBottom:2,textAlign:"left",transition:"all .15s"}}>{t.l}</button>)}
-          <div style={{borderTop:`1px solid ${C.f200}`,marginTop:7,paddingTop:7}}><button onClick={logout} style={{width:"100%",display:"block",padding:"9px 12px",borderRadius:10,border:"none",background:"transparent",color:C.r,fontWeight:600,fontSize:13,cursor:"pointer",textAlign:"left"}}>Déconnexion</button></div>
-        </div>
-      </div>
-      <div style={{minWidth:0}}>
-        <div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:20,paddingBottom:4}}>
-          {DTABS.slice(0,6).map(t=><button key={t.id} onClick={()=>setDtab(t.id)} className="btn" style={{padding:"7px 14px",borderRadius:100,border:`1.5px solid ${dtab===t.id?C.g:C.f200}`,background:dtab===t.id?C.g:C.w,color:dtab===t.id?C.w:C.f600,fontSize:12,fontWeight:dtab===t.id?700:500,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>{t.l}</button>)}
-        </div>
-        {dtab==="overview"&&<div>
-          <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Bonjour, {fn} 👋</h2>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:18}} className="g2m">
-            {[[`${rev.toFixed(2)} €`,"Revenus",C.g],[myA.filter(a=>a.status==="active").length,"Annonces actives",C.k],[myS.length,"Ventes",C.o],[myO.length,"Achats",C.f600]].map(([v,l,col])=><div key={l} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:12,padding:"16px"}}><div style={{fontSize:22,fontWeight:900,color:col,letterSpacing:"-1px"}}>{v}</div><div style={{fontSize:12,color:C.f400,marginTop:3}}>{l}</div></div>)}
+      </nav>
+ 
+      <div style={{maxWidth:1060,margin:"0 auto",padding:"24px 20px",display:"grid",gridTemplateColumns:"200px 1fr",gap:20}} className="g1m">
+        {/* Sidebar */}
+        <div className="hm" style={{display:"flex",flexDirection:"column",gap:4}}>
+          <div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:14,padding:"14px",marginBottom:10}}>
+            <div style={{fontSize:15,fontWeight:700}}>{fn}</div>
+            <div style={{fontSize:12,color:C.f400,marginTop:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{prof?.email}</div>
+            {isPro&&<div style={{marginTop:7,background:C.k,color:C.w,borderRadius:6,padding:"2px 9px",fontSize:11,fontWeight:700,display:"inline-block"}}>PRO</div>}
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}} className="g1m">
-            <div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:14,padding:"16px"}}>
-              <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:C.f400,marginBottom:12}}>Annonces récentes</div>
-              {myA.slice(0,4).map(a=><div key={a.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:`1px solid ${C.f100}`}}>
-                <div style={{width:36,height:36,borderRadius:8,overflow:"hidden",background:C.f100,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>{a.photo_url?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:CAT_TREE[a.category]?.icon||"🏅"}</div>
-                <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div><div style={{fontSize:12,color:C.f400}}>{a.price} €</div></div>
-                <div style={{fontSize:10,fontWeight:700,color:a.status==="active"?C.g:C.f400,textTransform:"uppercase"}}>{a.status==="active"?"En ligne":"—"}</div>
-              </div>)}
-              {myA.length===0&&<div style={{fontSize:13,color:C.f400,textAlign:"center",padding:"14px 0"}}>Aucune annonce</div>}
+          <div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:14,padding:"8px"}}>
+            {DTABS.map(t=>(
+              <button key={t.id} onClick={()=>setDtab(t.id)} style={{width:"100%",display:"block",padding:"9px 12px",borderRadius:10,border:"none",background:dtab===t.id?C.k:"transparent",color:dtab===t.id?C.w:t.id.includes("drop")&&(pendingDropsV+pendingDropsA)>0?C.o:C.f600,fontWeight:dtab===t.id?700:500,fontSize:13,cursor:"pointer",marginBottom:2,textAlign:"left",transition:"all .15s"}}>{t.l}</button>
+            ))}
+            <div style={{borderTop:`1px solid ${C.f200}`,marginTop:7,paddingTop:7}}>
+              <button onClick={logout} style={{width:"100%",display:"block",padding:"9px 12px",borderRadius:10,border:"none",background:"transparent",color:C.r,fontWeight:600,fontSize:13,cursor:"pointer",textAlign:"left"}}>Déconnexion</button>
             </div>
-            <div style={{background:C.g,borderRadius:14,padding:"20px",color:C.w}}>
-              <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:"rgba(255,255,255,.4)",marginBottom:6}}>E-Wallet</div>
-              <div style={{fontSize:34,fontWeight:900,letterSpacing:"-2px",marginBottom:4}}>{wal.toFixed(2)} €</div>
-              <div style={{fontSize:12,color:"rgba(255,255,255,.4)",marginBottom:18}}>Solde disponible</div>
-              <button onClick={()=>setDtab("wallet")} style={{background:"rgba(255,255,255,.15)",color:C.w,border:"1px solid rgba(255,255,255,.2)",borderRadius:100,padding:"9px 18px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Gérer mon wallet</button>
-            </div>
           </div>
-        </div>}
-        {dtab==="annonces"&&<div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
-            <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px"}}>Mes annonces</h2>
-            <button onClick={()=>go("sell")} className="btn" style={{background:C.k,color:C.w,border:"none",borderRadius:100,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><Ico.plus/> Nouvelle</button>
+        </div>
+ 
+        {/* Main */}
+        <div style={{minWidth:0}}>
+          <div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:20,paddingBottom:4}}>
+            {DTABS.slice(0,7).map(t=>(
+              <button key={t.id} onClick={()=>setDtab(t.id)} className="btn" style={{padding:"7px 14px",borderRadius:100,border:`1.5px solid ${dtab===t.id?C.g:C.f200}`,background:dtab===t.id?C.g:C.w,color:dtab===t.id?C.w:t.id.includes("drop")&&(pendingDropsV+pendingDropsA)>0?C.o:C.f600,fontSize:12,fontWeight:dtab===t.id?700:500,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>{t.l}</button>
+            ))}
           </div>
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {myA.map(a=>{
-              let di={};try{if(a.drop_info)di=JSON.parse(a.drop_info)}catch(e){}
-              return<div key={a.id} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:13,padding:"13px 16px",display:"flex",alignItems:"center",gap:12}}>
-                <div style={{width:52,height:52,borderRadius:9,overflow:"hidden",background:C.f100,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>{a.photo_url?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:CAT_TREE[a.category]?.icon||"🏅"}</div>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:14,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
-                  <div style={{fontSize:12,color:C.f400,marginTop:1}}>{a.category}{a.sub_category?` › ${a.sub_category}`:""} · {a.price} €</div>
-                  {di.code&&<div style={{fontSize:11,color:C.ga,fontWeight:700,marginTop:2,fontFamily:"monospace",letterSpacing:1}}>{DROP_MODES[di.mode]?.icon} {di.code}</div>}
+ 
+          {/* ═══ OVERVIEW ═══ */}
+          {dtab==="overview"&&(
+            <div>
+              <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Bonjour, {fn} 👋</h2>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:18}} className="g2m">
+                {[[`${rev.toFixed(2)} €`,"Revenus confirmés",C.g],[myA.filter(a=>a.status==="active").length,"Annonces actives",C.k],[myS.length,"Ventes",C.o],[myO.length,"Achats",C.f600]].map(([v,l,col])=>(
+                  <div key={l} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:12,padding:"16px"}}>
+                    <div style={{fontSize:22,fontWeight:900,color:col,letterSpacing:"-1px"}}>{v}</div>
+                    <div style={{fontSize:12,color:C.f400,marginTop:3}}>{l}</div>
+                  </div>
+                ))}
+              </div>
+              {/* Alertes Drop */}
+              {(pendingDropsV.length>0||pendingDropsA>0)&&(
+                <div style={{background:"#FFF3E0",border:"1px solid #F5C07A",borderRadius:13,padding:"14px 18px",marginBottom:16,display:"flex",gap:12,alignItems:"center"}}>
+                  <span style={{fontSize:20}}>⚡</span>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:700,color:"#8a4a00"}}>Actions SMASHD Drop requises</div>
+                    <div style={{fontSize:13,color:"#b05a00",marginTop:2}}>
+                      {pendingDropsV>0&&<span>{pendingDropsV} remise{pendingDropsV>1?"s":""} à effectuer en tant que vendeur · </span>}
+                      {pendingDropsA>0&&<span>{pendingDropsA} remise{pendingDropsA>1?"s":""} à confirmer en tant qu'acheteur</span>}
+                    </div>
+                  </div>
+                  <button onClick={()=>setDtab(pendingDropsV>0?"drop-vendeur":"drop-acheteur")} style={{marginLeft:"auto",background:"#E8470A",color:"#fff",border:"none",borderRadius:100,padding:"8px 16px",fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0}}>Gérer</button>
                 </div>
-                <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-                  <div style={{fontSize:10,fontWeight:700,color:a.status==="active"?C.g:a.status==="pause"?C.o:C.f400,textTransform:"uppercase",background:a.status==="active"?C.gl:a.status==="pause"?"#FFF3E0":C.f100,padding:"4px 9px",borderRadius:100}}>{a.status==="active"?"En ligne":a.status==="pause"?"Pause":"Vendu"}</div>
-                  {a.status!=="vendu"&&a.status!=="supprimé"&&<>
-                    <button onClick={()=>toggleA(a.id,a.status==="pause"?"active":"pause")} style={{background:C.f100,color:C.k,border:"none",borderRadius:7,padding:"5px 9px",fontSize:11,cursor:"pointer",fontWeight:600}}>{a.status==="pause"?"Activer":"Pause"}</button>
-                    <button onClick={()=>deleteA(a.id)} style={{background:C.f100,color:C.f400,border:"none",borderRadius:7,padding:"5px 7px",fontSize:11,cursor:"pointer"}}>Suppr.</button>
-                  </>}
+              )}
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}} className="g1m">
+                <div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:14,padding:"16px"}}>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:C.f400,marginBottom:12}}>Annonces récentes</div>
+                  {myA.slice(0,4).map(a=>(
+                    <div key={a.id} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:`1px solid ${C.f100}`}}>
+                      <div style={{width:36,height:36,borderRadius:8,overflow:"hidden",background:C.f100,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>{a.photo_url?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:CAT_TREE[a.category]?.icon||"🏅"}</div>
+                      <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div><div style={{fontSize:12,color:C.f400}}>{a.price} €</div></div>
+                      <div style={{fontSize:10,fontWeight:700,color:a.status==="active"?C.g:C.f400,textTransform:"uppercase"}}>{a.status==="active"?"En ligne":"—"}</div>
+                    </div>
+                  ))}
+                  {myA.length===0&&<div style={{fontSize:13,color:C.f400,textAlign:"center",padding:"14px 0"}}>Aucune annonce</div>}
+                </div>
+                <div style={{background:C.g,borderRadius:14,padding:"20px",color:C.w}}>
+                  <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:"rgba(255,255,255,.4)",marginBottom:6}}>E-Wallet</div>
+                  <div style={{fontSize:34,fontWeight:900,letterSpacing:"-2px",marginBottom:4}}>{wal.toFixed(2)} €</div>
+                  <div style={{fontSize:12,color:"rgba(255,255,255,.4)",marginBottom:18}}>Revenus confirmés via Drop</div>
+                  <button onClick={()=>setDtab("wallet")} style={{background:"rgba(255,255,255,.15)",color:C.w,border:"1px solid rgba(255,255,255,.2)",borderRadius:100,padding:"9px 18px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Gérer mon wallet</button>
                 </div>
               </div>
-            })}
-            {myA.length===0&&<div style={{textAlign:"center",padding:"44px",color:C.f400,background:C.w,borderRadius:13,border:`1px solid ${C.f200}`}}>Aucune annonce. <span style={{color:C.g,cursor:"pointer",fontWeight:600}} onClick={()=>go("sell")}>Publiez votre premier article</span></div>}
-          </div>
-        </div>}
-        {dtab==="ventes"&&<div>
-          <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Mes ventes</h2>
-          {myS.length===0?<div style={{textAlign:"center",padding:"44px",color:C.f400,background:C.w,borderRadius:13,border:`1px solid ${C.f200}`}}>Aucune vente pour l'instant.</div>:<div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {myS.map(v=><div key={v.id} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:13,padding:"14px 18px"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:9}}><div><div style={{fontSize:14,fontWeight:700}}>#{v.id?.slice(0,8)}</div><div style={{fontSize:12,color:C.f400,marginTop:1}}>{new Date(v.created_at).toLocaleDateString("fr-FR")}</div></div><div style={{fontSize:10,fontWeight:700,color:v.status==="livré"?C.g:C.o,textTransform:"uppercase"}}>{v.status}</div></div><div style={{display:"flex",gap:18,fontSize:13,flexWrap:"wrap"}}><span><span style={{color:C.f400}}>Prix : </span><strong>{v.price} €</strong></span><span><span style={{color:C.f400}}>Net : </span><strong style={{color:C.g}}>{v.gain} €</strong></span></div></div>)}
-          </div>}
-        </div>}
-        {dtab==="achats"&&<div>
-          <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Mes achats</h2>
-          {myO.length===0?<div style={{textAlign:"center",padding:"44px",color:C.f400,background:C.w,borderRadius:13,border:`1px solid ${C.f200}`}}>Aucun achat. <span style={{color:C.g,cursor:"pointer",fontWeight:600}} onClick={()=>go("home")}>Explorer le catalogue</span></div>:<div style={{display:"flex",flexDirection:"column",gap:8}}>{myO.map(o=><div key={o.id} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:13,padding:"14px 18px"}}><div style={{display:"flex",justifyContent:"space-between"}}><div><div style={{fontSize:14,fontWeight:700}}>#{o.id?.slice(0,8)}</div><div style={{fontSize:12,color:C.f400,marginTop:1}}>{new Date(o.created_at).toLocaleDateString("fr-FR")}</div></div><div style={{fontSize:10,fontWeight:700,color:o.status==="livré"?C.g:C.o,textTransform:"uppercase"}}>{o.status}</div></div><div style={{fontSize:14,fontWeight:700,marginTop:8}}>{o.price} € · SMASHD Drop</div></div>)}</div>}
-        </div>}
-        {dtab==="wallet"&&<div>
-          <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>E-Wallet</h2>
-          <div style={{background:C.g,borderRadius:16,padding:"26px 28px",marginBottom:16,color:C.w}}><div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:"rgba(255,255,255,.4)",marginBottom:5}}>Solde disponible</div><div style={{fontSize:44,fontWeight:900,letterSpacing:"-2px",marginBottom:18}}>{wal.toFixed(2)} €</div><button className="btn" style={{background:"rgba(255,255,255,.15)",color:C.w,border:"1px solid rgba(255,255,255,.2)",borderRadius:100,padding:"10px 20px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Retirer les fonds</button></div>
-        </div>}
-        {dtab==="settings"&&<div>
-          <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Paramètres</h2>
-          <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {[["Informations personnelles","Nom, email, téléphone"],["Sécurité","Mot de passe, 2FA"],["Moyens de paiement","Carte, IBAN"],["Notifications","Email, push, SMS"],["Langue","Français / English"],["Supprimer mon compte","Irréversible"]].map(([t,s],i)=><div key={t} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:12,padding:"13px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}><div><div style={{fontSize:14,fontWeight:600,color:i===5?C.r:C.k}}>{t}</div><div style={{fontSize:12,color:C.f400,marginTop:2}}>{s}</div></div><Ico.chR/></div>)}
-            <div onClick={logout} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:12,padding:"13px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}><div><div style={{fontSize:14,fontWeight:600,color:C.r}}>Déconnexion</div><div style={{fontSize:12,color:C.f400,marginTop:2}}>Se déconnecter de SMASHD</div></div><Ico.chR/></div>
-          </div>
-        </div>}
+            </div>
+          )}
+ 
+          {/* ═══ ANNONCES ═══ */}
+          {dtab==="annonces"&&(
+            <div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+                <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px"}}>Mes annonces</h2>
+                <button onClick={()=>go("sell")} className="btn" style={{background:C.k,color:C.w,border:"none",borderRadius:100,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><Ico.plus/> Nouvelle</button>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {myA.map(a=>{
+                  let di={};try{if(a.drop_info)di=JSON.parse(a.drop_info)}catch(e){}
+                  return(
+                    <div key={a.id} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:13,padding:"13px 16px",display:"flex",alignItems:"center",gap:12}}>
+                      <div style={{width:52,height:52,borderRadius:9,overflow:"hidden",background:C.f100,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>{a.photo_url?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:CAT_TREE[a.category]?.icon||"🏅"}</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:14,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
+                        <div style={{fontSize:12,color:C.f400,marginTop:1}}>{a.category}{a.sub_category?` › ${a.sub_category}`:""} · {a.price} €</div>
+                        {di.code&&<div style={{fontSize:11,color:C.ga,fontWeight:700,marginTop:2,fontFamily:"monospace",letterSpacing:1}}>{DROP_MODES[di.mode]?.icon} Code: {di.code}</div>}
+                      </div>
+                      <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                        <div style={{fontSize:10,fontWeight:700,color:a.status==="active"?C.g:a.status==="pause"?C.o:C.f400,textTransform:"uppercase",background:a.status==="active"?C.gl:a.status==="pause"?"#FFF3E0":C.f100,padding:"4px 9px",borderRadius:100}}>{a.status==="active"?"En ligne":a.status==="pause"?"Pause":"Vendu"}</div>
+                        {a.status!=="vendu"&&a.status!=="supprimé"&&(
+                          <>
+                            <button onClick={()=>toggleA(a.id,a.status==="pause"?"active":"pause")} style={{background:C.f100,color:C.k,border:"none",borderRadius:7,padding:"5px 9px",fontSize:11,cursor:"pointer",fontWeight:600}}>{a.status==="pause"?"Activer":"Pause"}</button>
+                            <button onClick={()=>deleteA(a.id)} style={{background:C.f100,color:C.f400,border:"none",borderRadius:7,padding:"5px 7px",fontSize:11,cursor:"pointer"}}>Suppr.</button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                {myA.length===0&&<div style={{textAlign:"center",padding:"44px",color:C.f400,background:C.w,borderRadius:13,border:`1px solid ${C.f200}`}}>Aucune annonce. <span style={{color:C.g,cursor:"pointer",fontWeight:600}} onClick={()=>go("sell")}>Publiez votre premier article</span></div>}
+              </div>
+            </div>
+          )}
+ 
+          {/* ═══ DROP VENDEUR ═══ */}
+          {dtab==="drop-vendeur"&&(
+            <div>
+              <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Drop Vendeur</h2>
+              <p style={{fontSize:14,color:C.f400,marginBottom:20}}>Articles vendus en attente de remise physique à l'acheteur.</p>
+              {myDropsV.length===0?(
+                <div style={{textAlign:"center",padding:"44px",color:C.f400,background:C.w,borderRadius:13,border:`1px solid ${C.f200}`}}>
+                  <div style={{fontSize:32,marginBottom:12}}>📦</div>
+                  <div style={{fontWeight:600,marginBottom:4}}>Aucune remise en cours</div>
+                  <div style={{fontSize:13}}>Vos futures ventes apparaîtront ici</div>
+                </div>
+              ):myDropsV.map(drop=>{
+                const mode=DROP_MODES[drop.mode]||DROP_MODES["meet"];
+                return(
+                  <div key={drop.id} style={{background:C.w,border:`1.5px solid ${drop.status==="en_attente"?C.o:drop.status==="confirmé"?C.g:C.r}`,borderRadius:16,padding:"18px 20px",marginBottom:12}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+                      <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                        <div style={{fontSize:24}}>{mode.icon}</div>
+                        <div>
+                          <div style={{fontSize:14,fontWeight:800}}>{mode.label}</div>
+                          <div style={{fontSize:12,color:C.f400,marginTop:1}}>{drop.lieu||"Lieu non précisé"}</div>
+                        </div>
+                      </div>
+                      <DropStatusBadge status={drop.status}/>
+                    </div>
+ 
+                    {/* Code à donner */}
+                    <div style={{background:C.k,borderRadius:12,padding:"14px 18px",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <div>
+                        <div style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.3)",letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:6}}>Code à donner à l'acheteur</div>
+                        <div style={{fontFamily:"monospace",fontSize:26,color:C.ga,letterSpacing:4,fontWeight:500}}>{drop.code}</div>
+                      </div>
+                      <div style={{fontSize:11,color:"rgba(255,255,255,.3)",textAlign:"right"}}>
+                        <div>Créé le</div>
+                        <div>{new Date(drop.created_at).toLocaleDateString("fr-FR")}</div>
+                      </div>
+                    </div>
+ 
+                    {/* Instructions selon mode */}
+                    {drop.status==="en_attente"&&(
+                      <div style={{background:C.gl,borderRadius:10,padding:"12px 14px",marginBottom:12}}>
+                        <div style={{fontSize:12,fontWeight:700,color:C.g,marginBottom:4}}>
+                          {drop.mode==="meet"?"📍 Rendez-vous à organiser":drop.mode==="club"?"🏆 Dépôt au club à effectuer":"📦 Boîte à préparer"}
+                        </div>
+                        <div style={{fontSize:12,color:C.gm,lineHeight:1.6}}>
+                          {drop.mode==="meet"?"Contactez l'acheteur pour fixer le rendez-vous. Donnez-lui le code lors de la remise.":drop.mode==="club"?"Déposez l'article au club partenaire sous 48h. Le code sera demandé lors du retrait.":"Placez l'article à l'emplacement prévu. L'acheteur utilisera le code pour récupérer."}
+                        </div>
+                      </div>
+                    )}
+ 
+                    {drop.status==="confirmé"&&(
+                      <div style={{background:C.gl,borderRadius:10,padding:"12px 14px",display:"flex",gap:10,alignItems:"center"}}>
+                        <span style={{fontSize:20}}>✅</span>
+                        <div>
+                          <div style={{fontSize:13,fontWeight:700,color:C.g}}>Remise confirmée</div>
+                          <div style={{fontSize:12,color:C.gm}}>Confirmé le {new Date(drop.confirmed_at).toLocaleDateString("fr-FR")} · Fonds crédités</div>
+                        </div>
+                      </div>
+                    )}
+ 
+                    {drop.status==="litigé"&&(
+                      <div style={{background:C.rl,borderRadius:10,padding:"12px 14px",display:"flex",gap:10,alignItems:"center"}}>
+                        <span style={{fontSize:20}}>⚠️</span>
+                        <div style={{fontSize:13,color:C.r,fontWeight:600}}>Litige en cours — Notre équipe vous contacte sous 24h.</div>
+                      </div>
+                    )}
+ 
+                    {drop.status==="en_attente"&&(
+                      <div style={{display:"flex",gap:8,marginTop:4}}>
+                        <button onClick={()=>setLitigeId(drop.id)} style={{flex:1,background:C.f100,color:C.r,border:`1px solid ${C.f200}`,borderRadius:100,padding:"10px",fontSize:12,fontWeight:600,cursor:"pointer"}}>⚠️ Signaler un problème</button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+ 
+          {/* ═══ DROP ACHETEUR ═══ */}
+          {dtab==="drop-acheteur"&&(
+            <div>
+              <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Drop Acheteur</h2>
+              <p style={{fontSize:14,color:C.f400,marginBottom:20}}>Confirmez la réception de vos articles en saisissant le code du vendeur.</p>
+              {myDropsA.length===0?(
+                <div style={{textAlign:"center",padding:"44px",color:C.f400,background:C.w,borderRadius:13,border:`1px solid ${C.f200}`}}>
+                  <div style={{fontSize:32,marginBottom:12}}>🛒</div>
+                  <div style={{fontWeight:600,marginBottom:4}}>Aucun achat en attente</div>
+                  <div style={{fontSize:13}}>Vos achats apparaîtront ici après commande</div>
+                </div>
+              ):myDropsA.map(drop=>{
+                const mode=DROP_MODES[drop.mode]||DROP_MODES["meet"];
+                return(
+                  <div key={drop.id} style={{background:C.w,border:`1.5px solid ${drop.status==="en_attente"?"#F5C07A":drop.status==="confirmé"?C.g:C.r}`,borderRadius:16,padding:"18px 20px",marginBottom:12}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+                      <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                        <div style={{fontSize:24}}>{mode.icon}</div>
+                        <div>
+                          <div style={{fontSize:14,fontWeight:800}}>{mode.label}</div>
+                          <div style={{fontSize:12,color:C.f400,marginTop:1}}>{drop.lieu||"Lieu non précisé"}</div>
+                        </div>
+                      </div>
+                      <DropStatusBadge status={drop.status}/>
+                    </div>
+ 
+                    {/* Instructions acheteur */}
+                    {drop.status==="en_attente"&&(
+                      <div style={{background:"#FFF8E1",borderRadius:10,padding:"12px 14px",marginBottom:16}}>
+                        <div style={{fontSize:12,fontWeight:700,color:"#8a6a00",marginBottom:4}}>
+                          {drop.mode==="meet"?"📍 Rendez-vous à organiser avec le vendeur":drop.mode==="club"?"🏆 Récupérez au club partenaire":"📦 Récupérez à l'adresse indiquée"}
+                        </div>
+                        <div style={{fontSize:12,color:"#6a4a00",lineHeight:1.6}}>
+                          {drop.mode==="meet"?"Le vendeur va vous contacter. Lors de la remise, il vous donnera un code à 7 caractères à saisir ici.":drop.mode==="club"?"L'article est ou sera déposé au club. Récupérez-le et saisissez le code remis par le vendeur.":"Rendez-vous à l'adresse convenue. Le vendeur vous donnera le code lors de la récupération."}
+                        </div>
+                      </div>
+                    )}
+ 
+                    {/* Saisie du code */}
+                    {drop.status==="en_attente"&&(
+                      <div style={{marginBottom:12}}>
+                        <label style={{fontSize:11,fontWeight:700,color:C.f400,textTransform:"uppercase",letterSpacing:"1px",display:"block",marginBottom:8}}>Saisir le code du vendeur</label>
+                        <div style={{display:"flex",gap:8}}>
+                          <input
+                            value={codeInput[drop.id]||""}
+                            onChange={e=>setCodeInput(ci=>({...ci,[drop.id]:e.target.value.toUpperCase()}))}
+                            placeholder="SMD-XXXX"
+                            maxLength={8}
+                            style={{flex:1,padding:"12px 14px",borderRadius:12,border:`1.5px solid ${codeErr[drop.id]?C.r:C.f200}`,fontSize:16,fontFamily:"monospace",letterSpacing:3,outline:"none",textTransform:"uppercase",fontWeight:700}}
+                          />
+                          <button
+                            onClick={()=>handleConfirmCode(drop)}
+                            style={{background:C.g,color:"#fff",border:"none",borderRadius:12,padding:"12px 20px",fontSize:14,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap"}}
+                          >
+                            Confirmer
+                          </button>
+                        </div>
+                        {codeErr[drop.id]&&<div style={{fontSize:12,color:C.r,marginTop:6,fontWeight:600}}>❌ {codeErr[drop.id]}</div>}
+                      </div>
+                    )}
+ 
+                    {drop.status==="confirmé"&&(
+                      <div style={{background:C.gl,borderRadius:10,padding:"12px 14px",display:"flex",gap:10,alignItems:"center"}}>
+                        <span style={{fontSize:20}}>✅</span>
+                        <div>
+                          <div style={{fontSize:13,fontWeight:700,color:C.g}}>Article bien reçu</div>
+                          <div style={{fontSize:12,color:C.gm}}>Confirmé le {new Date(drop.confirmed_at).toLocaleDateString("fr-FR")}</div>
+                        </div>
+                      </div>
+                    )}
+ 
+                    {drop.status==="en_attente"&&(
+                      <button onClick={()=>setLitigeId(drop.id)} style={{width:"100%",background:C.f100,color:C.r,border:`1px solid ${C.f200}`,borderRadius:100,padding:"10px",fontSize:12,fontWeight:600,cursor:"pointer",marginTop:4}}>⚠️ Signaler un problème</button>
+                    )}
+ 
+                    {drop.status==="litigé"&&(
+                      <div style={{background:C.rl,borderRadius:10,padding:"12px 14px",display:"flex",gap:10,alignItems:"center"}}>
+                        <span style={{fontSize:20}}>⚠️</span>
+                        <div style={{fontSize:13,color:C.r,fontWeight:600}}>Litige en cours — Notre équipe vous contacte sous 24h.</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+ 
+          {/* ═══ VENTES ═══ */}
+          {dtab==="ventes"&&(
+            <div>
+              <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Mes ventes</h2>
+              {myS.length===0?<div style={{textAlign:"center",padding:"44px",color:C.f400,background:C.w,borderRadius:13,border:`1px solid ${C.f200}`}}>Aucune vente pour l'instant.</div>:(
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {myS.map(v=>{
+                    const drop=myDropsV.find(d=>d.commande_id===v.id);
+                    return(
+                      <div key={v.id} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:13,padding:"14px 18px"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:9}}>
+                          <div><div style={{fontSize:14,fontWeight:700}}>#{v.id?.slice(0,8)}</div><div style={{fontSize:12,color:C.f400,marginTop:1}}>{new Date(v.created_at).toLocaleDateString("fr-FR")}</div></div>
+                          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                            {drop&&<span style={{fontSize:10,fontWeight:700,background:drop.status==="confirmé"?C.gl:"#FFF3E0",color:drop.status==="confirmé"?C.gm:"#C25A00",borderRadius:100,padding:"3px 9px",textTransform:"uppercase"}}>Drop {drop.status}</span>}
+                            <span style={{fontSize:10,fontWeight:700,color:v.status==="livré"?C.g:C.o,textTransform:"uppercase"}}>{v.status}</span>
+                          </div>
+                        </div>
+                        <div style={{display:"flex",gap:18,fontSize:13,flexWrap:"wrap"}}>
+                          <span><span style={{color:C.f400}}>Prix : </span><strong>{v.price} €</strong></span>
+                          <span><span style={{color:C.f400}}>Commission : </span><span style={{color:C.r}}>- {v.commission} €</span></span>
+                          <span><span style={{color:C.f400}}>Net : </span><strong style={{color:drop?.status==="confirmé"?C.g:C.f400}}>{v.gain} € {drop?.status==="confirmé"?"✓ crédité":"⏳ en attente"}</strong></span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+ 
+          {/* ═══ ACHATS ═══ */}
+          {dtab==="achats"&&(
+            <div>
+              <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Mes achats</h2>
+              {myO.length===0?<div style={{textAlign:"center",padding:"44px",color:C.f400,background:C.w,borderRadius:13,border:`1px solid ${C.f200}`}}>Aucun achat. <span style={{color:C.g,cursor:"pointer",fontWeight:600}} onClick={()=>go("home")}>Explorer le catalogue</span></div>:(
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {myO.map(o=>{
+                    const drop=myDropsA.find(d=>d.commande_id===o.id);
+                    return(
+                      <div key={o.id} style={{background:C.w,border:`1px solid ${drop?.status==="en_attente"?"#F5C07A":C.f200}`,borderRadius:13,padding:"14px 18px"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                          <div><div style={{fontSize:14,fontWeight:700}}>#{o.id?.slice(0,8)}</div><div style={{fontSize:12,color:C.f400,marginTop:1}}>{new Date(o.created_at).toLocaleDateString("fr-FR")}</div></div>
+                          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                            {drop&&<span style={{fontSize:10,fontWeight:700,background:drop.status==="confirmé"?C.gl:"#FFF3E0",color:drop.status==="confirmé"?C.gm:"#C25A00",borderRadius:100,padding:"3px 9px",textTransform:"uppercase"}}>Drop {drop.status}</span>}
+                          </div>
+                        </div>
+                        <div style={{fontSize:14,fontWeight:700,marginBottom:8}}>{o.price} € · SMASHD Drop</div>
+                        {drop?.status==="en_attente"&&(
+                          <button onClick={()=>setDtab("drop-acheteur")} style={{background:C.o,color:"#fff",border:"none",borderRadius:100,padding:"8px 16px",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}>
+                            <span>Saisir le code de remise</span>
+                          </button>
+                        )}
+                        {drop?.status==="confirmé"&&<div style={{fontSize:12,color:C.g,fontWeight:700}}>✓ Article reçu et confirmé</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+ 
+          {/* ═══ WALLET ═══ */}
+          {dtab==="wallet"&&(
+            <div>
+              <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>E-Wallet</h2>
+              <div style={{background:C.g,borderRadius:16,padding:"26px 28px",marginBottom:16,color:C.w}}>
+                <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:"rgba(255,255,255,.4)",marginBottom:5}}>Solde disponible</div>
+                <div style={{fontSize:44,fontWeight:900,letterSpacing:"-2px",marginBottom:4}}>{wal.toFixed(2)} €</div>
+                <div style={{fontSize:12,color:"rgba(255,255,255,.4)",marginBottom:18}}>Uniquement les remises Drop confirmées</div>
+                <button className="btn" style={{background:"rgba(255,255,255,.15)",color:C.w,border:"1px solid rgba(255,255,255,.2)",borderRadius:100,padding:"10px 20px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Retirer les fonds</button>
+              </div>
+              <div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:14,padding:"16px"}}>
+                <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:C.f400,marginBottom:12}}>Historique des remises</div>
+                {myDropsV.length===0?<div style={{textAlign:"center",padding:"14px",color:C.f400,fontSize:13}}>Aucune transaction.</div>:myDropsV.map((d,i)=>{
+                  const sale=myS.find(s=>s.id===d.commande_id);
+                  return(
+                    <div key={d.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:i<myDropsV.length-1?`1px solid ${C.f100}`:"none"}}>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:600,display:"flex",gap:7,alignItems:"center"}}>{DROP_MODES[d.mode]?.icon} #{d.id?.slice(0,8)}<span style={{fontSize:10,background:d.status==="confirmé"?C.gl:"#FFF3E0",color:d.status==="confirmé"?C.gm:"#C25A00",padding:"2px 7px",borderRadius:100,fontWeight:700}}>{d.status}</span></div>
+                        <div style={{fontSize:12,color:C.f400}}>{new Date(d.created_at).toLocaleDateString("fr-FR")} · {d.lieu}</div>
+                      </div>
+                      <div style={{fontSize:14,fontWeight:800,color:d.status==="confirmé"?C.g:C.f400}}>{d.status==="confirmé"?`+${sale?.gain||"—"} €`:"En attente"}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+ 
+          {/* ═══ STATS ═══ */}
+          {dtab==="stats"&&(
+            <div>
+              <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Statistiques</h2>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}} className="g2m">
+                {[[myA.reduce((a,x)=>a+(x.views||0),0),"Vues totales"],[myDropsV.filter(d=>d.status==="confirmé").length,"Drops confirmés"],[myS.length,"Ventes"],[`${rev.toFixed(0)} €`,"Revenus"]].map(([v,l])=>(
+                  <div key={l} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:12,padding:"16px"}}>
+                    <div style={{fontSize:22,fontWeight:900,letterSpacing:"-1px"}}>{v}</div>
+                    <div style={{fontSize:12,color:C.f400,marginTop:3}}>{l}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+ 
+          {/* ═══ SETTINGS ═══ */}
+          {dtab==="settings"&&(
+            <div>
+              <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Paramètres</h2>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {[["Informations personnelles","Nom, email, téléphone"],["Sécurité","Mot de passe, 2FA"],["Moyens de paiement","Carte, IBAN"],["Notifications","Email, push, SMS"],["Langue","Français / English"],["Supprimer mon compte","Irréversible"]].map(([t,s],i)=>(
+                  <div key={t} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:12,padding:"13px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+                    <div><div style={{fontSize:14,fontWeight:600,color:i===5?C.r:C.k}}>{t}</div><div style={{fontSize:12,color:C.f400,marginTop:2}}>{s}</div></div>
+                    <Ico.chR/>
+                  </div>
+                ))}
+                <div onClick={logout} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:12,padding:"13px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+                  <div><div style={{fontSize:14,fontWeight:600,color:C.r}}>Déconnexion</div><div style={{fontSize:12,color:C.f400,marginTop:2}}>Se déconnecter de SMASHD</div></div>
+                  <Ico.chR/>
+                </div>
+              </div>
+            </div>
+          )}
+ 
+        </div>
       </div>
+ 
+      {/* Modal Litige */}
+      {litigeId&&(
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:300,padding:20}}>
+          <div style={{background:C.w,borderRadius:20,padding:"26px",maxWidth:400,width:"100%"}}>
+            <h3 style={{fontSize:17,fontWeight:800,marginBottom:6}}>⚠️ Signaler un problème</h3>
+            <p style={{fontSize:13,color:C.f400,marginBottom:16,lineHeight:1.6}}>Décrivez le problème rencontré. Notre équipe interviendra sous 24h.</p>
+            <textarea value={litigeText} onChange={e=>setLitigeText(e.target.value)} rows={4} placeholder="Ex: Le vendeur ne répond plus, le code ne correspond pas..." style={{width:"100%",padding:"12px",borderRadius:12,border:`1.5px solid ${C.f200}`,fontSize:13,resize:"vertical",boxSizing:"border-box",outline:"none",fontFamily:"inherit",marginBottom:16}}/>
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>{setLitigeId(null);setLitigeText("")}} style={{flex:1,background:C.f100,border:"none",borderRadius:100,padding:"12px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Annuler</button>
+              <button onClick={async()=>{if(!litigeText.trim())return;await signalLitige(litigeId,litigeText);setLitigeId(null);setLitigeText("")}} style={{flex:2,background:C.r,color:"#fff",border:"none",borderRadius:100,padding:"12px",fontSize:13,fontWeight:700,cursor:"pointer"}}>Envoyer le signalement</button>
+            </div>
+          </div>
+        </div>
+      )}
+ 
     </div>
-  </div>;
+  );
 }
+ 
  
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
+ 
