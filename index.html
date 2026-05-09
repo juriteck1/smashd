@@ -32,9 +32,9 @@ const SB="https://gcnmgtwbouakwaufqswh.supabase.co";
 const KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjbm1ndHdib3Vha3dhdWZxc3doIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTk4NDQsImV4cCI6MjA5MzgzNTg0NH0.qtHQ4si2Ybsriiaaj9F-1Z6WeN52sZ1ry7T7VpcIMpM";
 let tok=KEY;
 const gt=()=>tok,st=t=>{tok=t||KEY},ct=()=>{tok=KEY};
-
+ 
 const C={g:"#0A2A1E",gm:"#1A5C3A",gl:"#F0F7F4",ga:"#00C46A",o:"#E8470A",w:"#fff",k:"#0A0A0A",f50:"#FAFAFA",f100:"#F5F5F5",f200:"#E8E8E8",f400:"#9A9A9A",f600:"#5A5A5A",r:"#E8290A",rl:"#FFF0EE"};
-
+ 
 // ═══════ CATALOGUE COMPLET ═══════
 const CAT_TREE = {
   Tennis:{
@@ -412,16 +412,16 @@ const CAT_TREE = {
     }
   }
 };
-
+ 
 const SPORTS=Object.keys(CAT_TREE);
 const STATES=["Neuf avec étiquette","Neuf sans étiquette","Très bon état","Bon état","Acceptable"];
 const SHIP=[{id:"mondial",l:"Mondial Relay",p:3.99,d:"3-5j"},{id:"colissimo",l:"Colissimo",p:5.49,d:"2-3j"},{id:"chrono",l:"Chronopost",p:7.99,d:"24h"},{id:"main",l:"En main propre",p:0,d:"À convenir"}];
-
+ 
 // API
 const api=async(p,o={})=>{const r=await fetch(`${SB}/rest/v1/${p}`,{headers:{"apikey":KEY,"Authorization":`Bearer ${gt()}`,"Content-Type":"application/json","Prefer":o.prefer||"return=representation",...(o.headers||{})},...o});if(!r.ok){const e=await r.json();throw new Error(e.message||"Err")}const t=await r.text();return t?JSON.parse(t):[]};
 const authApi=async(ep,b)=>{const r=await fetch(`${SB}/auth/v1/${ep}`,{method:"POST",headers:{"apikey":KEY,"Content-Type":"application/json"},body:JSON.stringify(b)});const d=await r.json();if(d.error||d.error_description)throw new Error(d.error_description||d.error);return d};
 const uploadPhoto=async f=>{const x=f.name.split('.').pop(),n=`${Date.now()}-${Math.random().toString(36).slice(2)}.${x}`;const r=await fetch(`${SB}/storage/v1/object/smashd-photos/${n}`,{method:"POST",headers:{"apikey":KEY,"Authorization":`Bearer ${gt()}`,"Content-Type":f.type},body:f});if(!r.ok)throw new Error("Upload fail");return`${SB}/storage/v1/object/public/smashd-photos/${n}`};
-
+ 
 // Icons
 const Ico={
   search:()=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>,
@@ -437,12 +437,12 @@ const Ico={
   trk:()=><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
   menu:()=><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>,
 };
-
+ 
 const Logo=({s=20})=><span style={{fontWeight:900,fontSize:s,letterSpacing:"-0.5px",cursor:"pointer"}}>SMASH<span style={{color:C.o}}>D</span></span>;
 const Toast=({msg,type})=><div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:type==="error"?C.r:C.g,color:"#fff",borderRadius:100,padding:"12px 24px",fontSize:14,fontWeight:600,zIndex:9999,boxShadow:"0 8px 32px rgba(0,0,0,.15)",whiteSpace:"nowrap"}}>{msg}</div>;
 const Tag=({state})=>{const m={"Neuf avec étiquette":C.g,"Neuf sans étiquette":C.gm,"Très bon état":"#2A2A2A","Bon état":C.f600,"Acceptable":C.f400};return<span style={{fontSize:10,fontWeight:700,color:m[state]||C.f400,letterSpacing:".5px",textTransform:"uppercase"}}>{state}</span>};
 const Pill=({l,a,onClick})=><button onClick={onClick} className="btn" style={{borderRadius:100,padding:"7px 15px",fontSize:13,fontWeight:600,cursor:"pointer",border:`1.5px solid ${a?C.g:C.f200}`,background:a?C.g:C.w,color:a?C.w:C.f600,transition:"all .15s",whiteSpace:"nowrap"}}>{l}</button>;
-
+ 
 // ═══ APP ═══
 function App(){
   const[sc,setSc]=useState("home");
@@ -462,28 +462,28 @@ function App(){
   const[dtab,setDtab]=useState("overview");
   const[lang,setLang]=useState("FR");
   const[favs,setFavs]=useState({});
-
+ 
   const tw=(msg,type="success")=>{setToast({msg,type});setTimeout(()=>setToast(null),3000)};
   const go=(s,d=null)=>{setSc(s);if(d)setSel(d);window.scrollTo(0,0)};
   const loadA=async()=>{try{const d=await api("annonces?status=eq.active&order=created_at.desc&limit=60");setAnn(d)}catch(e){}};
   const loadMy=async uid=>{try{const[a,o,s]=await Promise.all([api(`annonces?user_id=eq.${uid}&order=created_at.desc`),api(`commandes?buyer_id=eq.${uid}&order=created_at.desc`),api(`commandes?seller_id=eq.${uid}&order=created_at.desc`)]);setMyA(a);setMyO(o);setMyS(s)}catch(e){}};
   useEffect(()=>{loadA()},[]);
-
+ 
   const login=async(email,pwd)=>{setLoad(true);try{const d=await authApi("token?grant_type=password",{email,password:pwd});st(d.access_token);setUser(d.user);const p=await api(`profiles?id=eq.${d.user.id}`);setProf(p[0]||null);await loadMy(d.user.id);tw("Bienvenue !");go("home")}catch(e){throw e}finally{setLoad(false)}};
   const register=async(email,pwd,name,ut,siret,company)=>{setLoad(true);try{const d=await authApi("signup",{email,password:pwd});if(d.user){if(d.access_token)st(d.access_token);await api("profiles",{method:"POST",body:JSON.stringify({id:d.user.id,name,email,user_type:ut,siret:siret||null,company:company||null})});setUser(d.user);setProf({id:d.user.id,name,email,user_type:ut});tw("Compte créé !");go("home")}}catch(e){throw e}finally{setLoad(false)}};
   const logout=()=>{ct();setUser(null);setProf(null);setMyA([]);setMyO([]);setMyS([]);go("home")};
-
+ 
   const publish=async f=>{if(!user){go("auth");return}setLoad(true);try{await api("annonces",{method:"POST",body:JSON.stringify({user_id:user.id,...f,status:"active"})});tw("Annonce publiée !");await loadA();await loadMy(user.id);go("dashboard");setDtab("annonces")}catch(e){tw("Erreur : "+e.message,"error")}finally{setLoad(false)}};
   const toggleA=async(id,status)=>{try{await api(`annonces?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({status})});await loadMy(user.id);await loadA()}catch(e){}};
   const deleteA=async id=>{try{await api(`annonces?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({status:"supprimé"})});await loadMy(user.id);await loadA()}catch(e){}};
   const placeOrder=async(a,sm)=>{if(!user){go("auth");return false}setLoad(true);try{const c=parseFloat((a.price*.08).toFixed(2)),g=parseFloat((a.price-c).toFixed(2));await api("commandes",{method:"POST",body:JSON.stringify({annonce_id:a.id,buyer_id:user.id,seller_id:a.user_id,price:a.price,commission:c,gain:g,shipping_method:sm,status:"en attente"})});await api(`annonces?id=eq.${a.id}`,{method:"PATCH",body:JSON.stringify({status:"vendu"})});tw("Commande confirmée !");await loadA();await loadMy(user.id);return true}catch(e){tw("Erreur","error");return false}finally{setLoad(false)}};
-
+ 
   const fil=ann.filter(a=>fcat==="Tous"||a.category===fcat||a.sub_category===fcat).filter(a=>fst==="Tous"||a.state===fst).filter(a=>!fpr.min||a.price>=parseFloat(fpr.min)).filter(a=>!fpr.max||a.price<=parseFloat(fpr.max)).filter(a=>!srch||a.title?.toLowerCase().includes(srch.toLowerCase())||a.brand?.toLowerCase().includes(srch.toLowerCase()));
   const wal=Math.round(myS.reduce((acc,s)=>acc+(s.gain||0),0)*100)/100;
   const p={user,prof,load,tw,go,login,register,logout,publish,toggleA,deleteA,placeOrder,myA,myO,myS,wal,dtab,setDtab,ann:fil,allAnn:ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,sel,loadMy,lang,setLang,favs,setFavs};
   return<div>{toast&&<Toast {...toast}/>}{sc==="home"&&<Home {...p}/>}{sc==="auth"&&<Auth {...p}/>}{sc==="sell"&&<Sell {...p}/>}{sc==="article"&&<Article {...p}/>}{sc==="dashboard"&&<Dash {...p}/>}</div>;
 }
-
+ 
 // ═══ HOME ═══
 function Home({user,prof,ann,allAnn,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,lang,setLang,favs,setFavs}){
   const[sc,setSc]=useState(false);
@@ -491,7 +491,7 @@ function Home({user,prof,ann,allAnn,srch,setSrch,fcat,setFcat,fst,setFst,fpr,set
   useEffect(()=>{const h=()=>setSc(window.scrollY>10);window.addEventListener("scroll",h);return()=>window.removeEventListener("scroll",h)},[]);
   const fn=prof?.name?.split(" ")[0]||"?";
   const CBG={Tennis:"#0A2A1E",Padel:"#1A3A5C",Badminton:"#2A1A5C",Squash:"#5C1A1A","Ping-Pong":"#1A5C3A",Pickleball:"#5C3A1A",Raquetball:"#3A1A5C","Pelote basque":"#5C4A1A","Beach Tennis":"#1A4A5C"};
-
+ 
   return<div style={{minHeight:"100vh",background:C.w}}>
     {/* NAV */}
     <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,background:C.w,borderBottom:`1px solid ${sc?C.f200:"transparent"}`,transition:"border .3s",padding:"0 20px"}}>
@@ -546,7 +546,7 @@ function Home({user,prof,ann,allAnn,srch,setSrch,fcat,setFcat,fst,setFst,fpr,set
         </div>
       </div>}
     </nav>
-
+ 
     {/* HERO */}
     <div className="hp" style={{background:C.g,minHeight:"88vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"110px 24px 68px",textAlign:"center",position:"relative",overflow:"hidden"}}>
       <div style={{position:"absolute",inset:0,opacity:.04,backgroundImage:"radial-gradient(circle,white 1px,transparent 1px)",backgroundSize:"48px 48px"}}/>
@@ -566,7 +566,7 @@ function Home({user,prof,ann,allAnn,srch,setSrch,fcat,setFcat,fst,setFst,fpr,set
         {[["4 200+",lang==="FR"?"articles en ligne":"items online"],["1 800+",lang==="FR"?"vendeurs actifs":"active sellers"],["98%",lang==="FR"?"avis positifs":"positive reviews"],["0€",lang==="FR"?"pour s'inscrire":"to sign up"]].map(([v,l])=><div key={l} style={{textAlign:"center"}}><div style={{fontSize:24,fontWeight:900,color:C.w,letterSpacing:"-1px"}}>{v}</div><div style={{fontSize:12,color:"rgba(255,255,255,.4)",marginTop:3}}>{l}</div></div>)}
       </div>
     </div>
-
+ 
     {/* FILTERS */}
     <div style={{padding:"16px 20px 0",maxWidth:1200,margin:"0 auto",display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
       <div style={{position:"relative",flex:1,maxWidth:260}}>
@@ -583,13 +583,13 @@ function Home({user,prof,ann,allAnn,srch,setSrch,fcat,setFcat,fst,setFst,fpr,set
       </div>
       <span style={{marginLeft:"auto",fontSize:13,color:C.f400,fontWeight:500}}>{ann.length} résultat{ann.length!==1?"s":""}</span>
     </div>
-
+ 
     {/* Mobile cats */}
     <div style={{padding:"12px 20px 0",display:"flex",gap:7,overflowX:"auto",maxWidth:1200,margin:"0 auto"}}>
       <button onClick={()=>setFcat("Tous")} style={{padding:"7px 14px",fontSize:12,fontWeight:fcat==="Tous"?700:500,color:fcat==="Tous"?C.w:C.f600,border:`1.5px solid ${fcat==="Tous"?C.g:C.f200}`,background:fcat==="Tous"?C.g:"transparent",borderRadius:100,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>Tous</button>
       {SPORTS.map(s=><button key={s} onClick={()=>setFcat(s)} style={{padding:"7px 14px",fontSize:12,fontWeight:fcat===s?700:500,color:fcat===s?C.w:C.f600,border:`1.5px solid ${fcat===s?C.g:C.f200}`,background:fcat===s?C.g:"transparent",borderRadius:100,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>{CAT_TREE[s].icon} {s}</button>)}
     </div>
-
+ 
     {/* GRID */}
     <div style={{padding:"16px 20px 80px",maxWidth:1200,margin:"0 auto"}}>
       {ann.length===0?<div style={{textAlign:"center",padding:"72px 0"}}>
@@ -601,7 +601,7 @@ function Home({user,prof,ann,allAnn,srch,setSrch,fcat,setFcat,fst,setFst,fpr,set
         {ann.map(a=><div key={a.id} className="card" onClick={()=>go("article",a)} style={{background:C.w,borderRadius:16,overflow:"hidden",cursor:"pointer",border:`1px solid ${C.f200}`}}>
           <div style={{background:C.f100,height:170,display:"flex",alignItems:"center",justifyContent:"center",position:"relative",overflow:"hidden"}}>
             {a.photo_url?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:44,height:44,background:CBG[a.category]||C.g,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>{CAT_TREE[a.category]?.icon||"🏅"}</div>}
-            <button onClick={e=>{e.stopPropagation();setFavs(f=>({...f,[a.id]:!f[a.id]}))}} style={{position:"absolute",top:10,right:10,width:30,height:30,borderRadius:"50%",background:C.w,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:favs[a.id]?C.o:C.f400}}><Ico.heart(favs[a.id])/></button>
+            <button onClick={e=>{e.stopPropagation();setFavs(f=>({...f,[a.id]:!f[a.id]}))}} style={{position:"absolute",top:10,right:10,width:30,height:30,borderRadius:"50%",background:C.w,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:favs[a.id]?C.o:C.f400}}>{Ico.heart(favs[a.id])}</button>
             {a.brand&&<div style={{position:"absolute",bottom:8,left:8,background:"rgba(0,0,0,.65)",color:C.w,fontSize:11,fontWeight:700,borderRadius:6,padding:"3px 8px"}}>{a.brand}</div>}
           </div>
           <div style={{padding:"12px 14px"}}>
@@ -619,14 +619,14 @@ function Home({user,prof,ann,allAnn,srch,setSrch,fcat,setFcat,fst,setFst,fpr,set
         </div>)}
       </div>}
     </div>
-
+ 
     {/* TRUST */}
     <div style={{background:C.f50,borderTop:`1px solid ${C.f200}`,padding:"56px 20px"}}>
       <div style={{maxWidth:960,margin:"0 auto",display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:36}}>
         {[[<Ico.shld/>,"Paiement sécurisé","Transactions protégées et chiffrées."],[<Ico.trk/>,"Livraison intégrée","Mondial Relay, Colissimo, Chronopost."],[<Ico.leaf/>,"Éco-responsable","Seconde vie à vos équipements."],[<Ico.chk/>,"Vendeurs vérifiés","Avis authentiques et profils contrôlés."]].map(([icon,t,d],i)=><div key={i}><div style={{width:38,height:38,background:C.gl,borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",color:C.g,marginBottom:12}}>{icon}</div><div style={{fontSize:14,fontWeight:700,marginBottom:4}}>{t}</div><div style={{fontSize:13,color:C.f600,lineHeight:1.6}}>{d}</div></div>)}
       </div>
     </div>
-
+ 
     {/* FOOTER */}
     <footer style={{background:C.k,color:C.w,padding:"44px 20px 32px"}}>
       <div style={{maxWidth:1200,margin:"0 auto"}}>
@@ -642,7 +642,7 @@ function Home({user,prof,ann,allAnn,srch,setSrch,fcat,setFcat,fst,setFst,fpr,set
     </footer>
   </div>;
 }
-
+ 
 // ═══ AUTH ═══
 function Auth({login,register,load,go}){
   const[mode,setMode]=useState("login");
@@ -656,12 +656,12 @@ function Auth({login,register,load,go}){
   const[company,setCompany]=useState("");
   const[cgv,setCgv]=useState(false);
   const[err,setErr]=useState({});
-
+ 
   const v0=()=>{const e={};if(!email||!/\S+@\S+\.\S+/.test(email))e.email="Email invalide";if(!pwd||pwd.length<6)e.pwd="6 caractères minimum";if(mode==="register"&&pwd!==pwd2)e.pwd2="Mots de passe différents";setErr(e);return!Object.keys(e).length};
   const v1=()=>{const e={};if(!name)e.name="Nom requis";if(ut==="pro"&&!siret)e.siret="SIRET requis";if(!cgv)e.cgv="Requis";setErr(e);return!Object.keys(e).length};
   const doLogin=async()=>{if(!v0())return;try{await login(email,pwd)}catch(e){setErr({email:"Email ou mot de passe incorrect"})}};
   const doReg=async()=>{if(!v1())return;try{await register(email,pwd,name,ut,siret,company)}catch(e){setErr({email:e.message})}};
-
+ 
   return<div style={{minHeight:"100vh",background:C.f50,display:"flex",flexDirection:"column"}}>
     <nav style={{background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"0 20px",height:54,display:"flex",alignItems:"center"}}><Logo s={18}/></nav>
     <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 16px"}}>
@@ -706,7 +706,7 @@ function Auth({login,register,load,go}){
     </div>
   </div>;
 }
-
+ 
 // ═══ SELL — Tunnel avec arborescence complète ═══
 function Sell({publish,load,go}){
   // Steps: 0=Sport, 1=Sous-catégorie, 2=Photos, 3=Caractéristiques, 4=Détails (titre/desc/prix), 5=Envoi, 6=Vérification
@@ -722,25 +722,25 @@ function Sell({publish,load,go}){
   const[photos,setPhotos]=useState([]);
   const[up,setUp]=useState(false);
   const ref=useRef();
-
+ 
   const setAttr=(k,v)=>setAttrs(a=>({...a,[k]:v}));
   const comm=price?(price*.08).toFixed(2):0;
   const gain=price?(price*.92).toFixed(2):0;
-
+ 
   const sportData=sport?CAT_TREE[sport]:null;
   const subData=subCat&&sportData?sportData.subs[subCat]:null;
   const subCats=sportData?Object.keys(sportData.subs):[];
-
+ 
   // Check all required fields filled
   const attrsComplete=()=>{
     if(!subData)return false;
     return subData.fields.every(f=>attrs[f.key]);
   };
-
+ 
   const STEPS=["Sport","Type","Photos","Détails","Annonce","Envoi","Vérif."];
-
+ 
   const handleUp=async e=>{const fs=Array.from(e.target.files);if(photos.length+fs.length>8)return;setUp(true);try{const urls=await Promise.all(fs.map(f=>uploadPhoto(f)));setPhotos(p=>[...p,...urls])}catch(e){alert("Erreur upload")}finally{setUp(false)}};
-
+ 
   const canNext=()=>{
     if(step===0)return sport;
     if(step===1)return subCat;
@@ -750,7 +750,7 @@ function Sell({publish,load,go}){
     if(step===5)return ship;
     return true;
   };
-
+ 
   const doPublish=()=>{
     publish({
       title,description:desc,
@@ -761,7 +761,7 @@ function Sell({publish,load,go}){
       attributes:JSON.stringify(attrs),
     });
   };
-
+ 
   return<div style={{minHeight:"100vh",background:C.w}}>
     <nav style={{background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"0 20px",height:54,display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,zIndex:100}}>
       <button onClick={()=>step>0?setStep(s=>s-1):go("home")} style={{background:"none",border:"none",cursor:"pointer",color:C.f600,display:"flex",alignItems:"center",gap:5,fontSize:14}}><Ico.chL/> Retour</button>
@@ -777,9 +777,9 @@ function Sell({publish,load,go}){
       </div>
       <span style={{fontSize:12,color:C.f400,fontWeight:500,flexShrink:0}}>{step+1}/{STEPS.length}</span>
     </nav>
-
+ 
     <div style={{maxWidth:600,margin:"0 auto",padding:"36px 20px"}}>
-
+ 
       {/* STEP 0 — Sport */}
       {step===0&&<div>
         <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Quel sport ?</h2>
@@ -791,7 +791,7 @@ function Sell({publish,load,go}){
           </button>)}
         </div>
       </div>}
-
+ 
       {/* STEP 1 — Sous-catégorie */}
       {step===1&&sport&&<div>
         <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Quel type d'article ?</h2>
@@ -804,7 +804,7 @@ function Sell({publish,load,go}){
           </button>)}
         </div>
       </div>}
-
+ 
       {/* STEP 2 — Photos */}
       {step===2&&<div>
         <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Photos de l'article</h2>
@@ -828,13 +828,13 @@ function Sell({publish,load,go}){
         </div>}
         {photos.length===0&&<div style={{background:"#FFF8E1",borderRadius:10,padding:"11px 14px",fontSize:13,color:"#8a6a00"}}>⚠️ Au moins 1 photo requise.</div>}
       </div>}
-
+ 
       {/* STEP 3 — Caractéristiques dynamiques */}
       {step===3&&subData&&<div>
         <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Caractéristiques</h2>
         <p style={{color:C.f400,fontSize:14,marginBottom:4}}><strong>{CAT_TREE[sport].icon} {sport}</strong> › <strong>{subCat}</strong></p>
         <p style={{color:C.f400,fontSize:14,marginBottom:24}}>Renseignez les détails de votre article.</p>
-
+ 
         {/* État */}
         <div style={{marginBottom:22}}>
           <label style={{fontSize:12,fontWeight:700,display:"block",marginBottom:10,textTransform:"uppercase",letterSpacing:"1px",color:C.f400}}>État *</label>
@@ -842,7 +842,7 @@ function Sell({publish,load,go}){
             {STATES.map(s=><Pill key={s} l={s} a={state===s} onClick={()=>setState(s)}/>)}
           </div>
         </div>
-
+ 
         {/* Dynamic fields */}
         {subData.fields.map(field=><div key={field.key} style={{marginBottom:22}}>
           <label style={{fontSize:12,fontWeight:700,display:"block",marginBottom:10,textTransform:"uppercase",letterSpacing:"1px",color:C.f400}}>
@@ -853,31 +853,31 @@ function Sell({publish,load,go}){
             {field.opts.map(opt=><Pill key={opt} l={opt} a={attrs[field.key]===opt} onClick={()=>setAttr(field.key,opt)}/>)}
           </div>
         </div>)}
-
+ 
         {!attrsComplete()&&state&&<div style={{background:"#FFF8E1",borderRadius:10,padding:"11px 14px",fontSize:13,color:"#8a6a00",marginTop:8}}>
           ⚠️ Veuillez renseigner toutes les caractéristiques obligatoires.
         </div>}
       </div>}
-
+ 
       {/* STEP 4 — Titre / Description / Prix */}
       {step===4&&<div style={{display:"flex",flexDirection:"column",gap:18}}>
         <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",margin:0}}>L'annonce</h2>
         <p style={{color:C.f400,fontSize:14,margin:0}}>Donnez un titre accrocheur et fixez votre prix.</p>
-
+ 
         <div>
           <label style={{fontSize:12,fontWeight:700,display:"block",marginBottom:8,textTransform:"uppercase",letterSpacing:"1px",color:C.f400}}>Titre *</label>
           <input value={title} onChange={e=>setTitle(e.target.value)}
             placeholder={`Ex: ${attrs.brand||"Wilson"} ${subCat} — ${state||"Très bon état"}`}
             style={{width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${C.f200}`,fontSize:15,outline:"none",boxSizing:"border-box"}}/>
         </div>
-
+ 
         <div>
           <label style={{fontSize:12,fontWeight:700,display:"block",marginBottom:8,textTransform:"uppercase",letterSpacing:"1px",color:C.f400}}>Description</label>
           <textarea value={desc} onChange={e=>setDesc(e.target.value)} rows={4}
             placeholder="Décrivez votre article : origine, raison de la vente, défauts éventuels…"
             style={{width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${C.f200}`,fontSize:14,resize:"vertical",boxSizing:"border-box",outline:"none"}}/>
         </div>
-
+ 
         <div>
           <label style={{fontSize:12,fontWeight:700,display:"block",marginBottom:12,textTransform:"uppercase",letterSpacing:"1px",color:C.f400}}>Prix *</label>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -886,14 +886,14 @@ function Sell({publish,load,go}){
             <span style={{fontSize:28,fontWeight:900,color:C.f400}}>€</span>
           </div>
         </div>
-
+ 
         {price>0&&<div style={{background:C.gl,borderRadius:14,padding:"16px 20px"}}>
           <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:C.f400,marginBottom:10}}>Récapitulatif</div>
           {[["Prix de vente",`${price} €`],["Commission SMASHD (8%)",`- ${comm} €`]].map(([k,v])=><div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:14,marginBottom:7,color:C.f600}}><span>{k}</span><span>{v}</span></div>)}
           <div style={{borderTop:`1px solid ${C.f200}`,paddingTop:9,display:"flex",justifyContent:"space-between",fontSize:17,fontWeight:900}}><span>Vous recevez</span><span style={{color:C.g}}>{gain} €</span></div>
         </div>}
       </div>}
-
+ 
       {/* STEP 5 — Envoi */}
       {step===5&&<div>
         <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Mode d'envoi</h2>
@@ -905,7 +905,7 @@ function Sell({publish,load,go}){
           </button>)}
         </div>
       </div>}
-
+ 
       {/* STEP 6 — Vérification */}
       {step===6&&<div>
         <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Vérification</h2>
@@ -942,7 +942,7 @@ function Sell({publish,load,go}){
           </div>
         </div>
       </div>}
-
+ 
       {/* Navigation */}
       <div style={{display:"flex",justifyContent:"space-between",marginTop:32,paddingTop:24,borderTop:`1px solid ${C.f100}`}}>
         {step>0?<button onClick={()=>setStep(s=>s-1)} style={{background:C.f100,color:C.k,border:"none",borderRadius:100,padding:"12px 22px",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><Ico.chL/> Retour</button>:<div/>}
@@ -960,7 +960,7 @@ function Sell({publish,load,go}){
     </div>
   </div>;
 }
-
+ 
 // ═══ ARTICLE ═══
 function Article({sel,go,user,placeOrder,load,favs,setFavs}){
   const a=sel;
@@ -978,13 +978,13 @@ function Article({sel,go,user,placeOrder,load,favs,setFavs}){
   const tot=(parseFloat(a.price)+parseFloat(comm)+sc).toFixed(2);
   const doOrder=async()=>{const ok=await placeOrder(a,ship);if(ok)setOrdered(true)};
   let parsedAttrs={};try{if(a.attributes)parsedAttrs=JSON.parse(a.attributes)}catch(e){}
-
+ 
   return<div style={{minHeight:"100vh",background:C.w}}>
     <nav style={{background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"0 20px",height:54,display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,zIndex:100}}>
       <button onClick={()=>go("home")} style={{background:"none",border:"none",cursor:"pointer",color:C.f600,display:"flex",alignItems:"center",gap:5,fontSize:14}}><Ico.chL/> Retour</button>
       <Logo s={18}/>
     </nav>
-
+ 
     {checkout&&!ordered&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
       <div style={{background:C.w,borderRadius:20,padding:"26px",maxWidth:440,width:"100%"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}><h3 style={{fontSize:17,fontWeight:800}}>Finaliser l'achat</h3><button onClick={()=>setCheckout(false)} style={{background:C.f100,border:"none",borderRadius:"50%",width:32,height:32,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><Ico.x/></button></div>
@@ -994,7 +994,7 @@ function Article({sel,go,user,placeOrder,load,favs,setFavs}){
         <div style={{display:"flex",gap:8}}><button onClick={()=>setCheckout(false)} style={{flex:1,background:C.f100,color:C.k,border:"none",borderRadius:100,padding:"12px",fontSize:14,fontWeight:600,cursor:"pointer"}}>Annuler</button><button onClick={doOrder} disabled={load} className="btn" style={{flex:2,background:C.o,color:C.w,border:"none",borderRadius:100,padding:"12px",fontSize:14,fontWeight:700,cursor:"pointer"}}>{load?"…":`Payer ${tot} €`}</button></div>
       </div>
     </div>}
-
+ 
     {ordered&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
       <div style={{background:C.w,borderRadius:20,padding:"40px 32px",maxWidth:360,textAlign:"center"}}>
         <div style={{width:60,height:60,background:C.gl,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 18px",color:C.g,fontSize:24}}><Ico.chk/></div>
@@ -1003,7 +1003,7 @@ function Article({sel,go,user,placeOrder,load,favs,setFavs}){
         <button onClick={()=>go("dashboard")} className="btn" style={{background:C.g,color:C.w,border:"none",borderRadius:100,padding:"14px 28px",fontSize:14,fontWeight:700,cursor:"pointer",width:"100%"}}>Voir mes commandes</button>
       </div>
     </div>}
-
+ 
     <div style={{maxWidth:1060,margin:"0 auto",padding:"36px 20px",display:"grid",gridTemplateColumns:"1fr 320px",gap:40}} className="g1m">
       <div>
         <div style={{background:C.f100,borderRadius:16,height:340,overflow:"hidden",marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -1037,7 +1037,7 @@ function Article({sel,go,user,placeOrder,load,favs,setFavs}){
         <div style={{display:"flex",flexDirection:"column",gap:9,marginBottom:18}}>
           <button onClick={()=>user?setCheckout(true):go("auth")} className="btn" style={{background:C.g,color:C.w,border:"none",borderRadius:100,padding:"15px",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>Acheter maintenant <Ico.arr/></button>
           <div style={{display:"flex",gap:7}}><input type="number" value={ofr} onChange={e=>setOfr(e.target.value)} placeholder="Proposer un prix €" style={{flex:1,padding:"12px 13px",borderRadius:100,border:`1.5px solid ${C.f200}`,fontSize:14,outline:"none"}}/><button onClick={()=>ofr&&setOfrSent(true)} className="btn" style={{background:C.w,color:C.k,border:`1.5px solid ${C.k}`,borderRadius:100,padding:"12px 16px",fontSize:14,fontWeight:700,cursor:"pointer"}}>Offrir</button></div>
-          <button onClick={()=>setFavs(f=>({...f,[a.id]:!f[a.id]}))} style={{background:"none",border:`1.5px solid ${favs[a.id]?C.o:C.f200}`,borderRadius:100,padding:"11px",fontSize:14,fontWeight:600,cursor:"pointer",color:favs[a.id]?C.o:C.f400,display:"flex",alignItems:"center",justifyContent:"center",gap:7}}><Ico.heart(favs[a.id])/> {favs[a.id]?"Sauvegardé":"Sauvegarder"}</button>
+          <button onClick={()=>setFavs(f=>({...f,[a.id]:!f[a.id]}))} style={{background:"none",border:`1.5px solid ${favs[a.id]?C.o:C.f200}`,borderRadius:100,padding:"11px",fontSize:14,fontWeight:600,cursor:"pointer",color:favs[a.id]?C.o:C.f400,display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>{Ico.heart(favs[a.id])} {favs[a.id]?"Sauvegardé":"Sauvegarder"}</button>
         </div>
         <div style={{borderTop:`1px solid ${C.f200}`,paddingTop:16}}>
           {[[<Ico.trk/>,"Livraison dès 3,99 €"],[<Ico.shld/>,"Paiement sécurisé"],[<Ico.chk/>,"Protection acheteur"],[<Ico.leaf/>,"Article éco-responsable"]].map(([icon,l],i)=><div key={i} style={{display:"flex",gap:10,alignItems:"center",fontSize:13,color:C.f600,marginBottom:9}}><div style={{color:C.g,flexShrink:0}}>{icon}</div>{l}</div>)}
@@ -1046,7 +1046,7 @@ function Article({sel,go,user,placeOrder,load,favs,setFavs}){
     </div>
   </div>;
 }
-
+ 
 // ═══ DASHBOARD ═══
 function Dash({user,prof,go,logout,myA,myO,myS,wal,dtab,setDtab,toggleA,deleteA,tw}){
   const[boosted,setBoosted]=useState([]);
@@ -1055,7 +1055,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,wal,dtab,setDtab,toggleA,deleteA,
   const rev=myS.reduce((acc,s)=>acc+(s.gain||0),0);
   const fn=prof?.name?.split(" ")[0]||"là";
   const DTABS=[{id:"overview",l:"Vue d'ensemble"},{id:"annonces",l:"Mes annonces"},{id:"ventes",l:"Mes ventes"},{id:"achats",l:"Mes achats"},{id:"wallet",l:"E-Wallet"},{id:"stats",l:"Statistiques"},...(isPro?[{id:"pro",l:"Espace Pro"}]:[]),{id:"settings",l:"Paramètres"}];
-
+ 
   return<div style={{minHeight:"100vh",background:C.f50}}>
     <nav style={{background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"0 20px",height:54,display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,zIndex:100}}>
       <button onClick={()=>go("home")} style={{background:"none",border:"none",cursor:"pointer",color:C.f600,display:"flex",alignItems:"center",fontSize:14}}><Ico.chL/></button>
@@ -1065,7 +1065,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,wal,dtab,setDtab,toggleA,deleteA,
         <button onClick={logout} className="btn" style={{background:C.f100,color:C.r,border:`1px solid ${C.f200}`,borderRadius:100,padding:"8px 14px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Déconnexion</button>
       </div>
     </nav>
-
+ 
     <div style={{maxWidth:1060,margin:"0 auto",padding:"24px 20px",display:"grid",gridTemplateColumns:"190px 1fr",gap:20}} className="g1m">
       {/* Sidebar desktop */}
       <div className="hm" style={{display:"flex",flexDirection:"column",gap:4}}>
@@ -1081,14 +1081,14 @@ function Dash({user,prof,go,logout,myA,myO,myS,wal,dtab,setDtab,toggleA,deleteA,
           </div>
         </div>
       </div>
-
+ 
       {/* Main */}
       <div style={{minWidth:0}}>
         {/* Mobile tab scrollbar */}
         <div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:20,paddingBottom:4}}>
           {DTABS.slice(0,6).map(t=><button key={t.id} onClick={()=>setDtab(t.id)} className="btn" style={{padding:"7px 14px",borderRadius:100,border:`1.5px solid ${dtab===t.id?C.g:C.f200}`,background:dtab===t.id?C.g:C.w,color:dtab===t.id?C.w:C.f600,fontSize:12,fontWeight:dtab===t.id?700:500,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>{t.l}</button>)}
         </div>
-
+ 
         {dtab==="overview"&&<div>
           <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Bonjour, {fn} 👋</h2>
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:18}} className="g2m">
@@ -1112,7 +1112,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,wal,dtab,setDtab,toggleA,deleteA,
             </div>
           </div>
         </div>}
-
+ 
         {dtab==="annonces"&&<div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
             <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px"}}>Mes annonces</h2>
@@ -1145,21 +1145,21 @@ function Dash({user,prof,go,logout,myA,myO,myS,wal,dtab,setDtab,toggleA,deleteA,
             </div>
           </div>}
         </div>}
-
+ 
         {dtab==="ventes"&&<div>
           <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Mes ventes</h2>
           {myS.length===0?<div style={{textAlign:"center",padding:"44px",color:C.f400,background:C.w,borderRadius:13,border:`1px solid ${C.f200}`}}>Aucune vente pour l'instant.</div>:<div style={{display:"flex",flexDirection:"column",gap:8}}>
             {myS.map(v=><div key={v.id} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:13,padding:"14px 18px"}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:9}}><div><div style={{fontSize:14,fontWeight:700}}>#{v.id?.slice(0,8)}</div><div style={{fontSize:12,color:C.f400,marginTop:1}}>{new Date(v.created_at).toLocaleDateString("fr-FR")}</div></div><div style={{fontSize:10,fontWeight:700,color:v.status==="livré"?C.g:C.o,textTransform:"uppercase"}}>{v.status}</div></div><div style={{display:"flex",gap:18,fontSize:13,flexWrap:"wrap"}}><span><span style={{color:C.f400}}>Prix : </span><strong>{v.price} €</strong></span><span><span style={{color:C.f400}}>Commission : </span><span style={{color:C.r}}>- {v.commission} €</span></span><span><span style={{color:C.f400}}>Net : </span><strong style={{color:C.g}}>{v.gain} €</strong></span></div></div>)}
           </div>}
         </div>}
-
+ 
         {dtab==="achats"&&<div>
           <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Mes achats</h2>
           {myO.length===0?<div style={{textAlign:"center",padding:"44px",color:C.f400,background:C.w,borderRadius:13,border:`1px solid ${C.f200}`}}>Aucun achat. <span style={{color:C.g,cursor:"pointer",fontWeight:600}} onClick={()=>go("home")}>Explorer le catalogue</span></div>:<div style={{display:"flex",flexDirection:"column",gap:8}}>
             {myO.map(o=><div key={o.id} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:13,padding:"14px 18px"}}><div style={{display:"flex",justifyContent:"space-between"}}><div><div style={{fontSize:14,fontWeight:700}}>#{o.id?.slice(0,8)}</div><div style={{fontSize:12,color:C.f400,marginTop:1}}>{new Date(o.created_at).toLocaleDateString("fr-FR")}</div></div><div style={{fontSize:10,fontWeight:700,color:o.status==="livré"?C.g:C.o,textTransform:"uppercase"}}>{o.status}</div></div><div style={{fontSize:14,fontWeight:700,marginTop:8}}>{o.price} € · {o.shipping_method}</div></div>)}
           </div>}
         </div>}
-
+ 
         {dtab==="wallet"&&<div>
           <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>E-Wallet</h2>
           <div style={{background:C.g,borderRadius:16,padding:"26px 28px",marginBottom:16,color:C.w}}>
@@ -1172,7 +1172,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,wal,dtab,setDtab,toggleA,deleteA,
             {myS.length===0?<div style={{textAlign:"center",padding:"14px",color:C.f400,fontSize:13}}>Aucune transaction.</div>:myS.map((s,i)=><div key={s.id} style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderBottom:i<myS.length-1?`1px solid ${C.f100}`:"none"}}><div><div style={{fontSize:13,fontWeight:600}}>#{s.id?.slice(0,8)}</div><div style={{fontSize:12,color:C.f400}}>{new Date(s.created_at).toLocaleDateString("fr-FR")}</div></div><div style={{fontSize:14,fontWeight:800,color:C.g}}>+{s.gain} €</div></div>)}
           </div>
         </div>}
-
+ 
         {dtab==="stats"&&<div>
           <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Statistiques</h2>
           <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16}} className="g2m">
@@ -1183,7 +1183,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,wal,dtab,setDtab,toggleA,deleteA,
             {myA.length===0?<div style={{textAlign:"center",padding:"14px",color:C.f400}}>Pas encore de données.</div>:myA.map(a=><div key={a.id} style={{marginBottom:12}}><div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}><span style={{fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"70%"}}>{a.title}</span><span style={{color:C.f400}}>{a.views||0} vues</span></div><div style={{background:C.f100,borderRadius:4,height:5,overflow:"hidden"}}><div style={{background:C.g,height:"100%",borderRadius:4,width:`${Math.min((a.views||0)/Math.max(...myA.map(x=>x.views||1))*100,100)}%`,transition:"width .5s"}}/></div></div>)}
           </div>
         </div>}
-
+ 
         {dtab==="pro"&&isPro&&<div>
           <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Espace Pro</h2>
           <p style={{color:C.f400,marginBottom:18,fontSize:14}}>Gérez vos invendus et votre espace publicitaire.</p>
@@ -1193,7 +1193,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,wal,dtab,setDtab,toggleA,deleteA,
           </div>
           <div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:14,padding:"20px"}}><div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"1px",color:C.f400,marginBottom:12}}>Invendus</div><button onClick={()=>go("sell")} className="btn" style={{background:C.k,color:C.w,border:"none",borderRadius:100,padding:"10px 20px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><Ico.plus/> Ajouter un invendu</button></div>
         </div>}
-
+ 
         {dtab==="settings"&&<div>
           <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Paramètres</h2>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -1205,8 +1205,9 @@ function Dash({user,prof,go,logout,myA,myO,myS,wal,dtab,setDtab,toggleA,deleteA,
     </div>
   </div>;
 }
-
+ 
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
+ 
