@@ -649,7 +649,7 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
   </div>;
 }
  
-// ═══ AUTH (inchangé) ═══
+// ═══ AUTH ═══
 function Auth({login,register,load,go}){
   const[mode,setMode]=useState("login");
   const[step,setStep]=useState(0);
@@ -662,22 +662,127 @@ function Auth({login,register,load,go}){
   const[company,setCompany]=useState("");
   const[cgv,setCgv]=useState(false);
   const[err,setErr]=useState({});
+ 
+  const inp={width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${C.f200}`,fontSize:14,outline:"none",boxSizing:"border-box"};
   const v0=()=>{const e={};if(!email||!/\S+@\S+\.\S+/.test(email))e.email="Email invalide";if(!pwd||pwd.length<6)e.pwd="6 caractères minimum";if(mode==="register"&&pwd!==pwd2)e.pwd2="Mots de passe différents";setErr(e);return!Object.keys(e).length};
   const v1=()=>{const e={};if(!name)e.name="Nom requis";if(ut==="pro"&&!siret)e.siret="SIRET requis";if(!cgv)e.cgv="Requis";setErr(e);return!Object.keys(e).length};
   const doLogin=async()=>{if(!v0())return;try{await login(email,pwd)}catch(e){setErr({email:"Email ou mot de passe incorrect"})}};
   const doReg=async()=>{if(!v1())return;try{await register(email,pwd,name,ut,siret,company)}catch(e){setErr({email:e.message})}};
-  return<div style={{minHeight:"100vh",background:C.f50,display:"flex",flexDirection:"column"}}>
-    <nav style={{background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"0 20px",height:54,display:"flex",alignItems:"center"}}><Logo s={18}/></nav>
-    <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 16px"}}>
-      <div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:20,padding:"28px 24px",maxWidth:400,width:"100%"}}>
-        <button onClick={()=>go("home")} style={{background:"none",border:"none",cursor:"pointer",color:C.f400,fontSize:13,display:"flex",alignItems:"center",gap:5,marginBottom:20}}><Ico.chL/> Retour</button>
-        <div style={{display:"flex",gap:6,marginBottom:24,background:C.f100,borderRadius:12,padding:4}}>{[["login","Connexion"],["register","S'inscrire"]].map(([m,l])=><button key={m} onClick={()=>{setMode(m);setErr({});setStep(0)}} style={{flex:1,background:mode===m?C.w:"transparent",color:mode===m?C.k:C.f400,border:"none",borderRadius:10,padding:"10px",fontSize:14,fontWeight:700,cursor:"pointer",transition:"all .15s"}}>{l}</button>)}</div>
-        {mode==="login"&&<><h2 style={{fontSize:22,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Bon retour</h2><p style={{fontSize:13,color:C.f400,marginBottom:22}}>Connectez-vous à votre compte SMASHD</p><div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="vous@exemple.com" style={{width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${err.email?C.r:C.f200}`,fontSize:14,outline:"none",boxSizing:"border-box"}}/>{err.email&&<div style={{fontSize:12,color:C.r,marginTop:4}}>{err.email}</div>}</div><div style={{marginBottom:22}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>Mot de passe</label><input type="password" value={pwd} onChange={e=>setPwd(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&doLogin()} style={{width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${C.f200}`,fontSize:14,outline:"none",boxSizing:"border-box"}}/></div><button onClick={doLogin} disabled={load} className="btn" style={{width:"100%",background:load?"#9FE1CB":C.g,color:C.w,border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>{load?"Connexion…":"Se connecter"}</button></>}
-        {mode==="register"&&<><h2 style={{fontSize:22,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Créer un compte</h2><p style={{fontSize:13,color:C.f400,marginBottom:18}}>Rejoignez la communauté SMASHD</p><div style={{display:"flex",gap:6,marginBottom:18}}>{[["particulier","Particulier"],["pro","Vendeur Pro"]].map(([id,l])=><button key={id} onClick={()=>setUt(id)} style={{flex:1,background:ut===id?C.g:C.f100,color:ut===id?C.w:C.f600,border:"none",borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>{l}</button>)}</div>{ut==="pro"&&<div style={{background:C.gl,border:`1px solid ${C.ga}`,borderRadius:10,padding:"10px 13px",fontSize:12,color:C.g,marginBottom:16,fontWeight:500}}>Abonnement 99€/an — Invendus + espace publicitaire</div>}<div style={{display:"flex",gap:4,marginBottom:20}}>{["Compte","Profil"].map((s,i)=><div key={s} style={{flex:1,height:3,borderRadius:2,background:step>i?C.g:step===i?C.ga:C.f200,transition:"background .3s"}}/>)}</div>{step===0&&<><div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>Email *</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} style={{width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${err.email?C.r:C.f200}`,fontSize:14,outline:"none",boxSizing:"border-box"}}/>{err.email&&<div style={{fontSize:12,color:C.r,marginTop:4}}>{err.email}</div>}</div><div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>Mot de passe *</label><input type="password" value={pwd} onChange={e=>setPwd(e.target.value)} style={{width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${err.pwd?C.r:C.f200}`,fontSize:14,outline:"none",boxSizing:"border-box"}}/>{err.pwd&&<div style={{fontSize:12,color:C.r,marginTop:4}}>{err.pwd}</div>}</div><div style={{marginBottom:22}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>Confirmer *</label><input type="password" value={pwd2} onChange={e=>setPwd2(e.target.value)} style={{width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${err.pwd2?C.r:C.f200}`,fontSize:14,outline:"none",boxSizing:"border-box"}}/>{err.pwd2&&<div style={{fontSize:12,color:C.r,marginTop:4}}>{err.pwd2}</div>}</div><button onClick={()=>v0()&&setStep(1)} className="btn" style={{width:"100%",background:C.g,color:C.w,border:"none",borderRadius:12,padding:"13px",fontSize:14,fontWeight:700,cursor:"pointer"}}>Continuer →</button></>}{step===1&&<><div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>{ut==="pro"?"Nom du responsable *":"Nom complet *"}</label><input value={name} onChange={e=>setName(e.target.value)} placeholder="Jean Dupont" style={{width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${err.name?C.r:C.f200}`,fontSize:14,outline:"none",boxSizing:"border-box"}}/>{err.name&&<div style={{fontSize:12,color:C.r,marginTop:4}}>{err.name}</div>}</div>{ut==="pro"&&<><div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>SIRET *</label><input value={siret} onChange={e=>setSiret(e.target.value)} style={{width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${err.siret?C.r:C.f200}`,fontSize:14,outline:"none",boxSizing:"border-box"}}/>{err.siret&&<div style={{fontSize:12,color:C.r,marginTop:4}}>{err.siret}</div>}</div><div style={{marginBottom:14}}><label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>Nom commercial</label><input value={company} onChange={e=>setCompany(e.target.value)} style={{width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${C.f200}`,fontSize:14,outline:"none",boxSizing:"border-box"}}/></div></>}<div style={{marginBottom:18}}><label style={{display:"flex",alignItems:"flex-start",gap:9,cursor:"pointer",fontSize:13,color:C.f600}}><input type="checkbox" checked={cgv} onChange={e=>setCgv(e.target.checked)} style={{marginTop:3,accentColor:C.g}}/><span>J'accepte les <span style={{color:C.g,fontWeight:600}}>CGV</span> et la <span style={{color:C.g,fontWeight:600}}>Politique de confidentialité</span></span></label>{err.cgv&&<div style={{fontSize:12,color:C.r,marginTop:4}}>{err.cgv}</div>}</div><div style={{display:"flex",gap:8}}><button onClick={()=>setStep(0)} style={{flex:1,background:C.f100,border:"none",borderRadius:12,padding:"12px",fontSize:14,fontWeight:600,cursor:"pointer"}}>Retour</button><button onClick={doReg} disabled={load} className="btn" style={{flex:2,background:load?"#9FE1CB":C.g,color:C.w,border:"none",borderRadius:12,padding:"12px",fontSize:14,fontWeight:700,cursor:"pointer"}}>{load?"Création…":ut==="pro"?"Créer compte Pro":"Créer mon compte"}</button></div></>}
-      </div>}
+ 
+  const Field=({label,children,error})=>(
+    <div style={{marginBottom:14}}>
+      <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>{label}</label>
+      {children}
+      {error&&<div style={{fontSize:12,color:C.r,marginTop:4}}>{error}</div>}
+    </div>
+  );
+ 
+  return(
+    <div style={{minHeight:"100vh",background:C.f50,display:"flex",flexDirection:"column"}}>
+      <nav style={{background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"0 20px",height:54,display:"flex",alignItems:"center"}}><Logo s={18}/></nav>
+      <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 16px"}}>
+        <div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:20,padding:"28px 24px",maxWidth:400,width:"100%"}}>
+          <button onClick={()=>go("home")} style={{background:"none",border:"none",cursor:"pointer",color:C.f400,fontSize:13,display:"flex",alignItems:"center",gap:5,marginBottom:20}}><Ico.chL/> Retour</button>
+ 
+          {/* Tabs */}
+          <div style={{display:"flex",gap:6,marginBottom:24,background:C.f100,borderRadius:12,padding:4}}>
+            {[["login","Connexion"],["register","S'inscrire"]].map(([m,l])=>(
+              <button key={m} onClick={()=>{setMode(m);setErr({});setStep(0)}} style={{flex:1,background:mode===m?C.w:"transparent",color:mode===m?C.k:C.f400,border:"none",borderRadius:10,padding:"10px",fontSize:14,fontWeight:700,cursor:"pointer",transition:"all .15s"}}>{l}</button>
+            ))}
+          </div>
+ 
+          {/* LOGIN */}
+          {mode==="login"&&(
+            <div>
+              <h2 style={{fontSize:22,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Bon retour</h2>
+              <p style={{fontSize:13,color:C.f400,marginBottom:22}}>Connectez-vous à votre compte SMASHD</p>
+              <Field label="Email" error={err.email}>
+                <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="vous@exemple.com" style={{...inp,border:`1.5px solid ${err.email?C.r:C.f200}`}}/>
+              </Field>
+              <Field label="Mot de passe">
+                <input type="password" value={pwd} onChange={e=>setPwd(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&doLogin()} style={inp}/>
+              </Field>
+              <button onClick={doLogin} disabled={load} className="btn" style={{width:"100%",background:load?"#9FE1CB":C.g,color:C.w,border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",marginTop:8}}>
+                {load?"Connexion…":"Se connecter"}
+              </button>
+            </div>
+          )}
+ 
+          {/* REGISTER */}
+          {mode==="register"&&(
+            <div>
+              <h2 style={{fontSize:22,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Créer un compte</h2>
+              <p style={{fontSize:13,color:C.f400,marginBottom:18}}>Rejoignez la communauté SMASHD</p>
+ 
+              {/* Type */}
+              <div style={{display:"flex",gap:6,marginBottom:18}}>
+                {[["particulier","Particulier"],["pro","Vendeur Pro"]].map(([id,l])=>(
+                  <button key={id} onClick={()=>setUt(id)} style={{flex:1,background:ut===id?C.g:C.f100,color:ut===id?C.w:C.f600,border:"none",borderRadius:10,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>{l}</button>
+                ))}
+              </div>
+              {ut==="pro"&&<div style={{background:C.gl,border:`1px solid ${C.ga}`,borderRadius:10,padding:"10px 13px",fontSize:12,color:C.g,marginBottom:16,fontWeight:500}}>Abonnement 99€/an — Invendus + espace publicitaire</div>}
+ 
+              {/* Progress */}
+              <div style={{display:"flex",gap:4,marginBottom:20}}>
+                {["Compte","Profil"].map((s,i)=>(
+                  <div key={s} style={{flex:1,height:3,borderRadius:2,background:step>i?C.g:step===i?C.ga:C.f200,transition:"background .3s"}}/>
+                ))}
+              </div>
+ 
+              {/* Step 0 */}
+              {step===0&&(
+                <div>
+                  <Field label="Email *" error={err.email}>
+                    <input type="email" value={email} onChange={e=>setEmail(e.target.value)} style={{...inp,border:`1.5px solid ${err.email?C.r:C.f200}`}}/>
+                  </Field>
+                  <Field label="Mot de passe *" error={err.pwd}>
+                    <input type="password" value={pwd} onChange={e=>setPwd(e.target.value)} placeholder="6 caractères minimum" style={{...inp,border:`1.5px solid ${err.pwd?C.r:C.f200}`}}/>
+                  </Field>
+                  <Field label="Confirmer *" error={err.pwd2}>
+                    <input type="password" value={pwd2} onChange={e=>setPwd2(e.target.value)} placeholder="Répétez" style={{...inp,border:`1.5px solid ${err.pwd2?C.r:C.f200}`}}/>
+                  </Field>
+                  <button onClick={()=>v0()&&setStep(1)} className="btn" style={{width:"100%",background:C.g,color:C.w,border:"none",borderRadius:12,padding:"13px",fontSize:14,fontWeight:700,cursor:"pointer"}}>Continuer →</button>
+                </div>
+              )}
+ 
+              {/* Step 1 */}
+              {step===1&&(
+                <div>
+                  <Field label={ut==="pro"?"Nom du responsable *":"Nom complet *"} error={err.name}>
+                    <input value={name} onChange={e=>setName(e.target.value)} placeholder="Jean Dupont" style={{...inp,border:`1.5px solid ${err.name?C.r:C.f200}`}}/>
+                  </Field>
+                  {ut==="pro"&&(
+                    <div>
+                      <Field label="SIRET *" error={err.siret}>
+                        <input value={siret} onChange={e=>setSiret(e.target.value)} placeholder="123 456 789 00012" style={{...inp,border:`1.5px solid ${err.siret?C.r:C.f200}`}}/>
+                      </Field>
+                      <Field label="Nom commercial">
+                        <input value={company} onChange={e=>setCompany(e.target.value)} placeholder="Mon Shop Tennis" style={inp}/>
+                      </Field>
+                    </div>
+                  )}
+                  <div style={{marginBottom:18}}>
+                    <label style={{display:"flex",alignItems:"flex-start",gap:9,cursor:"pointer",fontSize:13,color:C.f600}}>
+                      <input type="checkbox" checked={cgv} onChange={e=>setCgv(e.target.checked)} style={{marginTop:3,accentColor:C.g}}/>
+                      <span>J'accepte les <span style={{color:C.g,fontWeight:600}}>CGV</span> et la <span style={{color:C.g,fontWeight:600}}>Politique de confidentialité</span></span>
+                    </label>
+                    {err.cgv&&<div style={{fontSize:12,color:C.r,marginTop:4}}>{err.cgv}</div>}
+                  </div>
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={()=>setStep(0)} style={{flex:1,background:C.f100,border:"none",borderRadius:12,padding:"12px",fontSize:14,fontWeight:600,cursor:"pointer"}}>Retour</button>
+                    <button onClick={doReg} disabled={load} className="btn" style={{flex:2,background:load?"#9FE1CB":C.g,color:C.w,border:"none",borderRadius:12,padding:"12px",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+                      {load?"Création…":ut==="pro"?"Créer compte Pro":"Créer mon compte"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+ 
+        </div>
       </div>
     </div>
-  </div>;
+  );
 }
  
 // ═══ SELL — avec SMASHD Drop intégré à l'étape 5 ═══
