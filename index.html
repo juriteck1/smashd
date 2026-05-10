@@ -211,7 +211,7 @@ function SellDropConfig({onClose,onConfirm,clubs=[]}){
   );
 }
  
-// ═══ MODAL ACHETEUR : Choisir mode + payer en escrow ═══
+// ═══ MODAL ACHETEUR : Choisir mode + payer via Stripe ═══
 function BuyerDropModal({ann,onClose,onConfirm,load,tw}){
   const[modeChoisi,setModeChoisi]=useState("");
   const[step,setStep]=useState(1);
@@ -224,33 +224,27 @@ function BuyerDropModal({ann,onClose,onConfirm,load,tw}){
   const doOrder=async()=>{
     setPaying(true);
     try{
-      // 1. Créer la commande en DB avec statut "en_attente_paiement"
       const ok=await onConfirm(ann,modeChoisi);
       if(!ok){setPaying(false);return;}
-      // 2. Appeler Stripe Checkout via Edge Function
       const resp=await fetch("https://gcnmgtwbouakwaufqswh.supabase.co/functions/v1/stripe-checkout",{
         method:"POST",
         headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjbm1ndHdib3Vha3dhdWZxc3doIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTk4NDQsImV4cCI6MjA5MzgzNTg0NH0.qtHQ4si2Ybsriiaaj9F-1Z6WeN52sZ1ry7T7VpcIMpM"},
         body:JSON.stringify({
-          annonce_id:ann.id,
-          titre:ann.title,
-          prix:ann.price,
-          protection:protection,
-          buyer_id:ann.buyer_id,
-          seller_id:ann.user_id,
+          annonce_id:ann.id,titre:ann.title,
+          prix:ann.price,protection:protection,
+          buyer_id:ann.buyer_id,seller_id:ann.user_id,
           mode_drop:modeChoisi
         })
       });
       const data=await resp.json();
       if(data.url){
-        // Rediriger vers Stripe Checkout
         window.location.href=data.url;
       } else {
-        tw("Erreur paiement : "+( data.error||"Réessayez"),"error");
+        tw&&tw("Erreur paiement : "+(data.error||"Réessayez"),"error");
         setPaying(false);
       }
     }catch(e){
-      tw("Erreur connexion Stripe","error");
+      tw&&tw("Erreur connexion Stripe","error");
       setPaying(false);
     }
   };
@@ -261,8 +255,8 @@ function BuyerDropModal({ann,onClose,onConfirm,load,tw}){
         <div className="drop-header">
           <button className="drop-close" onClick={onClose}>✕</button>
           <div className="drop-header-badge">🔐 Achat sécurisé</div>
-          <h2>{step===3?"Paiement bloqué !":step===2?"Confirmer le paiement":"Choisir le mode de remise"}</h2>
-          <p>{step===1?"Sélectionnez le mode proposé par le vendeur.":step===2?"Votre argent est bloqué jusqu'à la remise confirmée.":"Le vendeur va vous proposer des créneaux dans l'app."}</p>
+          <h2>{step===3?"Paiement confirmé !":step===2?"Confirmer le paiement":"Choisir le mode de remise"}</h2>
+          <p>{step===1?"Sélectionnez le mode proposé par le vendeur.":step===2?"Votre argent sera sécurisé jusqu'à la remise confirmée.":"Vous allez être redirigé vers Stripe."}</p>
         </div>
         <div className="drop-body">
  
@@ -297,37 +291,22 @@ function BuyerDropModal({ann,onClose,onConfirm,load,tw}){
               <div style={{background:"#F5F5F5",borderRadius:12,padding:"14px",marginBottom:14}}>
                 <div style={{fontSize:14,fontWeight:800,marginBottom:6,display:"flex",gap:8}}>{DROP_MODES[modeChoisi]?.icon} {DROP_MODES[modeChoisi]?.label}</div>
                 <div style={{background:"#FFF3E0",borderRadius:8,padding:"10px 12px",fontSize:12,color:"#8a4a00",lineHeight:1.6}}>
-                  ⚠️ <strong>Protection anti-bypass :</strong> L'argent ne sera jamais libéré hors plateforme. Toute tentative de contournement supprime la protection acheteur et la garantie vendeur.
+                  ⚠️ <strong>Protection anti-bypass :</strong> L'argent ne sera libéré qu'après confirmation de la remise avec le code Drop.
                 </div>
               </div>
-              {[["Article",`${ann.price} €`],["Protection Acheteur SMASHD",`${protection} €`],["Livraison","Gratuite"]].map(([k,v])=>(
+              {[["Article",`${ann.price} €`],["Protection Acheteur (4% + 0,60€)",`${protection} €`],["Livraison Drop","Gratuite"]].map(([k,v])=>(
                 <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"6px 0",borderBottom:"1px solid #F5F5F5",color:"#5A5A5A"}}><span>{k}</span><span>{v}</span></div>
               ))}
               <div style={{display:"flex",justifyContent:"space-between",fontWeight:900,fontSize:16,padding:"12px 0 4px"}}>
-                <span>Total bloqué en escrow</span><span style={{color:"#0A2A1E"}}>{total} €</span>
+                <span>Total</span><span style={{color:"#0A2A1E"}}>{total} €</span>
               </div>
-              <button className="btn-drop-primary" style={{marginTop:12}} onClick={doOrder} disabled={load}>
-                {load?<div style={{width:18,height:18,border:"2.5px solid rgba(255,255,255,.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>:paying?"Redirection Stripe…":`🔐 Payer ${total} € en sécurité`}
+              <button className="btn-drop-primary" style={{marginTop:12}} onClick={doOrder} disabled={paying||load}>
+                {paying
+                  ?<div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:16,height:16,border:"2px solid rgba(255,255,255,.3)",borderTopColor:"#fff",borderRadius:"50%",animation:"spin .7s linear infinite"}}/> Redirection Stripe…</div>
+                  :`🔐 Payer ${total} € en sécurité`
+                }
               </button>
               <button className="btn-drop-secondary" onClick={()=>setStep(1)}>Retour</button>
-            </div>
-          )}
- 
-          {step===3&&(
-            <div style={{textAlign:"center",padding:"16px 0"}}>
-              <div style={{width:68,height:68,background:"#F0F7F4",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",fontSize:28}}>🔐</div>
-              <div style={{fontSize:18,fontWeight:900,marginBottom:8}}>Paiement sécurisé !</div>
-              <div style={{fontSize:14,color:"#5A5A5A",lineHeight:1.8,marginBottom:20}}>
-                <strong>{total} €</strong> bloqués chez SMASHD.<br/>
-                Le vendeur va vous proposer <strong>jusqu'à 3 créneaux</strong>.<br/>
-                Votre code Drop sera généré <strong>après votre choix de créneau</strong>.
-              </div>
-              <div style={{background:"#F0F7F4",borderRadius:12,padding:"13px",marginBottom:20,textAlign:"left"}}>
-                {[["Mode choisi",DROP_MODES[modeChoisi]?.label],["Escrow",`${total} €`],["Protection Acheteur",`${protection} €`]].map(([k,v])=>(
-                  <div key={k} style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:5,color:"#5A5A5A"}}><span>{k}</span><strong>{v}</strong></div>
-                ))}
-              </div>
-              <button className="btn-drop-primary" onClick={onClose}>Voir mes achats → Drop Acheteur</button>
             </div>
           )}
  
@@ -336,6 +315,7 @@ function BuyerDropModal({ann,onClose,onConfirm,load,tw}){
     </div>
   );
 }
+ 
  
 // ═══ PANEL DROP VENDEUR ═══
  
