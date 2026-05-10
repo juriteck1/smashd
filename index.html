@@ -1,3 +1,6 @@
+mashd v5 final · HTML
+Copier
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -64,8 +67,10 @@ input,textarea,select,button{font-family:inherit}
 const {useState,useEffect,useRef}=React;
 const SB="https://gcnmgtwbouakwaufqswh.supabase.co";
 const KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjbm1ndHdib3Vha3dhdWZxc3doIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTk4NDQsImV4cCI6MjA5MzgzNTg0NH0.qtHQ4si2Ybsriiaaj9F-1Z6WeN52sZ1ry7T7VpcIMpM";
-let tok=KEY;
-const gt=()=>tok,st=t=>{tok=t||KEY},ct=()=>{tok=KEY};
+let tok=sessionStorage.getItem("smashd_tok")||KEY;
+const gt=()=>tok;
+const st=t=>{tok=t||KEY;if(t)sessionStorage.setItem("smashd_tok",t);else sessionStorage.removeItem("smashd_tok");};
+const ct=()=>{tok=KEY;sessionStorage.removeItem("smashd_tok");};
  
 const C={g:"#0A2A1E",gm:"#1A5C3A",gl:"#F0F7F4",ga:"#00C46A",o:"#E8470A",w:"#fff",k:"#0A0A0A",f50:"#FAFAFA",f100:"#F5F5F5",f200:"#E8E8E8",f400:"#9A9A9A",f600:"#5A5A5A",r:"#E8290A",rl:"#FFF0EE"};
  
@@ -785,10 +790,23 @@ function App(){
     }catch(e){}
   };
  
-  useEffect(()=>{loadA();loadClubs()},[]);
+  // Restaurer session depuis sessionStorage
+  useEffect(()=>{
+    loadA();loadClubs();
+    const savedTok=sessionStorage.getItem("smashd_tok");
+    const savedUser=sessionStorage.getItem("smashd_user");
+    if(savedTok&&savedUser){
+      try{
+        const u=JSON.parse(savedUser);
+        st(savedTok);setUser(u);
+        fetch(`${SB}/rest/v1/profiles?id=eq.${u.id}`,{headers:{"apikey":KEY,"Authorization":"Bearer "+savedTok}})
+          .then(r=>r.json()).then(d=>{if(d[0])setProf(d[0]);});
+      }catch(e){ct();}
+    }
+  },[]);
   useEffect(()=>{if(user?.id){loadMy(user.id);loadDrops(user.id)}},[user?.id]);
  
-  const login=async(email,pwd)=>{setLoad(true);try{const d=await authApi("token?grant_type=password",{email,password:pwd});st(d.access_token);setUser(d.user);const p=await api(`profiles?id=eq.${d.user.id}`);setProf(p[0]||null);tw("Bienvenue !");go("home")}catch(e){throw e}finally{setLoad(false)}};
+  const login=async(email,pwd)=>{setLoad(true);try{const d=await authApi("token?grant_type=password",{email,password:pwd});st(d.access_token);setUser(d.user);sessionStorage.setItem('smashd_user',JSON.stringify(d.user));const p=await api(`profiles?id=eq.${d.user.id}`);setProf(p[0]||null);tw("Bienvenue !");go("home")}catch(e){throw e}finally{setLoad(false)}};
   const register=async(email,pwd,name,ut,siret,company)=>{setLoad(true);try{const d=await authApi("signup",{email,password:pwd});if(d.user){if(d.access_token)st(d.access_token);await api("profiles",{method:"POST",body:JSON.stringify({id:d.user.id,name,email,user_type:ut,siret:siret||null,company:company||null})});setUser(d.user);setProf({id:d.user.id,name,email,user_type:ut});tw("Compte créé !");go("home")}}catch(e){throw e}finally{setLoad(false)}};
   const logout=()=>{ct();setUser(null);setProf(null);setMyA([]);setMyO([]);setMyS([]);setMyDropsV([]);setMyDropsA([]);go("home")};
  
@@ -1730,3 +1748,4 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
+ 
