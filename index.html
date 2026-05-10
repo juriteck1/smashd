@@ -362,69 +362,7 @@ function BuyerDropModal({ann,onClose,onConfirm,load,tw}){
 }
  
  
-// ═══ PANEL DROP VENDEUR ═══
-function DropVendeurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw,onRefresh}){
-  const[sel,setSel]=useState(null);
-  const[dates,setDates]=useState({});
-  const[lieux,setLieux]=useState({});
-  const[codeVal,setCodeVal]=useState("");
-  const[codeErr,setCodeErr]=useState("");
-  const[busy,setBusy]=useState(false);
- 
-  const getAnnonce=(drop)=>annonces.find(a=>a.id===drop.annonce_id);
- 
-  const proposer=async(drop)=>{
-    const slots=[];
-    for(let i=0;i<3;i++){
-      if(dates[`${drop.id}_${i}`]&&lieux[`${drop.id}_${i}`])
-        slots.push({remise_id:drop.id,date_heure:dates[`${drop.id}_${i}`],lieu_precis:lieux[`${drop.id}_${i}`]});
-    }
-    if(!slots.length){tw("Ajoutez au moins 1 créneau","error");return;}
-    setBusy(true);
-    try{
-      await Promise.all(slots.map(s=>api("drop_creneaux",{method:"POST",body:JSON.stringify(s)})));
-      await api(`drop_remises?id=eq.${drop.id}`,{method:"PATCH",body:JSON.stringify({status:"creneaux_proposes",updated_at:new Date().toISOString()})});
-      tw("Créneaux envoyés à l'acheteur !");
-      // Notifier l'acheteur
-      try{
-        const remiseData=await api("drop_remises?id=eq."+drop.id);
-        const acheteur=await api("profiles?id=eq."+remiseData[0]?.acheteur_id);
-        if(acheteur[0]?.email){
-          const annonce=annonces.find(a=>a.id===drop.annonce_id);
-          sendNotif("creneaux_disponibles",acheteur[0].email,{titre:annonce?.title||"Article",nb_creneaux:slots.length});
-        }
-      }catch(e){}
-      onRefresh();setSel(null);
-    }catch(e){tw("Erreur","error")}
-    finally{setBusy(false)}
-  };
- 
-  const validerCode=async(drop)=>{
-    const code=codeVal.trim().toUpperCase();
-    if(code!==drop.code){setCodeErr("Code incorrect");return;}
-    setBusy(true);
-    try{
-      await api(`drop_remises?id=eq.${drop.id}`,{method:"PATCH",body:JSON.stringify({status:"confirme",code_used:true,updated_at:new Date().toISOString()})});
-      await api(`commandes?id=eq.${drop.commande_id}`,{method:"PATCH",body:JSON.stringify({status:"livré",escrow_status:"libéré",drop_status:"confirme"})});
-      tw("🎉 Transaction validée ! Fonds débloqués dans votre wallet.");
-      // Notifier le vendeur
-      try{
-        const vendeur=await api("profiles?id=eq."+user.id);
-        if(vendeur[0]?.email){
-          const annonce=annonces.find(a=>a.id===drop.annonce_id);
-          sendNotif("transaction_validee",vendeur[0].email,{titre:annonce?.title||"Article",gain:annonce?.price||"—"});
-        }
-      }catch(e){}
-      onRefresh();setCodeVal("");setCodeErr("");
-    }catch(e){tw("Erreur","error")}
-    finally{setBusy(false)}
-  };
- 
-  const pending=drops.filter(d=>d.status==="mode_choisi");
-  const active=drops.filter(d=>["creneaux_proposes","creneau_accepte","code_envoye"].includes(d.status));
-  const done=drops.filter(d=>["confirme","litige","expire"].includes(d.status));
- 
-  const Card=({drop})=>{
+function DropVendeurCard({drop,annonces,creneaux,sel,setSel,dates,setDates,lieux,setLieux,codeVal,setCodeVal,codeErr,setCodeErr,busy,validerCode,proposer,api,tw}){
     const isOpen=sel===drop.id;
     const mode=DROP_MODES[drop.mode_choisi]||DROP_MODES.meet;
     const dropCr=creneaux.filter(c=>c.remise_id===drop.id);
@@ -539,6 +477,70 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw,
     );
   };
  
+ 
+// ═══ PANEL DROP VENDEUR ═══
+function DropVendeurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw,onRefresh}){
+  const[sel,setSel]=useState(null);
+  const[dates,setDates]=useState({});
+  const[lieux,setLieux]=useState({});
+  const[codeVal,setCodeVal]=useState("");
+  const[codeErr,setCodeErr]=useState("");
+  const[busy,setBusy]=useState(false);
+ 
+  const getAnnonce=(drop)=>annonces.find(a=>a.id===drop.annonce_id);
+ 
+  const proposer=async(drop)=>{
+    const slots=[];
+    for(let i=0;i<3;i++){
+      if(dates[`${drop.id}_${i}`]&&lieux[`${drop.id}_${i}`])
+        slots.push({remise_id:drop.id,date_heure:dates[`${drop.id}_${i}`],lieu_precis:lieux[`${drop.id}_${i}`]});
+    }
+    if(!slots.length){tw("Ajoutez au moins 1 créneau","error");return;}
+    setBusy(true);
+    try{
+      await Promise.all(slots.map(s=>api("drop_creneaux",{method:"POST",body:JSON.stringify(s)})));
+      await api(`drop_remises?id=eq.${drop.id}`,{method:"PATCH",body:JSON.stringify({status:"creneaux_proposes",updated_at:new Date().toISOString()})});
+      tw("Créneaux envoyés à l'acheteur !");
+      // Notifier l'acheteur
+      try{
+        const remiseData=await api("drop_remises?id=eq."+drop.id);
+        const acheteur=await api("profiles?id=eq."+remiseData[0]?.acheteur_id);
+        if(acheteur[0]?.email){
+          const annonce=annonces.find(a=>a.id===drop.annonce_id);
+          sendNotif("creneaux_disponibles",acheteur[0].email,{titre:annonce?.title||"Article",nb_creneaux:slots.length});
+        }
+      }catch(e){}
+      onRefresh();setSel(null);
+    }catch(e){tw("Erreur","error")}
+    finally{setBusy(false)}
+  };
+ 
+  const validerCode=async(drop)=>{
+    const code=codeVal.trim().toUpperCase();
+    if(code!==drop.code){setCodeErr("Code incorrect");return;}
+    setBusy(true);
+    try{
+      await api(`drop_remises?id=eq.${drop.id}`,{method:"PATCH",body:JSON.stringify({status:"confirme",code_used:true,updated_at:new Date().toISOString()})});
+      await api(`commandes?id=eq.${drop.commande_id}`,{method:"PATCH",body:JSON.stringify({status:"livré",escrow_status:"libéré",drop_status:"confirme"})});
+      tw("🎉 Transaction validée ! Fonds débloqués dans votre wallet.");
+      // Notifier le vendeur
+      try{
+        const vendeur=await api("profiles?id=eq."+user.id);
+        if(vendeur[0]?.email){
+          const annonce=annonces.find(a=>a.id===drop.annonce_id);
+          sendNotif("transaction_validee",vendeur[0].email,{titre:annonce?.title||"Article",gain:annonce?.price||"—"});
+        }
+      }catch(e){}
+      onRefresh();setCodeVal("");setCodeErr("");
+    }catch(e){tw("Erreur","error")}
+    finally{setBusy(false)}
+  };
+ 
+  const pending=drops.filter(d=>d.status==="mode_choisi");
+  const active=drops.filter(d=>["creneaux_proposes","creneau_accepte","code_envoye"].includes(d.status));
+  const done=drops.filter(d=>["confirme","litige","expire"].includes(d.status));
+ 
+ 
   return(
     <div>
       <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Drop Vendeur</h2>
@@ -550,15 +552,15 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw,
             <div style={{fontSize:11,fontWeight:700,color:"#C25A00",textTransform:"uppercase",letterSpacing:"1px",marginBottom:8,display:"flex",alignItems:"center",gap:8}}>
               ⚡ Action requise — Proposez des créneaux ({pending.length})
             </div>
-            {pending.map(d=><Card key={d.id} drop={d}/>)}
+            {pending.map(d=><DropVendeurCard key={d.id} drop={d} annonces={annonces} creneaux={creneaux} sel={sel} setSel={setSel} dates={dates} setDates={setDates} lieux={lieux} setLieux={setLieux} codeVal={codeVal} setCodeVal={setCodeVal} codeErr={codeErr} setCodeErr={setCodeErr} busy={busy} validerCode={validerCode} proposer={proposer} api={api} tw={tw}/>)}
           </div>}
           {active.length>0&&<div style={{marginBottom:16}}>
             <div style={{fontSize:11,fontWeight:700,color:"#1A3A8C",textTransform:"uppercase",letterSpacing:"1px",marginBottom:8}}>📅 En cours ({active.length})</div>
-            {active.map(d=><Card key={d.id} drop={d}/>)}
+            {active.map(d=><DropVendeurCard key={d.id} drop={d} annonces={annonces} creneaux={creneaux} sel={sel} setSel={setSel} dates={dates} setDates={setDates} lieux={lieux} setLieux={setLieux} codeVal={codeVal} setCodeVal={setCodeVal} codeErr={codeErr} setCodeErr={setCodeErr} busy={busy} validerCode={validerCode} proposer={proposer} api={api} tw={tw}/>)}
           </div>}
           {done.length>0&&<div>
             <div style={{fontSize:11,fontWeight:700,color:"#9A9A9A",textTransform:"uppercase",letterSpacing:"1px",marginBottom:8}}>✅ Terminés ({done.length})</div>
-            {done.map(d=><Card key={d.id} drop={d}/>)}
+            {done.map(d=><DropVendeurCard key={d.id} drop={d} annonces={annonces} creneaux={creneaux} sel={sel} setSel={setSel} dates={dates} setDates={setDates} lieux={lieux} setLieux={setLieux} codeVal={codeVal} setCodeVal={setCodeVal} codeErr={codeErr} setCodeErr={setCodeErr} busy={busy} validerCode={validerCode} proposer={proposer} api={api} tw={tw}/>)}
           </div>}
         </div>
       }
@@ -566,43 +568,7 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw,
   );
 }
  
-// ═══ PANEL DROP ACHETEUR ═══
-function DropAcheteurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw,onRefresh}){
-  const[sel,setSel]=useState(null);
-  const[busy,setBusy]=useState(false);
- 
-  const getAnnonce=(drop)=>annonces.find(a=>a.id===drop.annonce_id);
- 
-  const accepter=async(drop,cr)=>{
-    setBusy(true);
-    try{
-      await api(`drop_creneaux?id=eq.${cr.id}`,{method:"PATCH",body:JSON.stringify({status:"accepté"})});
-      const autres=creneaux.filter(c=>c.remise_id===drop.id&&c.id!==cr.id);
-      await Promise.all(autres.map(c=>api(`drop_creneaux?id=eq.${c.id}`,{method:"PATCH",body:JSON.stringify({status:"refusé"})})));
-      const code=genCode();
-      const expires=new Date(Date.now()+48*3600*1000).toISOString();
-      await api(`drop_remises?id=eq.${drop.id}`,{method:"PATCH",body:JSON.stringify({
-        status:"code_envoye",creneau_retenu_id:cr.id,
-        lieu_final:cr.lieu_precis,date_finale:cr.date_heure,
-        code,code_expires_at:expires,updated_at:new Date().toISOString()
-      })});
-      tw("✅ RDV confirmé ! Votre code Drop est prêt.");
-      // Notifier le vendeur
-      try{
-        const remiseData=await api("drop_remises?id=eq."+drop.id);
-        const vendeur=await api("profiles?id=eq."+remiseData[0]?.vendeur_id);
-        if(vendeur[0]?.email){
-          const annonce=annonces.find(a=>a.id===drop.annonce_id);
-          const dateStr=new Date(cr.date_heure).toLocaleString("fr-FR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});
-          sendNotif("creneau_accepte",vendeur[0].email,{titre:annonce?.title||"Article",date:dateStr,lieu:cr.lieu_precis});
-        }
-      }catch(e){}
-      onRefresh();
-    }catch(e){tw("Erreur","error")}
-    finally{setBusy(false)}
-  };
- 
-  const Card=({drop})=>{
+function DropAcheteurCard({drop,annonces,creneaux,sel,setSel,busy,accepter,tw}){
     const isOpen=sel===drop.id;
     const mode=DROP_MODES[drop.mode_choisi]||DROP_MODES.meet;
     const annonce=getAnnonce(drop);
@@ -702,13 +668,51 @@ function DropAcheteurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw
     );
   };
  
+ 
+// ═══ PANEL DROP ACHETEUR ═══
+function DropAcheteurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw,onRefresh}){
+  const[sel,setSel]=useState(null);
+  const[busy,setBusy]=useState(false);
+ 
+  const getAnnonce=(drop)=>annonces.find(a=>a.id===drop.annonce_id);
+ 
+  const accepter=async(drop,cr)=>{
+    setBusy(true);
+    try{
+      await api(`drop_creneaux?id=eq.${cr.id}`,{method:"PATCH",body:JSON.stringify({status:"accepté"})});
+      const autres=creneaux.filter(c=>c.remise_id===drop.id&&c.id!==cr.id);
+      await Promise.all(autres.map(c=>api(`drop_creneaux?id=eq.${c.id}`,{method:"PATCH",body:JSON.stringify({status:"refusé"})})));
+      const code=genCode();
+      const expires=new Date(Date.now()+48*3600*1000).toISOString();
+      await api(`drop_remises?id=eq.${drop.id}`,{method:"PATCH",body:JSON.stringify({
+        status:"code_envoye",creneau_retenu_id:cr.id,
+        lieu_final:cr.lieu_precis,date_finale:cr.date_heure,
+        code,code_expires_at:expires,updated_at:new Date().toISOString()
+      })});
+      tw("✅ RDV confirmé ! Votre code Drop est prêt.");
+      // Notifier le vendeur
+      try{
+        const remiseData=await api("drop_remises?id=eq."+drop.id);
+        const vendeur=await api("profiles?id=eq."+remiseData[0]?.vendeur_id);
+        if(vendeur[0]?.email){
+          const annonce=annonces.find(a=>a.id===drop.annonce_id);
+          const dateStr=new Date(cr.date_heure).toLocaleString("fr-FR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});
+          sendNotif("creneau_accepte",vendeur[0].email,{titre:annonce?.title||"Article",date:dateStr,lieu:cr.lieu_precis});
+        }
+      }catch(e){}
+      onRefresh();
+    }catch(e){tw("Erreur","error")}
+    finally{setBusy(false)}
+  };
+ 
+ 
   return(
     <div>
       <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Drop Acheteur</h2>
       <p style={{fontSize:14,color:"#9A9A9A",marginBottom:20}}>Suivez vos achats et confirmez les remises.</p>
       {drops.length===0
         ?<div style={{textAlign:"center",padding:"44px",color:"#9A9A9A",background:"#fff",borderRadius:13,border:"1px solid #E8E8E8"}}><div style={{fontSize:32,marginBottom:12}}>🛒</div><div style={{fontWeight:600}}>Aucun achat en cours</div></div>
-        :drops.map(d=><Card key={d.id} drop={d}/>)
+        :drops.map(d=><DropAcheteurCard key={d.id} drop={d} annonces={annonces} creneaux={creneaux} sel={sel} setSel={setSel} busy={busy} accepter={accepter} tw={tw}/>)
       }
     </div>
   );
@@ -1127,6 +1131,16 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
 }
  
 // ═══ AUTH ═══
+function Field({label,children,error}){
+  return(
+    <div style={{marginBottom:14}}>
+      <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>{label}</label>
+      {children}
+      {error&&<div style={{fontSize:12,color:C.r,marginTop:4}}>{error}</div>}
+    </div>
+  );
+}
+ 
 function Auth({login,register,load,go}){
   const[mode,setMode]=useState("login");
   const[step,setStep]=useState(0);
@@ -1164,13 +1178,7 @@ function Auth({login,register,load,go}){
   const doLogin=async()=>{if(!v0())return;try{await login(email,pwd)}catch(e){setErr({email:"Email ou mot de passe incorrect"})}};
   const doReg=async()=>{if(!v1())return;try{await register(email,pwd,name,ut,siret,company)}catch(e){setErr({email:e.message})}};
  
-  const Field=({label,children,error})=>(
-    <div style={{marginBottom:14}}>
-      <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>{label}</label>
-      {children}
-      {error&&<div style={{fontSize:12,color:C.r,marginTop:4}}>{error}</div>}
-    </div>
-  );
+ 
  
   return(
     <div style={{minHeight:"100vh",background:C.f50,display:"flex",flexDirection:"column"}}>
