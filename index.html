@@ -720,6 +720,283 @@ function DropAcheteurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw
  
  
  
+ 
+// ═══ PROFIL PUBLIC ═══
+function Stars({note, size=16}){
+  return(
+    <div style={{display:"flex",gap:2}}>
+      {[1,2,3,4,5].map(i=>(
+        <svg key={i} width={size} height={size} viewBox="0 0 24 24" fill={i<=note?"#F5A623":"#E8E8E8"} stroke="none">
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+      ))}
+    </div>
+  );
+}
+ 
+function StarPicker({value, onChange}){
+  const[hover,setHover]=useState(0);
+  return(
+    <div style={{display:"flex",gap:4}}>
+      {[1,2,3,4,5].map(i=>(
+        <svg key={i} width={28} height={28} viewBox="0 0 24 24"
+          fill={i<=(hover||value)?"#F5A623":"#E8E8E8"} stroke="none"
+          style={{cursor:"pointer",transition:"all .1s"}}
+          onMouseEnter={()=>setHover(i)}
+          onMouseLeave={()=>setHover(0)}
+          onClick={()=>onChange(i)}>
+          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+        </svg>
+      ))}
+    </div>
+  );
+}
+ 
+function ProfilPublic({userId, go, user, tw}){
+  const[profil,setProfil]=useState(null);
+  const[annonces,setAnnonces]=useState([]);
+  const[avis,setAvis]=useState([]);
+  const[loading,setLoading]=useState(true);
+  const[showAvisForm,setShowAvisForm]=useState(false);
+  const[myNote,setMyNote]=useState(0);
+  const[myComment,setMyComment]=useState("");
+  const[sendingAvis,setSendingAvis]=useState(false);
+  const[editBio,setEditBio]=useState(false);
+  const[bioText,setBioText]=useState("");
+  const[avatarLoad,setAvatarLoad]=useState(false);
+  const avatarRef=useRef();
+ 
+  const isOwnProfile=user?.id===userId;
+  const avgNote=avis.length>0?(avis.reduce((a,b)=>a+b.note,0)/avis.length).toFixed(1):null;
+ 
+  useEffect(()=>{
+    if(!userId)return;
+    setLoading(true);
+    Promise.all([
+      api(`profiles?id=eq.${userId}`),
+      api(`annonces?user_id=eq.${userId}&status=eq.active&order=created_at.desc&limit=12`),
+      api(`avis?cible_id=eq.${userId}&order=created_at.desc`)
+    ]).then(([p,a,av])=>{
+      setProfil(p[0]||null);
+      setBioText(p[0]?.bio||"");
+      setAnnonces(a);
+      setAvis(av);
+      setLoading(false);
+    }).catch(()=>setLoading(false));
+  },[userId]);
+ 
+  const saveAvis=async()=>{
+    if(!myNote){tw("Choisissez une note","error");return;}
+    if(!user){go("auth");return;}
+    setSendingAvis(true);
+    try{
+      await api("avis",{method:"POST",body:JSON.stringify({
+        auteur_id:user.id,
+        cible_id:userId,
+        role_auteur:"acheteur",
+        note:myNote,
+        commentaire:myComment||null
+      })});
+      tw("Avis publié !");
+      setShowAvisForm(false);
+      const av=await api(`avis?cible_id=eq.${userId}&order=created_at.desc`);
+      setAvis(av);
+    }catch(e){tw("Erreur : vous avez peut-être déjà laissé un avis","error")}
+    finally{setSendingAvis(false)}
+  };
+ 
+  const saveBio=async()=>{
+    try{
+      await api(`profiles?id=eq.${userId}`,{method:"PATCH",body:JSON.stringify({bio:bioText})});
+      setProfil(p=>({...p,bio:bioText}));
+      setEditBio(false);
+      tw("Bio mise à jour !");
+    }catch(e){tw("Erreur","error")}
+  };
+ 
+  const uploadAvatar=async(e)=>{
+    const f=e.target.files[0];if(!f)return;
+    setAvatarLoad(true);
+    try{
+      const url=await uploadPhoto(f);
+      await api(`profiles?id=eq.${userId}`,{method:"PATCH",body:JSON.stringify({avatar_url:url})});
+      setProfil(p=>({...p,avatar_url:url}));
+      tw("Photo mise à jour !");
+    }catch(e){tw("Erreur upload","error")}
+    finally{setAvatarLoad(false)}
+  };
+ 
+  if(loading)return(
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{width:36,height:36,border:`3px solid ${C.f200}`,borderTopColor:C.g,borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
+    </div>
+  );
+ 
+  if(!profil)return(
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}>
+      <div style={{textAlign:"center"}}><div style={{fontSize:48,marginBottom:16}}>🔍</div><div style={{fontSize:17,fontWeight:700}}>Profil introuvable</div></div>
+    </div>
+  );
+ 
+  const joinDate=new Date(profil.membre_depuis||profil.created_at||Date.now()).toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
+ 
+  return(
+    <div style={{minHeight:"100vh",background:C.f50}}>
+      <nav style={{background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"0 20px",height:54,display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,zIndex:100}}>
+        <button onClick={()=>go("home")} style={{background:"none",border:"none",cursor:"pointer",color:C.f600,display:"flex",alignItems:"center",gap:5,fontSize:14}}><Ico.chL/> Retour</button>
+        <Logo s={18}/>
+      </nav>
+ 
+      <div style={{maxWidth:900,margin:"0 auto",padding:"32px 20px"}}>
+        {/* Header profil */}
+        <div style={{background:C.w,borderRadius:20,padding:"28px",marginBottom:16,border:`1px solid ${C.f200}`}}>
+          <div style={{display:"flex",gap:20,alignItems:"flex-start",flexWrap:"wrap"}}>
+            {/* Avatar */}
+            <div style={{position:"relative",flexShrink:0}}>
+              <div style={{width:88,height:88,borderRadius:"50%",background:C.g,display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,fontWeight:900,color:C.w,overflow:"hidden",border:`3px solid ${C.gl}`}}>
+                {profil.avatar_url
+                  ?<img src={profil.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>
+                  :(profil.name||"?").charAt(0).toUpperCase()
+                }
+              </div>
+              {isOwnProfile&&(
+                <>
+                  <button onClick={()=>avatarRef.current.click()} style={{position:"absolute",bottom:0,right:0,width:28,height:28,borderRadius:"50%",background:C.k,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.w,fontSize:12}}>
+                    {avatarLoad?"…":"📷"}
+                  </button>
+                  <input ref={avatarRef} type="file" accept="image/*" onChange={uploadAvatar} style={{display:"none"}}/>
+                </>
+              )}
+            </div>
+ 
+            {/* Infos */}
+            <div style={{flex:1,minWidth:200}}>
+              <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:6}}>
+                <h1 style={{fontSize:22,fontWeight:900,letterSpacing:"-0.5px"}}>{profil.name||"Utilisateur"}</h1>
+                {profil.user_type==="pro"&&<span style={{background:C.k,color:C.w,borderRadius:6,padding:"2px 9px",fontSize:11,fontWeight:700}}>PRO</span>}
+              </div>
+              {avgNote&&(
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+                  <Stars note={Math.round(parseFloat(avgNote))}/>
+                  <span style={{fontSize:15,fontWeight:800,color:C.k}}>{avgNote}</span>
+                  <span style={{fontSize:13,color:C.f400}}>({avis.length} avis)</span>
+                </div>
+              )}
+              <div style={{fontSize:13,color:C.f400,marginBottom:10}}>
+                Membre depuis {joinDate}
+                {profil.ville&&<span> · 📍 {profil.ville}</span>}
+              </div>
+ 
+              {/* Bio */}
+              {editBio?(
+                <div>
+                  <textarea value={bioText} onChange={e=>setBioText(e.target.value)} rows={3} placeholder="Décrivez-vous en quelques mots…" style={{width:"100%",padding:"10px 12px",borderRadius:10,border:`1.5px solid ${C.g}`,fontSize:13,resize:"vertical",boxSizing:"border-box",outline:"none",fontFamily:"inherit",marginBottom:8}}/>
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={saveBio} style={{background:C.g,color:C.w,border:"none",borderRadius:100,padding:"7px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}>Enregistrer</button>
+                    <button onClick={()=>setEditBio(false)} style={{background:C.f100,border:"none",borderRadius:100,padding:"7px 16px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Annuler</button>
+                  </div>
+                </div>
+              ):(
+                <div>
+                  <p style={{fontSize:14,color:profil.bio?C.f600:C.f400,lineHeight:1.7,fontStyle:profil.bio?"normal":"italic"}}>
+                    {profil.bio||"Aucune bio renseignée."}
+                  </p>
+                  {isOwnProfile&&<button onClick={()=>setEditBio(true)} style={{background:"none",border:"none",color:C.g,fontSize:12,fontWeight:600,cursor:"pointer",marginTop:4,padding:0,textDecoration:"underline"}}>✏️ Modifier ma bio</button>}
+                </div>
+              )}
+            </div>
+ 
+            {/* Stats */}
+            <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+              {[
+                [annonces.length,"Annonces actives"],
+                [avis.length,"Avis"],
+                [avgNote||"—","Note moyenne"]
+              ].map(([v,l])=>(
+                <div key={l} style={{background:C.f50,borderRadius:12,padding:"12px 16px",textAlign:"center",minWidth:80}}>
+                  <div style={{fontSize:20,fontWeight:900,color:C.g,letterSpacing:"-1px"}}>{v}</div>
+                  <div style={{fontSize:11,color:C.f400,marginTop:2}}>{l}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+ 
+        <div style={{display:"grid",gridTemplateColumns:"1fr 340px",gap:16}} className="g1m">
+          {/* Annonces actives */}
+          <div>
+            <div style={{fontSize:13,fontWeight:700,color:C.f400,textTransform:"uppercase",letterSpacing:"1px",marginBottom:12}}>Annonces en vente</div>
+            {annonces.length===0
+              ?<div style={{background:C.w,borderRadius:13,border:`1px solid ${C.f200}`,padding:"36px",textAlign:"center",color:C.f400}}>Aucune annonce active</div>
+              :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10}}>
+                {annonces.map(a=>(
+                  <div key={a.id} onClick={()=>go("article",a)} style={{background:C.w,borderRadius:14,overflow:"hidden",cursor:"pointer",border:`1px solid ${C.f200}`,transition:"transform .2s"}} className="card">
+                    <div style={{height:120,background:C.f100,display:"flex",alignItems:"center",justifyContent:"center",overflow:"hidden"}}>
+                      {a.photo_url?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{fontSize:28}}>{CAT_TREE[a.category]?.icon||"🏅"}</div>}
+                    </div>
+                    <div style={{padding:"10px 12px"}}>
+                      <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
+                      <div style={{fontSize:15,fontWeight:900,color:C.g,marginTop:4}}>{a.price} €</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            }
+          </div>
+ 
+          {/* Avis */}
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+              <div style={{fontSize:13,fontWeight:700,color:C.f400,textTransform:"uppercase",letterSpacing:"1px"}}>Avis ({avis.length})</div>
+              {user&&user.id!==userId&&!showAvisForm&&(
+                <button onClick={()=>setShowAvisForm(true)} style={{background:C.g,color:C.w,border:"none",borderRadius:100,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}>+ Laisser un avis</button>
+              )}
+            </div>
+ 
+            {/* Formulaire avis */}
+            {showAvisForm&&(
+              <div style={{background:C.w,borderRadius:14,border:`1.5px solid ${C.g}`,padding:"16px",marginBottom:12}}>
+                <div style={{fontSize:13,fontWeight:700,marginBottom:10}}>Votre avis</div>
+                <div style={{marginBottom:10}}>
+                  <StarPicker value={myNote} onChange={setMyNote}/>
+                </div>
+                <textarea value={myComment} onChange={e=>setMyComment(e.target.value)} placeholder="Commentaire (optionnel)…" rows={3} style={{width:"100%",padding:"10px 12px",borderRadius:10,border:`1.5px solid ${C.f200}`,fontSize:13,resize:"vertical",boxSizing:"border-box",outline:"none",fontFamily:"inherit",marginBottom:10}}/>
+                <div style={{display:"flex",gap:8}}>
+                  <button onClick={()=>setShowAvisForm(false)} style={{flex:1,background:C.f100,border:"none",borderRadius:100,padding:"10px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Annuler</button>
+                  <button onClick={saveAvis} disabled={sendingAvis||!myNote} style={{flex:2,background:myNote?C.g:"#ccc",color:C.w,border:"none",borderRadius:100,padding:"10px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                    {sendingAvis?"Envoi…":"Publier l'avis"}
+                  </button>
+                </div>
+              </div>
+            )}
+ 
+            {/* Liste avis */}
+            <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:500,overflowY:"auto"}}>
+              {avis.length===0
+                ?<div style={{background:C.w,borderRadius:13,border:`1px solid ${C.f200}`,padding:"24px",textAlign:"center",color:C.f400,fontSize:13}}>Aucun avis pour l'instant.</div>
+                :avis.map(a=>(
+                  <div key={a.id} style={{background:C.w,borderRadius:13,border:`1px solid ${C.f200}`,padding:"14px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+                      <div>
+                        <Stars note={a.note} size={14}/>
+                        <div style={{fontSize:11,color:C.f400,marginTop:3}}>
+                          {a.role_auteur==="acheteur"?"Acheteur":"Vendeur"} · {new Date(a.created_at).toLocaleDateString("fr-FR")}
+                        </div>
+                      </div>
+                      <div style={{fontSize:16,fontWeight:900,color:C.k}}>{a.note}/5</div>
+                    </div>
+                    {a.commentaire&&<p style={{fontSize:13,color:C.f600,lineHeight:1.6,margin:0}}>{a.commentaire}</p>}
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+ 
 // ═══ RESET PASSWORD PAGE ═══
 function ResetPassword({go}){
   const[pwd,setPwd]=useState("");
@@ -794,6 +1071,7 @@ function App(){
   // Détecter lien de reset Supabase
   const isReset=window.location.hash.includes("type=recovery")||window.location.search.includes("type=recovery");
   const[sc,setSc]=useState(isReset?"reset":"home");
+  const[profileId,setProfileId]=useState(null);
   const[user,setUser]=useState(null);
   const[prof,setProf]=useState(null);
   const[ann,setAnn]=useState([]);
@@ -817,7 +1095,12 @@ function App(){
   const[favs,setFavs]=useState({});
  
   const tw=(msg,type="success")=>{setToast({msg,type});setTimeout(()=>setToast(null),3500)};
-  const go=(s,d=null)=>{setSc(s);if(d)setSel(d);window.scrollTo(0,0)};
+  const go=(s,d=null,pid=null)=>{
+    setSc(s);
+    if(d)setSel(d);
+    if(pid)setProfileId(pid);
+    window.scrollTo(0,0);
+  };
  
   const loadA=async()=>{try{const d=await api("annonces?status=eq.active&order=created_at.desc&limit=60");setAnn(d)}catch(e){}};
  
@@ -967,7 +1250,7 @@ function App(){
   return(
     <div>
       {toast&&<Toast {...toast}/>}
-      {sc==="reset"&&<ResetPassword go={go}/>}{sc==="home"&&<Home {...p}/>}
+      {sc==="reset"&&<ResetPassword go={go}/>}{sc==="profil"&&<ProfilPublic userId={profileId} go={go} user={user} tw={tw}/>}{sc==="home"&&<Home {...p}/>}
       {sc==="auth"&&<Auth {...p}/>}
       {sc==="sell"&&<Sell {...p}/>}
       {sc==="article"&&<Article {...p}/>}
@@ -1632,6 +1915,7 @@ function Article({sel,go,user,placeOrder,load,favs,setFavs,tw}){
               <button onClick={()=>ofr&&setOfrSent(true)} className="btn" style={{background:C.w,color:C.k,border:`1.5px solid ${C.k}`,borderRadius:100,padding:"12px 16px",fontSize:14,fontWeight:700,cursor:"pointer"}}>Offrir</button>
             </div>
             <button onClick={()=>setFavs(f=>({...f,[a.id]:!f[a.id]}))} style={{background:"none",border:`1.5px solid ${favs[a.id]?C.o:C.f200}`,borderRadius:100,padding:"11px",fontSize:14,fontWeight:600,cursor:"pointer",color:favs[a.id]?C.o:C.f400,display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>{Ico.heart(favs[a.id])} {favs[a.id]?"Sauvegardé":"Sauvegarder"}</button>
+          <button onClick={()=>go("profil",null,a.user_id)} style={{background:"none",border:`1.5px solid ${C.f200}`,borderRadius:100,padding:"11px",fontSize:13,fontWeight:600,cursor:"pointer",color:C.f600,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>👤 Voir le profil vendeur</button>
           </div>
           <div style={{borderTop:`1px solid ${C.f200}`,paddingTop:16}}>
             {[[<Ico.drop/>,"Livraison SMASHD Drop gratuite"],[<Ico.shld/>,"Paiement bloqué en escrow"],[<Ico.chk/>,"Protection acheteur garantie"],[<Ico.leaf/>,"Article éco-responsable"]].map(([icon,l],i)=>(
@@ -1667,6 +1951,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
         <Logo s={18}/>
         <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
           {(pendingV+pendingA)>0&&<div style={{background:C.o,color:"#fff",borderRadius:100,padding:"4px 10px",fontSize:12,fontWeight:700}}>{pendingV+pendingA} Drop en attente</div>}
+          <button onClick={()=>go("profil",null,user?.id)} className="btn hm" style={{background:C.f100,color:C.k,border:`1px solid ${C.f200}`,borderRadius:100,padding:"8px 14px",fontSize:13,fontWeight:600,cursor:"pointer"}}>👤 Mon profil</button>
           <button onClick={()=>go("sell")} className="btn" style={{background:C.o,color:C.w,border:"none",borderRadius:100,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><Ico.plus/> Vendre</button>
           <button onClick={logout} className="btn" style={{background:C.f100,color:C.r,border:`1px solid ${C.f200}`,borderRadius:100,padding:"8px 14px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Déconnexion</button>
         </div>
@@ -1901,4 +2186,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
- 
