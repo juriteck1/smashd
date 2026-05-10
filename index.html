@@ -308,11 +308,27 @@ function BuyerDropModal({ann,onClose,onConfirm,load}){
 }
  
 // ═══ PANEL DROP VENDEUR ═══
+ 
+function MessageInput({dropId, onSend, busy}){
+  const[val,setVal]=useState("");
+  return(
+    <div style={{display:"flex",gap:8}}>
+      <input
+        value={val}
+        onChange={e=>setVal(e.target.value)}
+        onKeyDown={e=>{if(e.key==="Enter"&&val.trim()){onSend(val);setVal("");}}}
+        placeholder="Message (sans coordonnées personnelles)…"
+        style={{flex:1,padding:"9px 12px",borderRadius:100,border:"1.5px solid #E8E8E8",fontSize:13,outline:"none"}}
+      />
+      <button onClick={()=>{if(val.trim()){onSend(val);setVal("");}}} disabled={busy} style={{background:"#0A0A0A",color:"#fff",border:"none",borderRadius:100,padding:"9px 16px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Envoyer</button>
+    </div>
+  );
+}
+ 
 function DropVendeurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh}){
   const[sel,setSel]=useState(null);
   const[dates,setDates]=useState({});
   const[lieux,setLieux]=useState({});
-  const[msgs,setMsgs]=useState({});
   const[codeVal,setCodeVal]=useState("");
   const[codeErr,setCodeErr]=useState("");
   const[busy,setBusy]=useState(false);
@@ -333,12 +349,12 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh}){
     finally{setBusy(false)}
   };
  
-  const envoyerMsg=async(drop)=>{
-    const txt=(msgs[drop.id]||"").trim();if(!txt)return;
-    const filtered=filterMsg(txt);setBusy(true);
+  const envoyerMsg=async(drop,txt)=>{
+    if(!txt||!txt.trim())return;
+    const filtered=filterMsg(txt.trim());setBusy(true);
     try{
-      await api("drop_messages",{method:"POST",body:JSON.stringify({remise_id:drop.id,auteur_id:user.id,contenu:filtered,contenu_brut:txt,filtré:filtered!==txt})});
-      setMsgs(m=>({...m,[drop.id]:""}));onRefresh();
+      await api("drop_messages",{method:"POST",body:JSON.stringify({remise_id:drop.id,auteur_id:user.id,contenu:filtered,contenu_brut:txt,filtre:filtered!==txt})});
+      onRefresh();
     }catch(e){tw("Erreur","error")}
     finally{setBusy(false)}
   };
@@ -479,10 +495,7 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh}){
                     ))
                   }
                 </div>
-                <div style={{display:"flex",gap:8}}>
-                  <input value={msgs[drop.id]||""} onChange={e=>setMsgs(m=>({...m,[drop.id]:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&envoyerMsg(drop)} placeholder="Message (sans coordonnées personnelles)…" style={{flex:1,padding:"9px 12px",borderRadius:100,border:"1.5px solid #E8E8E8",fontSize:13,outline:"none"}}/>
-                  <button onClick={()=>envoyerMsg(drop)} disabled={busy} style={{background:"#0A0A0A",color:"#fff",border:"none",borderRadius:100,padding:"9px 16px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Envoyer</button>
-                </div>
+                <MessageInput dropId={drop.id} onSend={txt=>envoyerMsg(drop,txt)} busy={busy}/>
               </div>
             )}
           </div>
@@ -510,7 +523,6 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh}){
 // ═══ PANEL DROP ACHETEUR ═══
 function DropAcheteurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh}){
   const[sel,setSel]=useState(null);
-  const[msgs,setMsgs]=useState({});
   const[busy,setBusy]=useState(false);
  
   const accepter=async(drop,cr)=>{
@@ -531,12 +543,12 @@ function DropAcheteurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh})
     finally{setBusy(false)}
   };
  
-  const envoyerMsg=async(drop)=>{
-    const txt=(msgs[drop.id]||"").trim();if(!txt)return;
-    const filtered=filterMsg(txt);setBusy(true);
+  const envoyerMsg=async(drop,txt)=>{
+    if(!txt||!txt.trim())return;
+    const filtered=filterMsg(txt.trim());setBusy(true);
     try{
-      await api("drop_messages",{method:"POST",body:JSON.stringify({remise_id:drop.id,auteur_id:user.id,contenu:filtered,contenu_brut:txt,filtré:filtered!==txt})});
-      setMsgs(m=>({...m,[drop.id]:""}));onRefresh();
+      await api("drop_messages",{method:"POST",body:JSON.stringify({remise_id:drop.id,auteur_id:user.id,contenu:filtered,contenu_brut:txt,filtre:filtered!==txt})});
+      onRefresh();
     }catch(e){tw("Erreur","error")}
     finally{setBusy(false)}
   };
@@ -631,10 +643,7 @@ function DropAcheteurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh})
                     ))
                   }
                 </div>
-                <div style={{display:"flex",gap:8}}>
-                  <input value={msgs[drop.id]||""} onChange={e=>setMsgs(m=>({...m,[drop.id]:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&envoyerMsg(drop)} placeholder="Message (sans coordonnées personnelles)…" style={{flex:1,padding:"9px 12px",borderRadius:100,border:"1.5px solid #E8E8E8",fontSize:13,outline:"none"}}/>
-                  <button onClick={()=>envoyerMsg(drop)} disabled={busy} style={{background:"#0A0A0A",color:"#fff",border:"none",borderRadius:100,padding:"9px 16px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Envoyer</button>
-                </div>
+                <MessageInput dropId={drop.id} onSend={txt=>envoyerMsg(drop,txt)} busy={busy}/>
               </div>
             )}
           </div>
@@ -658,7 +667,13 @@ function DropAcheteurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh})
  
  
 // ═══ API ═══
-const api=async(p,o={})=>{const r=await fetch(`${SB}/rest/v1/${p}`,{headers:{"apikey":KEY,"Authorization":`Bearer ${gt()}`,"Content-Type":"application/json","Prefer":o.prefer||"return=representation",...(o.headers||{})},...o});if(!r.ok){const e=await r.json();throw new Error(e.message||"Err")}const t=await r.text();return t?JSON.parse(t):[]};
+const api=async(p,o={})=>{
+  const hdrs={"apikey":KEY,"Authorization":"Bearer "+gt(),"Content-Type":"application/json","Prefer":o.prefer||"return=representation"};
+  const {prefer,headers,method,body}=o;
+  const r=await fetch(SB+"/rest/v1/"+p,{method:method||"GET",headers:{...hdrs,...(headers||{})},body});
+  if(!r.ok){const e=await r.json();throw new Error(e.message||"Err")}
+  const t=await r.text();return t?JSON.parse(t):[];
+};
 const authApi=async(ep,b)=>{const r=await fetch(`${SB}/auth/v1/${ep}`,{method:"POST",headers:{"apikey":KEY,"Content-Type":"application/json"},body:JSON.stringify(b)});const d=await r.json();if(d.error||d.error_description)throw new Error(d.error_description||d.error);return d};
 const uploadPhoto=async f=>{const x=f.name.split('.').pop(),n=`${Date.now()}-${Math.random().toString(36).slice(2)}.${x}`;const r=await fetch(`${SB}/storage/v1/object/smashd-photos/${n}`,{method:"POST",headers:{"apikey":KEY,"Authorization":`Bearer ${gt()}`,"Content-Type":f.type},body:f});if(!r.ok)throw new Error("Upload fail");return`${SB}/storage/v1/object/public/smashd-photos/${n}`};
  
