@@ -1,6 +1,3 @@
-mashd v5 final · HTML
-Copier
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -323,30 +320,15 @@ function BuyerDropModal({ann,onClose,onConfirm,load,tw}){
  
  
 // ═══ PANEL DROP VENDEUR ═══
- 
-function MessageInput({dropId, onSend, busy}){
-  const[val,setVal]=useState("");
-  return(
-    <div style={{display:"flex",gap:8}}>
-      <input
-        value={val}
-        onChange={e=>setVal(e.target.value)}
-        onKeyDown={e=>{if(e.key==="Enter"&&val.trim()){onSend(val);setVal("");}}}
-        placeholder="Message (sans coordonnées personnelles)…"
-        style={{flex:1,padding:"9px 12px",borderRadius:100,border:"1.5px solid #E8E8E8",fontSize:13,outline:"none"}}
-      />
-      <button onClick={()=>{if(val.trim()){onSend(val);setVal("");}}} disabled={busy} style={{background:"#0A0A0A",color:"#fff",border:"none",borderRadius:100,padding:"9px 16px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Envoyer</button>
-    </div>
-  );
-}
- 
-function DropVendeurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh}){
+function DropVendeurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw,onRefresh}){
   const[sel,setSel]=useState(null);
   const[dates,setDates]=useState({});
   const[lieux,setLieux]=useState({});
   const[codeVal,setCodeVal]=useState("");
   const[codeErr,setCodeErr]=useState("");
   const[busy,setBusy]=useState(false);
+ 
+  const getAnnonce=(drop)=>annonces.find(a=>a.id===drop.annonce_id);
  
   const proposer=async(drop)=>{
     const slots=[];
@@ -359,27 +341,16 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh}){
     try{
       await Promise.all(slots.map(s=>api("drop_creneaux",{method:"POST",body:JSON.stringify(s)})));
       await api(`drop_remises?id=eq.${drop.id}`,{method:"PATCH",body:JSON.stringify({status:"creneaux_proposes",updated_at:new Date().toISOString()})});
-      tw("Créneaux envoyés !");onRefresh();setSel(null);
-    }catch(e){tw("Erreur","error")}
-    finally{setBusy(false)}
-  };
- 
-  const envoyerMsg=async(drop,txt)=>{
-    if(!txt||!txt.trim())return;
-    const filtered=filterMsg(txt.trim());setBusy(true);
-    try{
-      await api("drop_messages",{method:"POST",body:JSON.stringify({remise_id:drop.id,auteur_id:user.id,contenu:filtered,contenu_brut:txt,filtre:filtered!==txt})});
-      onRefresh();
+      tw("Créneaux envoyés à l'acheteur !");onRefresh();setSel(null);
     }catch(e){tw("Erreur","error")}
     finally{setBusy(false)}
   };
  
   const validerCode=async(drop)=>{
     const code=codeVal.trim().toUpperCase();
-    if(code!==drop.code){setCodeErr("Code incorrect — vérifiez avec l'acheteur");return;}
+    if(code!==drop.code){setCodeErr("Code incorrect");return;}
     setBusy(true);
     try{
-      // Marquer code utilisé + confirmer
       await api(`drop_remises?id=eq.${drop.id}`,{method:"PATCH",body:JSON.stringify({status:"confirme",code_used:true,updated_at:new Date().toISOString()})});
       await api(`commandes?id=eq.${drop.commande_id}`,{method:"PATCH",body:JSON.stringify({status:"livré",escrow_status:"libéré",drop_status:"confirme"})});
       tw("🎉 Transaction validée ! Fonds débloqués dans votre wallet.");
@@ -395,22 +366,30 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh}){
   const Card=({drop})=>{
     const isOpen=sel===drop.id;
     const mode=DROP_MODES[drop.mode_choisi]||DROP_MODES.meet;
-    const dropMsgs=messages.filter(m=>m.remise_id===drop.id);
     const dropCr=creneaux.filter(c=>c.remise_id===drop.id);
+    const dropMsgs=messages.filter(m=>m.remise_id===drop.id);
+    const annonce=getAnnonce(drop);
     const border=drop.status==="mode_choisi"?"#F5C07A":drop.status==="confirme"?"#00C46A":drop.status==="litige"?"#E8290A":"#E8E8E8";
  
     return(
       <div style={{background:"#fff",border:`1.5px solid ${border}`,borderRadius:16,marginBottom:10,overflow:"hidden"}}>
-        {/* Header cliquable */}
-        <div onClick={()=>setSel(isOpen?null:drop.id)} style={{padding:"14px 18px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
-          <div style={{display:"flex",gap:10,alignItems:"center",minWidth:0}}>
-            <span style={{fontSize:22,flexShrink:0}}>{mode.icon}</span>
-            <div style={{minWidth:0}}>
-              <div style={{fontSize:14,fontWeight:800}}>{mode.label}</div>
-              <div style={{fontSize:11,color:"#9A9A9A",marginTop:1}}>#{drop.commande_id?.slice(0,8)} · {new Date(drop.created_at).toLocaleDateString("fr-FR")}</div>
+        {/* Header */}
+        <div onClick={()=>setSel(isOpen?null:drop.id)} style={{padding:"14px 18px",cursor:"pointer",display:"flex",gap:12,alignItems:"center"}}>
+          {/* Photo article */}
+          <div style={{width:52,height:52,borderRadius:10,overflow:"hidden",background:"#F5F5F5",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>
+            {annonce?.photo_url?<img src={annonce.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:CAT_TREE[annonce?.category]?.icon||"🏅"}
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:14,fontWeight:800,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{annonce?.title||"Article"}</div>
+            <div style={{fontSize:12,color:"#9A9A9A",marginTop:2,display:"flex",gap:8,alignItems:"center"}}>
+              <span style={{fontWeight:700,color:"#0A2A1E"}}>{annonce?.price} €</span>
+              <span>·</span>
+              <span>{mode.icon} {mode.label}</span>
+              <span>·</span>
+              <span>{new Date(drop.created_at).toLocaleDateString("fr-FR")}</span>
             </div>
           </div>
-          <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+          <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
             <StatusBadge s={drop.status}/>
             <span style={{color:"#9A9A9A",fontSize:12}}>{isOpen?"▲":"▼"}</span>
           </div>
@@ -419,18 +398,18 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh}){
         {isOpen&&(
           <div style={{borderTop:"1px solid #F5F5F5",padding:"16px 18px"}}>
  
-            {/* Mode choisi → proposer créneaux */}
+            {/* ÉTAPE 1 : Proposer créneaux */}
             {drop.status==="mode_choisi"&&(
               <div>
                 <div style={{background:"#FFF3E0",borderRadius:10,padding:"11px 14px",marginBottom:14,fontSize:13,color:"#8a4a00",lineHeight:1.6}}>
-                  ⚡ L'acheteur a sélectionné <strong>{mode.label}</strong> et son paiement est <strong>bloqué en escrow</strong>. Proposez jusqu'à 3 créneaux.
+                  ⚡ <strong>{annonce?.title}</strong> a été acheté ! L'acheteur a payé <strong>{annonce?.price} €</strong>. Proposez jusqu'à <strong>3 créneaux</strong> de rendez-vous.
                 </div>
                 {[0,1,2].map(i=>(
                   <div key={i} style={{background:"#FAFAFA",borderRadius:10,padding:"12px",marginBottom:8}}>
                     <div style={{fontSize:11,fontWeight:700,color:"#9A9A9A",marginBottom:8}}>CRÉNEAU {i+1} {i===0?"*":""}</div>
                     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
                       <input type="datetime-local" value={dates[`${drop.id}_${i}`]||""} onChange={e=>setDates(d=>({...d,[`${drop.id}_${i}`]:e.target.value}))} style={{flex:1,minWidth:150,padding:"9px 11px",borderRadius:9,border:"1.5px solid #E8E8E8",fontSize:13,outline:"none"}}/>
-                      <input placeholder="Lieu précis (ex: Café République, Lyon 1er)" value={lieux[`${drop.id}_${i}`]||""} onChange={e=>setLieux(d=>({...d,[`${drop.id}_${i}`]:e.target.value}))} style={{flex:2,minWidth:180,padding:"9px 11px",borderRadius:9,border:"1.5px solid #E8E8E8",fontSize:13,outline:"none"}}/>
+                      <input placeholder="Lieu précis (ex: Café de la Paix, Paris 9e)" value={lieux[`${drop.id}_${i}`]||""} onChange={e=>setLieux(d=>({...d,[`${drop.id}_${i}`]:e.target.value}))} style={{flex:2,minWidth:180,padding:"9px 11px",borderRadius:9,border:"1.5px solid #E8E8E8",fontSize:13,outline:"none"}}/>
                     </div>
                   </div>
                 ))}
@@ -448,31 +427,26 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh}){
                 </div>
                 {dropCr.map((cr,i)=>(
                   <div key={cr.id} style={{background:"#FAFAFA",borderRadius:9,padding:"10px 12px",marginBottom:6,fontSize:13,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    <span><strong>Créneau {i+1} :</strong> {new Date(cr.date_heure).toLocaleString("fr-FR")} — {cr.lieu_precis}</span>
-                    <span style={{fontSize:10,fontWeight:700,color:cr.status==="accepté"?"#1A5C3A":"#9A9A9A",textTransform:"uppercase"}}>{cr.status}</span>
+                    <div>
+                      <div style={{fontWeight:700}}>Créneau {i+1} : {new Date(cr.date_heure).toLocaleString("fr-FR",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</div>
+                      <div style={{fontSize:12,color:"#5A5A5A",marginTop:2}}>📍 {cr.lieu_precis}</div>
+                    </div>
+                    <span style={{fontSize:10,fontWeight:700,color:cr.status==="accepté"||cr.status==="accepte"?"#1A5C3A":"#9A9A9A",textTransform:"uppercase",background:cr.status==="accepté"||cr.status==="accepte"?"#F0F7F4":"#F5F5F5",padding:"3px 8px",borderRadius:100}}>{cr.status}</span>
                   </div>
                 ))}
               </div>
             )}
  
-            {/* RDV confirmé — attente code */}
-            {drop.status==="creneau_accepte"&&(
-              <div style={{background:"#F0F7F4",borderRadius:10,padding:"13px 14px"}}>
-                <div style={{fontSize:13,fontWeight:700,color:"#0A2A1E",marginBottom:4}}>✅ RDV confirmé — code envoyé à l'acheteur</div>
-                <div style={{fontSize:13,color:"#1A5C3A"}}>📅 {drop.date_finale?new Date(drop.date_finale).toLocaleString("fr-FR"):"—"}<br/>📍 {drop.lieu_final||"—"}</div>
-              </div>
-            )}
- 
-            {/* Code envoyé → vendeur saisit le code de l'acheteur */}
+            {/* Code envoyé → vendeur saisit le code */}
             {drop.status==="code_envoye"&&(
               <div>
-                <div style={{background:"#F0F7F4",borderRadius:10,padding:"13px 14px",marginBottom:14}}>
+                <div style={{background:"#F0F7F4",borderRadius:10,padding:"12px 14px",marginBottom:14}}>
                   <div style={{fontSize:13,fontWeight:700,color:"#0A2A1E",marginBottom:4}}>✅ RDV confirmé</div>
                   <div style={{fontSize:13,color:"#1A5C3A"}}>📅 {drop.date_finale?new Date(drop.date_finale).toLocaleString("fr-FR"):"—"}<br/>📍 {drop.lieu_final||"—"}</div>
                 </div>
                 <div style={{background:"#0A0A0A",borderRadius:12,padding:"14px 16px",marginBottom:14}}>
-                  <div style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.3)",letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:6}}>Le jour J — saisissez le code que l'acheteur vous remet</div>
-                  <div style={{fontSize:12,color:"rgba(255,255,255,.4)",lineHeight:1.5}}>L'acheteur a un code dans son app. Il vous le donne lors de la remise physique de l'article.</div>
+                  <div style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.3)",letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:6}}>Jour J — L'acheteur vous remet ce code lors de la remise physique</div>
+                  <div style={{fontSize:12,color:"rgba(255,255,255,.4)",lineHeight:1.5}}>Saisissez le code uniquement après avoir remis l'article et vérifié que tout est OK.</div>
                 </div>
                 <label style={{fontSize:11,fontWeight:700,color:"#9A9A9A",textTransform:"uppercase",letterSpacing:"1px",display:"block",marginBottom:8}}>Code remis par l'acheteur</label>
                 <div style={{display:"flex",gap:8,marginBottom:codeErr?8:0}}>
@@ -489,30 +463,15 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh}){
             {drop.status==="confirme"&&(
               <div style={{background:"#F0F7F4",borderRadius:10,padding:"14px",display:"flex",gap:10,alignItems:"center"}}>
                 <span style={{fontSize:24}}>🎉</span>
-                <div><div style={{fontSize:14,fontWeight:800,color:"#0A2A1E"}}>Transaction validée !</div><div style={{fontSize:12,color:"#1A5C3A",marginTop:2}}>Fonds transférés dans votre wallet.</div></div>
+                <div>
+                  <div style={{fontSize:14,fontWeight:800,color:"#0A2A1E"}}>Transaction validée !</div>
+                  <div style={{fontSize:12,color:"#1A5C3A",marginTop:2}}>
+                    {annonce?.price} € transférés dans votre wallet.
+                  </div>
+                </div>
               </div>
             )}
  
-            {/* Messagerie */}
-            {["mode_choisi","creneaux_proposes","creneau_accepte","code_envoye"].includes(drop.status)&&(
-              <div style={{marginTop:16,borderTop:"1px solid #F5F5F5",paddingTop:14}}>
-                <div style={{fontSize:11,fontWeight:700,color:"#9A9A9A",textTransform:"uppercase",letterSpacing:"1px",marginBottom:4}}>Messagerie sécurisée</div>
-                <div style={{fontSize:10,color:"#E8470A",fontWeight:600,marginBottom:10}}>⚠️ Téléphone, email et réseaux sociaux masqués automatiquement</div>
-                <div style={{maxHeight:150,overflowY:"auto",marginBottom:8,display:"flex",flexDirection:"column",gap:6}}>
-                  {dropMsgs.length===0
-                    ?<div style={{fontSize:12,color:"#9A9A9A",textAlign:"center",padding:"10px"}}>Aucun message pour l'instant.</div>
-                    :dropMsgs.map(m=>(
-                      <div key={m.id} className={m.auteur_id===user.id?"msg-bubble-me":"msg-bubble-other"}>
-                        {m.filtré&&<div style={{fontSize:10,opacity:.6,marginBottom:2}}>⚠️ Contenu partiellement masqué</div>}
-                        {m.contenu}
-                        <div style={{fontSize:10,opacity:.5,marginTop:3}}>{new Date(m.created_at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</div>
-                      </div>
-                    ))
-                  }
-                </div>
-                <MessageInput dropId={drop.id} onSend={txt=>envoyerMsg(drop,txt)} busy={busy}/>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -522,13 +481,24 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh}){
   return(
     <div>
       <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Drop Vendeur</h2>
-      <p style={{fontSize:14,color:"#9A9A9A",marginBottom:20}}>Gérez vos remises et proposez des créneaux à vos acheteurs.</p>
+      <p style={{fontSize:14,color:"#9A9A9A",marginBottom:20}}>Gérez vos ventes et proposez des créneaux à vos acheteurs.</p>
       {drops.length===0
-        ?<div style={{textAlign:"center",padding:"44px",color:"#9A9A9A",background:"#fff",borderRadius:13,border:"1px solid #E8E8E8"}}><div style={{fontSize:32,marginBottom:12}}>📦</div><div style={{fontWeight:600}}>Aucune remise en cours</div></div>
+        ?<div style={{textAlign:"center",padding:"44px",color:"#9A9A9A",background:"#fff",borderRadius:13,border:"1px solid #E8E8E8"}}><div style={{fontSize:32,marginBottom:12}}>📦</div><div style={{fontWeight:600}}>Aucune vente en cours</div></div>
         :<div>
-          {pending.length>0&&<div style={{marginBottom:16}}><div style={{fontSize:11,fontWeight:700,color:"#C25A00",textTransform:"uppercase",letterSpacing:"1px",marginBottom:8}}>⏳ Action requise ({pending.length})</div>{pending.map(d=><Card key={d.id} drop={d}/>)}</div>}
-          {active.length>0&&<div style={{marginBottom:16}}><div style={{fontSize:11,fontWeight:700,color:"#1A3A8C",textTransform:"uppercase",letterSpacing:"1px",marginBottom:8}}>📅 En cours ({active.length})</div>{active.map(d=><Card key={d.id} drop={d}/>)}</div>}
-          {done.length>0&&<div><div style={{fontSize:11,fontWeight:700,color:"#9A9A9A",textTransform:"uppercase",letterSpacing:"1px",marginBottom:8}}>✅ Terminés ({done.length})</div>{done.map(d=><Card key={d.id} drop={d}/>)}</div>}
+          {pending.length>0&&<div style={{marginBottom:16}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#C25A00",textTransform:"uppercase",letterSpacing:"1px",marginBottom:8,display:"flex",alignItems:"center",gap:8}}>
+              ⚡ Action requise — Proposez des créneaux ({pending.length})
+            </div>
+            {pending.map(d=><Card key={d.id} drop={d}/>)}
+          </div>}
+          {active.length>0&&<div style={{marginBottom:16}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#1A3A8C",textTransform:"uppercase",letterSpacing:"1px",marginBottom:8}}>📅 En cours ({active.length})</div>
+            {active.map(d=><Card key={d.id} drop={d}/>)}
+          </div>}
+          {done.length>0&&<div>
+            <div style={{fontSize:11,fontWeight:700,color:"#9A9A9A",textTransform:"uppercase",letterSpacing:"1px",marginBottom:8}}>✅ Terminés ({done.length})</div>
+            {done.map(d=><Card key={d.id} drop={d}/>)}
+          </div>}
         </div>
       }
     </div>
@@ -536,9 +506,11 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh}){
 }
  
 // ═══ PANEL DROP ACHETEUR ═══
-function DropAcheteurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh}){
+function DropAcheteurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw,onRefresh}){
   const[sel,setSel]=useState(null);
   const[busy,setBusy]=useState(false);
+ 
+  const getAnnonce=(drop)=>annonces.find(a=>a.id===drop.annonce_id);
  
   const accepter=async(drop,cr)=>{
     setBusy(true);
@@ -553,17 +525,7 @@ function DropAcheteurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh})
         lieu_final:cr.lieu_precis,date_finale:cr.date_heure,
         code,code_expires_at:expires,updated_at:new Date().toISOString()
       })});
-      tw("RDV confirmé ! Votre code Drop est prêt.");onRefresh();
-    }catch(e){tw("Erreur","error")}
-    finally{setBusy(false)}
-  };
- 
-  const envoyerMsg=async(drop,txt)=>{
-    if(!txt||!txt.trim())return;
-    const filtered=filterMsg(txt.trim());setBusy(true);
-    try{
-      await api("drop_messages",{method:"POST",body:JSON.stringify({remise_id:drop.id,auteur_id:user.id,contenu:filtered,contenu_brut:txt,filtre:filtered!==txt})});
-      onRefresh();
+      tw("✅ RDV confirmé ! Votre code Drop est prêt.");onRefresh();
     }catch(e){tw("Erreur","error")}
     finally{setBusy(false)}
   };
@@ -571,96 +533,97 @@ function DropAcheteurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh})
   const Card=({drop})=>{
     const isOpen=sel===drop.id;
     const mode=DROP_MODES[drop.mode_choisi]||DROP_MODES.meet;
-    const dropMsgs=messages.filter(m=>m.remise_id===drop.id);
-    const dropCr=creneaux.filter(c=>c.remise_id===drop.id&&c.status==="proposé");
+    const annonce=getAnnonce(drop);
+    const dropCr=creneaux.filter(c=>c.remise_id===drop.id&&(c.status==="proposé"||c.status==="propose"));
+    const crAccepte=creneaux.find(c=>c.remise_id===drop.id&&(c.status==="accepté"||c.status==="accepte"));
     const border=drop.status==="creneaux_proposes"?"#F5C07A":drop.status==="code_envoye"?"#0A2A1E":drop.status==="confirme"?"#00C46A":"#E8E8E8";
+ 
+    // Créneaux dispo → ouvrir automatiquement
+    const autoOpen=drop.status==="creneaux_proposes";
  
     return(
       <div style={{background:"#fff",border:`1.5px solid ${border}`,borderRadius:16,marginBottom:10,overflow:"hidden"}}>
-        <div onClick={()=>setSel(isOpen?null:drop.id)} style={{padding:"14px 18px",cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
-          <div style={{display:"flex",gap:10,alignItems:"center",minWidth:0}}>
-            <span style={{fontSize:22,flexShrink:0}}>{mode.icon}</span>
-            <div style={{minWidth:0}}>
-              <div style={{fontSize:14,fontWeight:800}}>{mode.label}</div>
-              <div style={{fontSize:11,color:"#9A9A9A",marginTop:1}}>#{drop.commande_id?.slice(0,8)} · {new Date(drop.created_at).toLocaleDateString("fr-FR")}</div>
+        <div onClick={()=>setSel(isOpen?null:drop.id)} style={{padding:"14px 18px",cursor:"pointer",display:"flex",gap:12,alignItems:"center"}}>
+          <div style={{width:52,height:52,borderRadius:10,overflow:"hidden",background:"#F5F5F5",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>
+            {annonce?.photo_url?<img src={annonce.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:CAT_TREE[annonce?.category]?.icon||"🏅"}
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:14,fontWeight:800,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{annonce?.title||"Article"}</div>
+            <div style={{fontSize:12,color:"#9A9A9A",marginTop:2,display:"flex",gap:8,alignItems:"center"}}>
+              <span style={{fontWeight:700,color:"#0A2A1E"}}>{annonce?.price} €</span>
+              <span>·</span>
+              <span>{mode.icon} {mode.label}</span>
+              <span>·</span>
+              <span>{new Date(drop.created_at).toLocaleDateString("fr-FR")}</span>
             </div>
           </div>
-          <div style={{display:"flex",gap:8,alignItems:"center",flexShrink:0}}>
+          <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
             <StatusBadge s={drop.status}/>
             <span style={{color:"#9A9A9A",fontSize:12}}>{isOpen?"▲":"▼"}</span>
           </div>
         </div>
  
+        {/* Créneaux dispo — toujours visibles */}
+        {drop.status==="creneaux_proposes"&&dropCr.length>0&&(
+          <div style={{borderTop:"1px solid #F5F5F5",padding:"0 18px 16px"}}>
+            <div style={{background:"#FFF3E0",borderRadius:10,padding:"11px 14px",margin:"12px 0",fontSize:13,color:"#8a4a00",lineHeight:1.6}}>
+              📅 <strong>{dropCr.length} créneau{dropCr.length>1?"x":""} disponible{dropCr.length>1?"s":""}</strong> — Choisissez votre rendez-vous. Votre code Drop sera généré immédiatement.
+            </div>
+            {dropCr.map((cr,i)=>(
+              <div key={cr.id} style={{background:"#FAFAFA",border:"1.5px solid #E8E8E8",borderRadius:12,padding:"14px",marginBottom:8}}>
+                <div style={{fontSize:14,fontWeight:700,marginBottom:3}}>
+                  📅 {new Date(cr.date_heure).toLocaleString("fr-FR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"})}
+                </div>
+                <div style={{fontSize:13,color:"#5A5A5A",marginBottom:10}}>📍 {cr.lieu_precis}</div>
+                <button onClick={()=>accepter(drop,cr)} disabled={busy} style={{width:"100%",background:"#0A2A1E",color:"#fff",border:"none",borderRadius:100,padding:"11px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                  {busy?"…":"✓ Choisir ce créneau"}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+ 
         {isOpen&&(
-          <div style={{borderTop:"1px solid #F5F5F5",padding:"16px 18px"}}>
+          <div style={{borderTop:`1px solid ${drop.status==="creneaux_proposes"?"transparent":"#F5F5F5"}`,padding:"0 18px 16px"}}>
  
             {drop.status==="mode_choisi"&&(
-              <div style={{background:"#F5F5F5",borderRadius:10,padding:"12px 14px",fontSize:13,color:"#5A5A5A",lineHeight:1.6}}>
-                ⏳ Votre paiement est sécurisé. Le vendeur prépare ses créneaux de rendez-vous. Vous serez notifié dès qu'ils sont disponibles.
-              </div>
-            )}
- 
-            {drop.status==="creneaux_proposes"&&dropCr.length>0&&(
-              <div>
-                <div style={{background:"#FFF3E0",borderRadius:10,padding:"11px 14px",marginBottom:14,fontSize:13,color:"#8a4a00",lineHeight:1.6}}>
-                  📅 Le vendeur vous propose {dropCr.length} créneau{dropCr.length>1?"x":""}. <strong>Votre code Drop sera généré immédiatement après votre choix.</strong>
-                </div>
-                {dropCr.map((cr,i)=>(
-                  <div key={cr.id} style={{background:"#FAFAFA",border:"1.5px solid #E8E8E8",borderRadius:12,padding:"14px",marginBottom:8}}>
-                    <div style={{fontSize:14,fontWeight:700,marginBottom:4}}>📅 {new Date(cr.date_heure).toLocaleString("fr-FR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"})}</div>
-                    <div style={{fontSize:13,color:"#5A5A5A",marginBottom:10}}>📍 {cr.lieu_precis}</div>
-                    <button onClick={()=>accepter(drop,cr)} disabled={busy} style={{width:"100%",background:"#0A2A1E",color:"#fff",border:"none",borderRadius:100,padding:"11px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-                      {busy?"…":"✓ Choisir ce créneau"}
-                    </button>
-                  </div>
-                ))}
+              <div style={{background:"#F5F5F5",borderRadius:10,padding:"12px 14px",marginTop:12,fontSize:13,color:"#5A5A5A",lineHeight:1.6}}>
+                ⏳ Paiement sécurisé reçu. Le vendeur prépare ses créneaux de rendez-vous. Vous serez notifié dès qu'ils sont disponibles.
               </div>
             )}
  
             {drop.status==="code_envoye"&&(
-              <div>
+              <div style={{marginTop:12}}>
                 <div style={{background:"#F0F7F4",borderRadius:10,padding:"12px 14px",marginBottom:14}}>
                   <div style={{fontSize:13,fontWeight:700,color:"#0A2A1E",marginBottom:4}}>✅ RDV confirmé</div>
-                  <div style={{fontSize:13,color:"#1A5C3A"}}>📅 {drop.date_finale?new Date(drop.date_finale).toLocaleString("fr-FR"):"—"}<br/>📍 {drop.lieu_final||"—"}</div>
+                  <div style={{fontSize:13,color:"#1A5C3A"}}>
+                    📅 {drop.date_finale?new Date(drop.date_finale).toLocaleString("fr-FR"):"—"}<br/>
+                    📍 {drop.lieu_final||"—"}
+                  </div>
                 </div>
-                <div style={{background:"#0A0A0A",borderRadius:14,padding:"20px",marginBottom:14,textAlign:"center"}}>
+                <div style={{background:"#0A0A0A",borderRadius:14,padding:"20px",textAlign:"center"}}>
                   <div style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.3)",letterSpacing:"1.5px",textTransform:"uppercase",marginBottom:10}}>Votre code Drop — donnez-le au vendeur lors de la remise</div>
                   <div style={{fontFamily:"'DM Mono',monospace",fontSize:32,color:"#00C46A",letterSpacing:6,fontWeight:500,marginBottom:8}}>{drop.code}</div>
-                  <div style={{fontSize:11,color:"rgba(255,255,255,.25)"}}>Expire le {drop.code_expires_at?new Date(drop.code_expires_at).toLocaleDateString("fr-FR"):"—"} · Usage unique · Non transférable</div>
+                  <div style={{fontSize:11,color:"rgba(255,255,255,.25)"}}>
+                    Expire le {drop.code_expires_at?new Date(drop.code_expires_at).toLocaleDateString("fr-FR"):"—"} · Usage unique
+                  </div>
                 </div>
-                <div style={{background:"#FFF3E0",borderRadius:10,padding:"11px 14px",fontSize:12,color:"#8a4a00",lineHeight:1.6}}>
-                  ⚠️ <strong>Important :</strong> Donnez ce code au vendeur <strong>uniquement après avoir vérifié l'état de l'article</strong>. Ce code libère définitivement le paiement.
+                <div style={{background:"#FFF3E0",borderRadius:10,padding:"11px 14px",marginTop:12,fontSize:12,color:"#8a4a00",lineHeight:1.6}}>
+                  ⚠️ Donnez ce code <strong>uniquement après avoir vérifié l'état de l'article</strong>. Il libère définitivement le paiement.
                 </div>
               </div>
             )}
  
             {drop.status==="confirme"&&(
-              <div style={{background:"#F0F7F4",borderRadius:10,padding:"14px",display:"flex",gap:10,alignItems:"center"}}>
+              <div style={{background:"#F0F7F4",borderRadius:10,padding:"14px",marginTop:12,display:"flex",gap:10,alignItems:"center"}}>
                 <span style={{fontSize:24}}>✅</span>
-                <div><div style={{fontSize:14,fontWeight:800,color:"#0A2A1E"}}>Transaction terminée !</div><div style={{fontSize:12,color:"#1A5C3A",marginTop:2}}>Article reçu · Vendeur payé · Merci !</div></div>
+                <div>
+                  <div style={{fontSize:14,fontWeight:800,color:"#0A2A1E"}}>Transaction terminée !</div>
+                  <div style={{fontSize:12,color:"#1A5C3A",marginTop:2}}>Article reçu · Vendeur payé · Merci !</div>
+                </div>
               </div>
             )}
  
-            {/* Messagerie */}
-            {["mode_choisi","creneaux_proposes","creneau_accepte","code_envoye"].includes(drop.status)&&(
-              <div style={{marginTop:16,borderTop:"1px solid #F5F5F5",paddingTop:14}}>
-                <div style={{fontSize:11,fontWeight:700,color:"#9A9A9A",textTransform:"uppercase",letterSpacing:"1px",marginBottom:4}}>Messagerie sécurisée</div>
-                <div style={{fontSize:10,color:"#E8470A",fontWeight:600,marginBottom:10}}>⚠️ Coordonnées personnelles masquées automatiquement</div>
-                <div style={{maxHeight:150,overflowY:"auto",marginBottom:8,display:"flex",flexDirection:"column",gap:6}}>
-                  {dropMsgs.length===0
-                    ?<div style={{fontSize:12,color:"#9A9A9A",textAlign:"center",padding:"10px"}}>Aucun message pour l'instant.</div>
-                    :dropMsgs.map(m=>(
-                      <div key={m.id} className={m.auteur_id===user.id?"msg-bubble-me":"msg-bubble-other"}>
-                        {m.filtré&&<div style={{fontSize:10,opacity:.6,marginBottom:2}}>⚠️ Contenu partiellement masqué</div>}
-                        {m.contenu}
-                        <div style={{fontSize:10,opacity:.5,marginTop:3}}>{new Date(m.created_at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</div>
-                      </div>
-                    ))
-                  }
-                </div>
-                <MessageInput dropId={drop.id} onSend={txt=>envoyerMsg(drop,txt)} busy={busy}/>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -670,7 +633,7 @@ function DropAcheteurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh})
   return(
     <div>
       <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Drop Acheteur</h2>
-      <p style={{fontSize:14,color:"#9A9A9A",marginBottom:20}}>Choisissez un créneau, obtenez votre code Drop et confirmez la remise.</p>
+      <p style={{fontSize:14,color:"#9A9A9A",marginBottom:20}}>Suivez vos achats et confirmez les remises.</p>
       {drops.length===0
         ?<div style={{textAlign:"center",padding:"44px",color:"#9A9A9A",background:"#fff",borderRadius:13,border:"1px solid #E8E8E8"}}><div style={{fontSize:32,marginBottom:12}}>🛒</div><div style={{fontWeight:600}}>Aucun achat en cours</div></div>
         :drops.map(d=><Card key={d.id} drop={d}/>)
@@ -679,40 +642,6 @@ function DropAcheteurPanel({drops=[],creneaux=[],messages=[],user,tw,onRefresh})
   );
 }
  
- 
- 
-// ═══ API ═══
-const api=async(p,o={})=>{
-  const hdrs={"apikey":KEY,"Authorization":"Bearer "+gt(),"Content-Type":"application/json","Prefer":o.prefer||"return=representation"};
-  const {prefer,headers,method,body}=o;
-  const r=await fetch(SB+"/rest/v1/"+p,{method:method||"GET",headers:{...hdrs,...(headers||{})},body});
-  if(!r.ok){const e=await r.json();throw new Error(e.message||"Err")}
-  const t=await r.text();return t?JSON.parse(t):[];
-};
-const authApi=async(ep,b)=>{const r=await fetch(`${SB}/auth/v1/${ep}`,{method:"POST",headers:{"apikey":KEY,"Content-Type":"application/json"},body:JSON.stringify(b)});const d=await r.json();if(d.error||d.error_description)throw new Error(d.error_description||d.error);return d};
-const uploadPhoto=async f=>{const x=f.name.split('.').pop(),n=`${Date.now()}-${Math.random().toString(36).slice(2)}.${x}`;const r=await fetch(`${SB}/storage/v1/object/smashd-photos/${n}`,{method:"POST",headers:{"apikey":KEY,"Authorization":`Bearer ${gt()}`,"Content-Type":f.type},body:f});if(!r.ok)throw new Error("Upload fail");return`${SB}/storage/v1/object/public/smashd-photos/${n}`};
- 
-// ═══ ICONS ═══
-const Ico={
-  search:()=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>,
-  plus:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>,
-  arr:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>,
-  heart:(f)=><svg width="15" height="15" viewBox="0 0 24 24" fill={f?"currentColor":"none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
-  x:()=><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>,
-  chk:()=><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>,
-  chL:()=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>,
-  chR:()=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>,
-  leaf:()=><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/></svg>,
-  shld:()=><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
-  trk:()=><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
-  menu:()=><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>,
-  drop:()=><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
-};
- 
-const Logo=({s=20})=><span style={{fontWeight:900,fontSize:s,letterSpacing:"-0.5px",cursor:"pointer"}}>SMASH<span style={{color:C.o}}>D</span></span>;
-const Toast=({msg,type})=><div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:type==="error"?C.r:C.g,color:"#fff",borderRadius:100,padding:"12px 24px",fontSize:14,fontWeight:600,zIndex:9999,boxShadow:"0 8px 32px rgba(0,0,0,.15)",whiteSpace:"nowrap"}}>{msg}</div>;
-const Tag=({state})=>{const m={"Neuf avec étiquette":C.g,"Neuf sans étiquette":C.gm,"Très bon état":"#2A2A2A","Bon état":C.f600,"Acceptable":C.f400};return<span style={{fontSize:10,fontWeight:700,color:m[state]||C.f400,letterSpacing:".5px",textTransform:"uppercase"}}>{state}</span>};
-const Pill=({l,a,onClick})=><button onClick={onClick} className="btn" style={{borderRadius:100,padding:"7px 15px",fontSize:13,fontWeight:600,cursor:"pointer",border:`1.5px solid ${a?C.g:C.f200}`,background:a?C.g:C.w,color:a?C.w:C.f600,transition:"all .15s",whiteSpace:"nowrap"}}>{l}</button>;
  
 // ═══ APP ═══
 function App(){
@@ -861,6 +790,7 @@ function App(){
  
   const pendingV=myDropsV.filter(d=>d.status==="mode_choisi").length;
   const pendingA=myDropsA.filter(d=>d.status==="creneaux_proposes").length;
+  const newSales=myDropsV.filter(d=>d.status==="mode_choisi");
   const wal=myS.filter(s=>myDropsV.find(d=>d.commande_id===s.id&&d.status==="confirme")).reduce((acc,s)=>acc+(s.gain||0),0);
  
   const p={user,prof,load,tw,go,login,register,logout,publish,toggleA,deleteA,placeOrder,
@@ -1557,10 +1487,12 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
                   <span style={{fontSize:20}}>⚡</span>
                   <div style={{flex:1}}>
                     <div style={{fontSize:14,fontWeight:700,color:"#8a4a00"}}>Actions SMASHD Drop requises</div>
-                    <div style={{fontSize:13,color:"#b05a00",marginTop:2}}>
-                      {pendingV>0&&<span>{pendingV} créneau{pendingV>1?"x":""} à proposer · </span>}
-                      {pendingA>0&&<span>{pendingA} créneau{pendingA>1?"x":""} à choisir</span>}
-                    </div>
+                    {pendingV>0&&<div style={{fontSize:13,color:"#b05a00",marginTop:4}}>
+                      📦 <strong>{pendingV} article{pendingV>1?"s":""} vendu{pendingV>1?"s":""}</strong> — Proposez des créneaux de remise
+                    </div>}
+                    {pendingA>0&&<div style={{fontSize:13,color:"#b05a00",marginTop:4}}>
+                      📅 <strong>{pendingA} créneau{pendingA>1?"x":""}</strong> disponible{pendingA>1?"s":""} — Choisissez votre RDV
+                    </div>}
                   </div>
                   <button onClick={()=>setDtab(pendingV>0?"drop-vendeur":"drop-acheteur")} style={{background:C.o,color:"#fff",border:"none",borderRadius:100,padding:"8px 16px",fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0}}>Gérer →</button>
                 </div>
@@ -1630,11 +1562,11 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
           )}
  
           {dtab==="drop-vendeur"&&(
-            <DropVendeurPanel drops={myDropsV} creneaux={myDropCr} messages={myDropMsgs} user={user} tw={tw} onRefresh={onDropRefresh}/>
+            <DropVendeurPanel drops={myDropsV} creneaux={myDropCr} messages={myDropMsgs} annonces={myA} user={user} tw={tw} onRefresh={onDropRefresh}/>
           )}
  
           {dtab==="drop-acheteur"&&(
-            <DropAcheteurPanel drops={myDropsA} creneaux={myDropCr} messages={myDropMsgs} user={user} tw={tw} onRefresh={onDropRefresh}/>
+            <DropAcheteurPanel drops={myDropsA} creneaux={myDropCr} messages={myDropMsgs} annonces={myA} user={user} tw={tw} onRefresh={onDropRefresh}/>
           )}
  
           {dtab==="ventes"&&(
@@ -1677,7 +1609,9 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
                           <div><div style={{fontSize:14,fontWeight:700}}>#{o.id?.slice(0,8)}</div><div style={{fontSize:12,color:C.f400,marginTop:1}}>{new Date(o.created_at).toLocaleDateString("fr-FR")}</div></div>
                           {drop&&<span style={{fontSize:10,fontWeight:700,background:drop.status==="confirme"?C.gl:drop.status==="creneaux_proposes"?"#FFF3E0":"#F5F5F5",color:drop.status==="confirme"?C.gm:drop.status==="creneaux_proposes"?"#C25A00":"#9A9A9A",borderRadius:100,padding:"3px 9px"}}>Drop : {drop.status==="mode_choisi"?"En attente":drop.status==="creneaux_proposes"?"Créneaux dispo !":drop.status==="code_envoye"?"Code actif":drop.status==="confirme"?"Terminé":"—"}</span>}
                         </div>
-                        <div style={{fontSize:14,fontWeight:700,marginBottom:drop?.status==="creneaux_proposes"?8:0}}>{o.price} € · SMASHD Drop</div>
+                        <div style={{fontSize:13,color:"#9A9A9A",marginBottom:4}}>
+                          {o.price} € · SMASHD Drop · {new Date(o.created_at).toLocaleDateString("fr-FR")}
+                        </div>
                         {drop?.status==="creneaux_proposes"&&(
                           <button onClick={()=>setDtab("drop-acheteur")} style={{background:C.o,color:"#fff",border:"none",borderRadius:100,padding:"8px 16px",fontSize:12,fontWeight:700,cursor:"pointer"}}>
                             📅 Choisir un créneau →
