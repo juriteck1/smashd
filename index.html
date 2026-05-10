@@ -384,7 +384,17 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw,
     try{
       await Promise.all(slots.map(s=>api("drop_creneaux",{method:"POST",body:JSON.stringify(s)})));
       await api(`drop_remises?id=eq.${drop.id}`,{method:"PATCH",body:JSON.stringify({status:"creneaux_proposes",updated_at:new Date().toISOString()})});
-      tw("Créneaux envoyés à l'acheteur !");onRefresh();setSel(null);
+      tw("Créneaux envoyés à l'acheteur !");
+      // Notifier l'acheteur
+      try{
+        const remiseData=await api("drop_remises?id=eq."+drop.id);
+        const acheteur=await api("profiles?id=eq."+remiseData[0]?.acheteur_id);
+        if(acheteur[0]?.email){
+          const annonce=annonces.find(a=>a.id===drop.annonce_id);
+          sendNotif("creneaux_disponibles",acheteur[0].email,{titre:annonce?.title||"Article",nb_creneaux:slots.length});
+        }
+      }catch(e){}
+      onRefresh();setSel(null);
     }catch(e){tw("Erreur","error")}
     finally{setBusy(false)}
   };
@@ -397,6 +407,14 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw,
       await api(`drop_remises?id=eq.${drop.id}`,{method:"PATCH",body:JSON.stringify({status:"confirme",code_used:true,updated_at:new Date().toISOString()})});
       await api(`commandes?id=eq.${drop.commande_id}`,{method:"PATCH",body:JSON.stringify({status:"livré",escrow_status:"libéré",drop_status:"confirme"})});
       tw("🎉 Transaction validée ! Fonds débloqués dans votre wallet.");
+      // Notifier le vendeur
+      try{
+        const vendeur=await api("profiles?id=eq."+user.id);
+        if(vendeur[0]?.email){
+          const annonce=annonces.find(a=>a.id===drop.annonce_id);
+          sendNotif("transaction_validee",vendeur[0].email,{titre:annonce?.title||"Article",gain:annonce?.price||"—"});
+        }
+      }catch(e){}
       onRefresh();setCodeVal("");setCodeErr("");
     }catch(e){tw("Erreur","error")}
     finally{setBusy(false)}
@@ -568,7 +586,18 @@ function DropAcheteurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw
         lieu_final:cr.lieu_precis,date_finale:cr.date_heure,
         code,code_expires_at:expires,updated_at:new Date().toISOString()
       })});
-      tw("✅ RDV confirmé ! Votre code Drop est prêt.");onRefresh();
+      tw("✅ RDV confirmé ! Votre code Drop est prêt.");
+      // Notifier le vendeur
+      try{
+        const remiseData=await api("drop_remises?id=eq."+drop.id);
+        const vendeur=await api("profiles?id=eq."+remiseData[0]?.vendeur_id);
+        if(vendeur[0]?.email){
+          const annonce=annonces.find(a=>a.id===drop.annonce_id);
+          const dateStr=new Date(cr.date_heure).toLocaleString("fr-FR",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"});
+          sendNotif("creneau_accepte",vendeur[0].email,{titre:annonce?.title||"Article",date:dateStr,lieu:cr.lieu_precis});
+        }
+      }catch(e){}
+      onRefresh();
     }catch(e){tw("Erreur","error")}
     finally{setBusy(false)}
   };
@@ -795,6 +824,17 @@ function App(){
   const toggleA=async(id,status)=>{try{await api(`annonces?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({status})});await loadMy(user.id);await loadA()}catch(e){}};
   const deleteA=async id=>{try{await api(`annonces?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({status:"supprimé"})});await loadMy(user.id);await loadA()}catch(e){}};
  
+ 
+  const sendNotif=async(type,to,data)=>{
+    try{
+      await fetch("https://gcnmgtwbouakwaufqswh.supabase.co/functions/v1/smashd-notify",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjbm1ndHdib3Vha3dhdWZxc3doIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTk4NDQsImV4cCI6MjA5MzgzNTg0NH0.qtHQ4si2Ybsriiaaj9F-1Z6WeN52sZ1ry7T7VpcIMpM"},
+        body:JSON.stringify({type,to,data})
+      });
+    }catch(e){console.log("Notif failed:",e)}
+  };
+ 
   const placeOrder=async(a,modeChoisi)=>{
     if(!user){go("auth");return false}
     setLoad(true);
@@ -816,6 +856,13 @@ function App(){
       }
       await api(`annonces?id=eq.${a.id}`,{method:"PATCH",body:JSON.stringify({status:"vendu"})});
       tw("Commande confirmée ! Paiement sécurisé en escrow.");
+      // Notifier le vendeur par email
+      try{
+        const vendeur=await api(`profiles?id=eq.${a.user_id}`);
+        if(vendeur[0]?.email){
+          sendNotif("vente_confirmee",vendeur[0].email,{titre:a.title,prix:a.price});
+        }
+      }catch(e){}
       await loadA();await loadMy(user.id);await loadDrops(user.id);
       return true;
     }catch(e){tw("Erreur","error");return false}
@@ -1020,6 +1067,24 @@ function Auth({login,register,load,go}){
   const[company,setCompany]=useState("");
   const[cgv,setCgv]=useState(false);
   const[err,setErr]=useState({});
+  const[forgot,setForgot]=useState(false);
+  const[forgotEmail,setForgotEmail]=useState("");
+  const[forgotSent,setForgotSent]=useState(false);
+  const[forgotLoad,setForgotLoad]=useState(false);
+ 
+  const doForgot=async()=>{
+    if(!forgotEmail||!/\S+@\S+\.\S+/.test(forgotEmail)){setErr({forgotEmail:"Email invalide"});return;}
+    setForgotLoad(true);
+    try{
+      await fetch(`${SB}/auth/v1/recover`,{
+        method:"POST",
+        headers:{"apikey":KEY,"Content-Type":"application/json"},
+        body:JSON.stringify({email:forgotEmail})
+      });
+      setForgotSent(true);
+    }catch(e){setErr({forgotEmail:"Erreur, réessayez"})}
+    finally{setForgotLoad(false)}
+  };
  
   const inp={width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${C.f200}`,fontSize:14,outline:"none",boxSizing:"border-box"};
   const v0=()=>{const e={};if(!email||!/\S+@\S+\.\S+/.test(email))e.email="Email invalide";if(!pwd||pwd.length<6)e.pwd="6 min";if(mode==="register"&&pwd!==pwd2)e.pwd2="Différents";setErr(e);return!Object.keys(e).length};
@@ -1053,6 +1118,37 @@ function Auth({login,register,load,go}){
               <Field label="Email" error={err.email}><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="vous@exemple.com" style={{...inp,border:`1.5px solid ${err.email?C.r:C.f200}`}}/></Field>
               <Field label="Mot de passe"><input type="password" value={pwd} onChange={e=>setPwd(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&doLogin()} style={inp}/></Field>
               <button onClick={doLogin} disabled={load} className="btn" style={{width:"100%",background:load?"#9FE1CB":C.g,color:C.w,border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",marginTop:8}}>{load?"Connexion…":"Se connecter"}</button>
+              <button onClick={()=>setForgot(true)} style={{width:"100%",background:"none",border:"none",color:C.f400,fontSize:13,cursor:"pointer",marginTop:12,textDecoration:"underline"}}>Mot de passe oublié ?</button>
+            </div>
+          )}
+ 
+          {/* FORGOT PASSWORD */}
+          {forgot&&(
+            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:300,padding:20}}>
+              <div style={{background:C.w,borderRadius:20,padding:"28px 24px",maxWidth:380,width:"100%"}}>
+                {forgotSent?(
+                  <div style={{textAlign:"center"}}>
+                    <div style={{fontSize:40,marginBottom:16}}>📧</div>
+                    <h3 style={{fontSize:18,fontWeight:900,marginBottom:8}}>Email envoyé !</h3>
+                    <p style={{fontSize:14,color:C.f400,lineHeight:1.7,marginBottom:20}}>Vérifiez votre boîte mail. Le lien est valable 1 heure.</p>
+                    <button onClick={()=>{setForgot(false);setForgotSent(false);setForgotEmail("");}} style={{width:"100%",background:C.g,color:C.w,border:"none",borderRadius:100,padding:"13px",fontSize:14,fontWeight:700,cursor:"pointer"}}>Retour à la connexion</button>
+                  </div>
+                ):(
+                  <div>
+                    <h3 style={{fontSize:18,fontWeight:900,marginBottom:6}}>Mot de passe oublié</h3>
+                    <p style={{fontSize:13,color:C.f400,marginBottom:20,lineHeight:1.6}}>Entrez votre email — nous vous enverrons un lien de réinitialisation.</p>
+                    <div style={{marginBottom:16}}>
+                      <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>Email</label>
+                      <input type="email" value={forgotEmail} onChange={e=>setForgotEmail(e.target.value)} placeholder="vous@exemple.com" onKeyDown={e=>e.key==="Enter"&&doForgot()} style={{width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${err.forgotEmail?C.r:C.f200}`,fontSize:14,outline:"none",boxSizing:"border-box"}}/>
+                      {err.forgotEmail&&<div style={{fontSize:12,color:C.r,marginTop:4}}>{err.forgotEmail}</div>}
+                    </div>
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={()=>{setForgot(false);setErr({});}} style={{flex:1,background:C.f100,border:"none",borderRadius:100,padding:"12px",fontSize:14,fontWeight:600,cursor:"pointer"}}>Annuler</button>
+                      <button onClick={doForgot} disabled={forgotLoad} style={{flex:2,background:forgotLoad?"#9FE1CB":C.g,color:C.w,border:"none",borderRadius:100,padding:"12px",fontSize:14,fontWeight:700,cursor:"pointer"}}>{forgotLoad?"Envoi…":"Envoyer le lien"}</button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
           {mode==="register"&&(
