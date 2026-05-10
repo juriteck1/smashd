@@ -212,9 +212,10 @@ function SellDropConfig({onClose,onConfirm,clubs=[]}){
 }
  
 // ═══ MODAL ACHETEUR : Choisir mode + payer en escrow ═══
-function BuyerDropModal({ann,onClose,onConfirm,load}){
+function BuyerDropModal({ann,onClose,onConfirm,load,tw}){
   const[modeChoisi,setModeChoisi]=useState("");
   const[step,setStep]=useState(1);
+  const[paying,setPaying]=useState(false);
   const protection=parseFloat((ann.price*0.04+0.60).toFixed(2));
   const total=(parseFloat(ann.price)+protection).toFixed(2);
   let dropInfo={};try{if(ann.drop_info)dropInfo=JSON.parse(ann.drop_info)}catch(e){}
@@ -1749,4 +1750,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
- 
