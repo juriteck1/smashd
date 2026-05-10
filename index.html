@@ -729,9 +729,11 @@ function ResetPassword({go}){
     if(pwd!==pwd2){setErr("Les mots de passe ne correspondent pas");return;}
     setLoad(true);
     try{
-      // Récupérer le token depuis l'URL
-      const params=new URLSearchParams(window.location.hash.replace("#","?").replace("?",""));
-      const accessToken=params.get("access_token")||new URLSearchParams(window.location.search).get("access_token");
+      // Récupérer le token depuis le hash Supabase (#access_token=xxx&type=recovery)
+      const hash=window.location.hash.substring(1); // enlever le #
+      const hashParams=new URLSearchParams(hash);
+      const searchParams=new URLSearchParams(window.location.search);
+      const accessToken=hashParams.get("access_token")||searchParams.get("access_token")||hashParams.get("token");
       if(!accessToken){setErr("Lien invalide ou expiré");setLoad(false);return;}
       const r=await fetch(`${SB}/auth/v1/user`,{
         method:"PUT",
