@@ -715,9 +715,79 @@ function DropAcheteurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw
 }
  
  
+ 
+// ═══ RESET PASSWORD PAGE ═══
+function ResetPassword({go}){
+  const[pwd,setPwd]=useState("");
+  const[pwd2,setPwd2]=useState("");
+  const[load,setLoad]=useState(false);
+  const[done,setDone]=useState(false);
+  const[err,setErr]=useState("");
+ 
+  const doReset=async()=>{
+    if(!pwd||pwd.length<6){setErr("6 caractères minimum");return;}
+    if(pwd!==pwd2){setErr("Les mots de passe ne correspondent pas");return;}
+    setLoad(true);
+    try{
+      // Récupérer le token depuis l'URL
+      const params=new URLSearchParams(window.location.hash.replace("#","?").replace("?",""));
+      const accessToken=params.get("access_token")||new URLSearchParams(window.location.search).get("access_token");
+      if(!accessToken){setErr("Lien invalide ou expiré");setLoad(false);return;}
+      const r=await fetch(`${SB}/auth/v1/user`,{
+        method:"PUT",
+        headers:{"apikey":KEY,"Authorization":`Bearer ${accessToken}`,"Content-Type":"application/json"},
+        body:JSON.stringify({password:pwd})
+      });
+      if(!r.ok){const e=await r.json();throw new Error(e.message||"Erreur");}
+      setDone(true);
+      // Nettoyer l'URL
+      window.history.replaceState({},"",window.location.pathname);
+    }catch(e){setErr(e.message||"Erreur, réessayez")}
+    finally{setLoad(false)}
+  };
+ 
+  return(
+    <div style={{minHeight:"100vh",background:C.f50,display:"flex",flexDirection:"column"}}>
+      <nav style={{background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"0 20px",height:54,display:"flex",alignItems:"center"}}><Logo s={18}/></nav>
+      <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:"24px 16px"}}>
+        <div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:20,padding:"28px 24px",maxWidth:400,width:"100%"}}>
+          {done?(
+            <div style={{textAlign:"center"}}>
+              <div style={{fontSize:48,marginBottom:16}}>✅</div>
+              <h2 style={{fontSize:22,fontWeight:900,marginBottom:8}}>Mot de passe modifié !</h2>
+              <p style={{fontSize:14,color:C.f400,marginBottom:24,lineHeight:1.7}}>Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.</p>
+              <button onClick={()=>go("auth")} style={{width:"100%",background:C.g,color:C.w,border:"none",borderRadius:100,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Se connecter →</button>
+            </div>
+          ):(
+            <div>
+              <div style={{fontSize:40,marginBottom:16,textAlign:"center"}}>🔐</div>
+              <h2 style={{fontSize:22,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6,textAlign:"center"}}>Nouveau mot de passe</h2>
+              <p style={{fontSize:13,color:C.f400,marginBottom:24,lineHeight:1.6,textAlign:"center"}}>Choisissez un nouveau mot de passe sécurisé.</p>
+              <div style={{marginBottom:14}}>
+                <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>Nouveau mot de passe</label>
+                <input type="password" value={pwd} onChange={e=>setPwd(e.target.value)} placeholder="6 caractères minimum" style={{width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${err?C.r:C.f200}`,fontSize:14,outline:"none",boxSizing:"border-box"}}/>
+              </div>
+              <div style={{marginBottom:20}}>
+                <label style={{fontSize:13,fontWeight:600,display:"block",marginBottom:5}}>Confirmer</label>
+                <input type="password" value={pwd2} onChange={e=>setPwd2(e.target.value)} placeholder="Répétez le mot de passe" onKeyDown={e=>e.key==="Enter"&&doReset()} style={{width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${err?C.r:C.f200}`,fontSize:14,outline:"none",boxSizing:"border-box"}}/>
+              </div>
+              {err&&<div style={{background:C.rl,color:C.r,borderRadius:10,padding:"10px 13px",fontSize:13,marginBottom:16}}>❌ {err}</div>}
+              <button onClick={doReset} disabled={load} style={{width:"100%",background:load?"#9FE1CB":C.g,color:C.w,border:"none",borderRadius:100,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer"}}>
+                {load?"Modification…":"Changer le mot de passe"}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+ 
 // ═══ APP ═══
 function App(){
-  const[sc,setSc]=useState("home");
+  // Détecter lien de reset Supabase
+  const isReset=window.location.hash.includes("type=recovery")||window.location.search.includes("type=recovery");
+  const[sc,setSc]=useState(isReset?"reset":"home");
   const[user,setUser]=useState(null);
   const[prof,setProf]=useState(null);
   const[ann,setAnn]=useState([]);
@@ -891,7 +961,7 @@ function App(){
   return(
     <div>
       {toast&&<Toast {...toast}/>}
-      {sc==="home"&&<Home {...p}/>}
+      {sc==="reset"&&<ResetPassword go={go}/>}{sc==="home"&&<Home {...p}/>}
       {sc==="auth"&&<Auth {...p}/>}
       {sc==="sell"&&<Sell {...p}/>}
       {sc==="article"&&<Article {...p}/>}
@@ -1821,3 +1891,4 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
+ 
