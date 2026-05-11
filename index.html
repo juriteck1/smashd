@@ -1365,9 +1365,15 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
       </div>
  
       {/* Script Three.js — Rubik's cube full mix icônes + patterns */}
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
       <script dangerouslySetInnerHTML={{__html:`
         (function(){
+          function loadAndInit(){
+            if(window.THREE){ initRubiks(); return; }
+            var s=document.createElement('script');
+            s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+            s.onload=function(){ initRubiks(); };
+            document.head.appendChild(s);
+          }
           function initRubiks(){
             const canvas=document.getElementById('heroRubiks');
             if(!canvas||!window.THREE)return;
@@ -1508,8 +1514,8 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
             }
             animate();
           }
-          if(document.readyState==='complete') initRubiks();
-          else window.addEventListener('load',initRubiks);
+          if(document.readyState==='complete') loadAndInit();
+          else window.addEventListener('load',loadAndInit);
         })();
       `}}/>
  
