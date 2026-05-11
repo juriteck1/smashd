@@ -64,18 +64,16 @@ html,body{overflow-x:hidden!important;max-width:100vw!important}
  
 /* ── Hero mobile ── */
 @media(max-width:768px){
-  .hp{padding:80px 16px 48px!important;text-align:center!important}
-  .hp h1{font-size:34px!important;letter-spacing:-1px!important;line-height:1.1!important}
-  .hp>div>div{grid-template-columns:1fr!important;gap:20px!important}
-  .hp .fu{text-align:center!important}
-  .hp [style*="text-align:left"]{text-align:center!important}
-  .hp [style*="display:flex"][style*="gap:10px"]{justify-content:center!important;flex-wrap:wrap!important}
-  .hp [style*="display:flex"][style*="gap:32px"]{justify-content:center!important}
+  #heroRubiks{display:none!important}
+  .hp{padding:80px 16px 48px!important}
+}
+@media(max-width:900px){
+  #heroRubiks{width:280px!important;height:280px!important}
 }
  
 /* ── Navbar HOME mobile ── */
 @media(max-width:640px){
-  .nav-search{display:none!important}
+  #burger-btn{display:flex!important}
   .nav-actions .nav-lang{display:none!important}
 }
  
@@ -86,6 +84,7 @@ html,body{overflow-x:hidden!important;max-width:100vw!important}
  
 /* ── Dashboard layout mobile ── */
 @media(max-width:640px){
+  #burger-btn{display:flex!important}
   .dash-sidebar{display:none!important}
   .dash-main{padding:14px!important}
   .dash-header{padding:10px 14px!important}
@@ -1380,6 +1379,7 @@ function App(){
   const[toast,setToast]=useState(null);
   const[load,setLoad]=useState(false);
   const[srch,setSrch]=useState("");
+  const[menuOpen,setMenuOpen]=useState(false);
   const[fcat,setFcat]=useState("Tous");
   const[fst,setFst]=useState("Tous");
   const[fpr,setFpr]=useState({min:"",max:""});
@@ -1576,85 +1576,153 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
   return(
     <div style={{minHeight:"100vh",background:C.w}}>
       {/* NAV */}
-      <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:100,background:C.w,borderBottom:`1px solid ${sc?C.f200:"transparent"}`,transition:"border .3s",padding:"0 20px"}}>
-        <div style={{maxWidth:1200,margin:"0 auto",height:58,display:"flex",alignItems:"center",gap:12}}>
-          <div onClick={()=>go("home")} style={{flexShrink:0}}><Logo s={20}/></div>
-          <div style={{flex:1,maxWidth:360,position:"relative",margin:"0 12px"}} className="hm">
-            <div style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:C.f400}}><Ico.search/></div>
-            <input value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Raquette, marque…" style={{width:"100%",padding:"8px 14px 8px 34px",borderRadius:100,border:`1.5px solid ${C.f200}`,fontSize:13,outline:"none",background:C.f50,boxSizing:"border-box"}}/>
+      <nav style={{position:"fixed",top:0,left:0,right:0,zIndex:200,background:"rgba(0,0,0,.85)",backdropFilter:"blur(12px)",borderBottom:"1px solid rgba(255,255,255,.07)",padding:"0 48px"}}>
+        <div style={{maxWidth:1200,margin:"0 auto",height:60,display:"flex",alignItems:"center",gap:16}}>
+ 
+          {/* Logo */}
+          <div onClick={()=>go("home")} style={{cursor:"pointer",flexShrink:0}}>
+            <span style={{fontWeight:900,fontSize:18,letterSpacing:"-0.5px",color:"#fff"}}>SMASH<span style={{color:"#E8470A"}}>D</span></span>
           </div>
-          <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
-            <div style={{display:"flex",background:C.f100,borderRadius:100,overflow:"hidden",border:`1px solid ${C.f200}`}} className="hm">
-              {["FR","EN"].map(l=><button key={l} onClick={()=>setLang(l)} style={{padding:"5px 12px",fontSize:12,fontWeight:700,border:"none",cursor:"pointer",background:lang===l?C.g:"transparent",color:lang===l?C.w:C.f400,borderRadius:100}}>{l}</button>)}
+ 
+          {/* Nav links desktop */}
+          <div style={{display:"flex",gap:4,marginLeft:16}} className="hm">
+            {["Tous","Tennis","Padel","Badminton","Squash"].map(cat=>(
+              <button key={cat} onClick={()=>{setSport(cat==="Tous"?"":cat);go("home");}} style={{background:"none",border:"none",padding:"6px 12px",borderRadius:6,fontSize:13,fontWeight:500,color:"rgba(255,255,255,.5)",cursor:"pointer",transition:"color .15s"}}
+                onMouseEnter={e=>e.target.style.color="#fff"}
+                onMouseLeave={e=>e.target.style.color="rgba(255,255,255,.5)"}
+              >{cat}</button>
+            ))}
+          </div>
+ 
+          {/* Recherche mobile */}
+          <div style={{flex:1,maxWidth:300,position:"relative",margin:"0 12px"}} className="hm">
+            <div style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"rgba(255,255,255,.3)"}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             </div>
+            <input value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Raquette, marque…" style={{width:"100%",padding:"7px 12px 7px 30px",borderRadius:7,border:"1px solid rgba(255,255,255,.1)",fontSize:13,background:"rgba(255,255,255,.05)",color:"#fff",outline:"none"}}/>
+          </div>
+ 
+          <div style={{flex:1}}/>
+ 
+          {/* Actions */}
+          <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
             {user?(
               <>
-                <button onClick={()=>go("sell")} className="btn hm" style={{background:C.o,color:C.w,border:"none",borderRadius:100,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><Ico.plus/> Vendre</button>
-                <button onClick={()=>go("dashboard")} className="btn" style={{width:36,height:36,borderRadius:"50%",background:C.g,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.w,fontWeight:700,fontSize:14,position:"relative"}}>
-                  {fn.charAt(0).toUpperCase()}
-                  {(pendingV+pendingA)>0&&<div style={{position:"absolute",top:-3,right:-3,width:14,height:14,background:C.o,borderRadius:"50%",fontSize:8,fontWeight:800,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center"}}>{pendingV+pendingA}</div>}
-                </button>
+                {/* Drops urgents */}
+                {(myDropsV.filter(d=>d.status==="mode_choisi").length+myDropsA.filter(d=>d.status==="creneaux_proposes").length)>0&&(
+                  <button onClick={()=>setSc("dashboard")} style={{background:"#E8470A",color:"#fff",border:"none",borderRadius:6,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                    {myDropsV.filter(d=>d.status==="mode_choisi").length+myDropsA.filter(d=>d.status==="creneaux_proposes").length} Drop en attente
+                  </button>
+                )}
+                <button onClick={()=>go("sell")} className="hm" style={{background:"#E8470A",color:"#fff",border:"none",borderRadius:6,padding:"7px 14px",fontSize:13,fontWeight:700,cursor:"pointer"}}>+ Vendre</button>
+                <div onClick={()=>setSc("dashboard")} style={{width:32,height:32,borderRadius:"50%",background:"#00C46A",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:900,color:"#fff",cursor:"pointer",flexShrink:0,position:"relative"}}>
+                  {prof?.avatar_url?<img src={prof.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}}/>:(prof?.name||user.email||"?").charAt(0).toUpperCase()}
+                  {(myDropsV.filter(d=>d.status==="mode_choisi").length+myDropsA.filter(d=>d.status==="creneaux_proposes").length)>0&&<span style={{position:"absolute",top:-2,right:-2,width:9,height:9,background:"#E8470A",borderRadius:"50%",border:"2px solid #000"}}/>}
+                </div>
               </>
             ):(
               <>
-                <button onClick={()=>go("auth")} className="btn hm" style={{background:"transparent",color:C.k,border:`1.5px solid ${C.f200}`,borderRadius:100,padding:"8px 18px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Connexion</button>
-                <button onClick={()=>go("auth")} className="btn" style={{background:C.g,color:C.w,border:"none",borderRadius:100,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer"}}>S'inscrire</button>
+                <button onClick={()=>go("auth")} style={{background:"none",border:"1px solid rgba(255,255,255,.15)",borderRadius:6,padding:"7px 14px",fontSize:13,fontWeight:500,cursor:"pointer",color:"rgba(255,255,255,.7)"}}>Connexion</button>
+                <button onClick={()=>go("auth")} style={{background:"#fff",color:"#000",border:"none",borderRadius:6,padding:"7px 14px",fontSize:13,fontWeight:700,cursor:"pointer"}}>S'inscrire</button>
               </>
             )}
-            <button onClick={()=>setMob(!mob)} className="btn" style={{background:C.f100,border:"none",borderRadius:10,padding:"8px",cursor:"pointer",display:"flex"}}><Ico.menu/></button>
+ 
+            {/* Burger mobile */}
+            <button onClick={()=>setMenuOpen(m=>!m)} id="burger-btn" style={{display:"none",background:"none",border:"none",cursor:"pointer",padding:6,color:"rgba(255,255,255,.7)"}}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+            </button>
           </div>
         </div>
-        <div style={{maxWidth:1200,margin:"0 auto",borderTop:`1px solid ${C.f100}`,display:"flex",overflowX:"auto"}} className="hm">
-          <button onClick={()=>setFcat("Tous")} style={{padding:"9px 14px",fontSize:13,fontWeight:fcat==="Tous"?700:500,color:fcat==="Tous"?C.g:C.f600,border:"none",borderBottom:`2px solid ${fcat==="Tous"?C.g:"transparent"}`,background:"transparent",cursor:"pointer",whiteSpace:"nowrap"}}>Tous</button>
-          {SPORTS.map(s=><button key={s} onClick={()=>setFcat(s)} style={{padding:"9px 14px",fontSize:13,fontWeight:fcat===s?700:500,color:fcat===s?C.g:C.f600,border:"none",borderBottom:`2px solid ${fcat===s?C.g:"transparent"}`,background:"transparent",cursor:"pointer",whiteSpace:"nowrap"}}>{CAT_TREE[s].icon} {s}</button>)}
-        </div>
-        {mob&&(
-          <div style={{position:"absolute",top:"100%",left:0,right:0,background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"16px 20px",boxShadow:"0 8px 24px rgba(0,0,0,.08)"}}>
-            <div style={{position:"relative",marginBottom:12}}><div style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:C.f400}}><Ico.search/></div><input value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Raquette…" style={{width:"100%",padding:"10px 14px 10px 34px",borderRadius:100,border:`1.5px solid ${C.f200}`,fontSize:14,outline:"none",background:C.f50,boxSizing:"border-box"}}/></div>
-            {!user&&<div style={{display:"flex",gap:8,marginBottom:12}}><button onClick={()=>{go("auth");setMob(false)}} style={{flex:1,background:C.f100,color:C.k,border:`1.5px solid ${C.f200}`,borderRadius:100,padding:"10px",fontSize:14,fontWeight:600,cursor:"pointer"}}>Connexion</button><button onClick={()=>{go("auth");setMob(false)}} style={{flex:1,background:C.g,color:C.w,border:"none",borderRadius:100,padding:"10px",fontSize:14,fontWeight:700,cursor:"pointer"}}>S'inscrire</button></div>}
-            {user&&<div style={{display:"flex",gap:8,marginBottom:12}}><button onClick={()=>{go("sell");setMob(false)}} style={{flex:1,background:C.o,color:C.w,border:"none",borderRadius:100,padding:"10px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Ico.plus/> Vendre</button><button onClick={()=>{go("dashboard");setMob(false)}} style={{flex:1,background:C.f100,color:C.k,border:`1.5px solid ${C.f200}`,borderRadius:100,padding:"10px",fontSize:14,fontWeight:600,cursor:"pointer"}}>Mon compte</button></div>}
-            <div style={{display:"flex",flexWrap:"wrap",gap:7}}>{SPORTS.map(s=><button key={s} onClick={()=>{setFcat(s);setMob(false)}} style={{padding:"7px 13px",fontSize:12,fontWeight:500,color:fcat===s?C.w:C.f600,border:`1.5px solid ${fcat===s?C.g:C.f200}`,background:fcat===s?C.g:"transparent",borderRadius:100,cursor:"pointer"}}>{CAT_TREE[s].icon} {s}</button>)}</div>
+ 
+        {/* Menu mobile */}
+        {menuOpen&&(
+          <div style={{position:"fixed",inset:0,zIndex:199}} onClick={()=>setMenuOpen(false)}>
+            <div style={{position:"absolute",top:60,left:0,right:0,background:"#111",borderBottom:"1px solid rgba(255,255,255,.08)",padding:"16px 20px 24px"}} onClick={e=>e.stopPropagation()}>
+              {/* Recherche */}
+              <input value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Rechercher un article…" style={{width:"100%",padding:"12px 16px",borderRadius:8,border:"1px solid rgba(255,255,255,.1)",fontSize:14,background:"rgba(255,255,255,.05)",color:"#fff",outline:"none",marginBottom:14,boxSizing:"border-box"}}/>
+              {user?(
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  <button onClick={()=>{setSc("dashboard");setMenuOpen(false);}} style={{width:"100%",padding:"13px",borderRadius:8,border:"1px solid rgba(255,255,255,.1)",background:"none",fontSize:14,fontWeight:600,cursor:"pointer",textAlign:"left",color:"#fff"}}>📊 Mon dashboard</button>
+                  <button onClick={()=>{go("sell");setMenuOpen(false);}} style={{width:"100%",padding:"13px",borderRadius:8,border:"none",background:"#E8470A",color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>+ Vendre un article</button>
+                  <button onClick={()=>{go("profil",null,user?.id);setMenuOpen(false);}} style={{width:"100%",padding:"13px",borderRadius:8,border:"1px solid rgba(255,255,255,.1)",background:"none",fontSize:14,fontWeight:600,cursor:"pointer",color:"rgba(255,255,255,.7)"}}>👤 Mon profil</button>
+                  <button onClick={()=>{logout();setMenuOpen(false);}} style={{width:"100%",padding:"13px",borderRadius:8,border:"none",background:"rgba(232,41,10,.15)",fontSize:14,fontWeight:600,cursor:"pointer",color:"#E8290A"}}>Déconnexion</button>
+                </div>
+              ):(
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  <button onClick={()=>{go("auth");setMenuOpen(false);}} style={{width:"100%",padding:"14px",borderRadius:8,border:"1px solid rgba(255,255,255,.15)",background:"none",fontSize:15,fontWeight:600,cursor:"pointer",color:"#fff"}}>Se connecter</button>
+                  <button onClick={()=>{go("auth");setMenuOpen(false);}} style={{width:"100%",padding:"14px",borderRadius:8,border:"none",background:"#fff",color:"#000",fontSize:15,fontWeight:700,cursor:"pointer"}}>S'inscrire gratuitement</button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </nav>
  
-      {/* HERO */}
-      <div className="hp" style={{background:C.g,minHeight:"88vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"110px 24px 68px 24px",position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",inset:0,opacity:.04,backgroundImage:"radial-gradient(circle,white 1px,transparent 1px)",backgroundSize:"48px 48px"}}/>
+      {/* HERO — style Resend : fond noir, texte gauche, cube droite */}
+      <div style={{background:"#000",minHeight:"100vh",display:"flex",flexDirection:"column",position:"relative",overflow:"hidden"}}>
  
-        {/* Layout 2 colonnes sur desktop */}
-        <div style={{maxWidth:1100,width:"100%",margin:"0 auto",display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,alignItems:"center"}}>
+        {/* Lueur verte subtile */}
+        <div style={{position:"absolute",top:"20%",left:"30%",width:600,height:600,background:"radial-gradient(circle,rgba(0,196,106,0.07) 0%,transparent 70%)",pointerEvents:"none",transform:"translate(-50%,-50%)"}}/>
  
-          {/* Colonne gauche — texte */}
-          <div style={{textAlign:"left"}}>
-            <div className="fu" style={{display:"inline-flex",alignItems:"center",gap:7,background:"rgba(255,255,255,.1)",borderRadius:100,padding:"6px 14px",fontSize:12,fontWeight:600,color:"rgba(255,255,255,.7)",marginBottom:24,border:"1px solid rgba(255,255,255,.12)"}}><Ico.leaf/> Marketplace éco-responsable</div>
-            <h1 className="fu" style={{fontSize:"clamp(28px,5vw,52px)",fontWeight:900,color:C.w,lineHeight:1.08,letterSpacing:"-1.5px",maxWidth:520,margin:"0 0 18px"}}>
-              La seconde main pour les<br/><span style={{color:C.ga}}>sports de raquette</span>
+        {/* Layout 2 colonnes */}
+        <div style={{maxWidth:1200,width:"100%",margin:"0 auto",padding:"160px 48px 80px",display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:60,alignItems:"center",flex:1,position:"relative",zIndex:1}}>
+ 
+          {/* Colonne gauche */}
+          <div>
+            {/* Badge annonce */}
+            <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",borderRadius:100,padding:"6px 14px 6px 8px",marginBottom:32,cursor:"pointer"}} onClick={()=>{}}>
+              <span style={{background:"rgba(0,196,106,.15)",border:"1px solid rgba(0,196,106,.25)",borderRadius:100,padding:"2px 10px",fontSize:11,fontWeight:700,color:"#00C46A",letterSpacing:".5px"}}>NOUVEAU</span>
+              <span style={{fontSize:13,color:"rgba(255,255,255,.6)",fontWeight:500}}>SMASHD Drop v2 — Livraison communautaire</span>
+              <span style={{color:"rgba(255,255,255,.3)",fontSize:13}}>→</span>
+            </div>
+ 
+            {/* Titre */}
+            <h1 style={{fontSize:56,fontWeight:900,color:"#fff",lineHeight:1.05,letterSpacing:"-2px",marginBottom:20}}>
+              La seconde main<br/>pour les <span style={{color:"#00C46A"}}>sports de<br/>raquette</span>
             </h1>
-            <p className="fu" style={{fontSize:16,color:"rgba(255,255,255,.6)",maxWidth:420,lineHeight:1.7,margin:"0 0 36px"}}>
-              Achetez et vendez raquettes, chaussures, vêtements et accessoires. Simple, sécurisé, éco-responsable.
+ 
+            {/* Sous-titre */}
+            <p style={{fontSize:17,color:"rgba(255,255,255,.5)",lineHeight:1.7,marginBottom:36,maxWidth:440}}>
+              Achetez et vendez raquettes, chaussures et accessoires. Simple, sécurisé, éco-responsable.
             </p>
-            <div className="fu" style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:32}}>
-              <button onClick={()=>go("auth")} className="btn" style={{background:C.w,color:C.k,border:"none",borderRadius:100,padding:"14px 30px",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:7}}>Commencer gratuitement <Ico.arr/></button>
-              <button onClick={()=>{window.scrollTo({top:700,behavior:"smooth"})}} className="btn" style={{background:"transparent",color:C.w,border:"1.5px solid rgba(255,255,255,.3)",borderRadius:100,padding:"14px 30px",fontSize:15,fontWeight:600,cursor:"pointer"}}>Voir les annonces</button>
+ 
+            {/* CTAs */}
+            <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:52}}>
+              {user
+                ?<button onClick={()=>setSc("dashboard")} style={{background:"#fff",color:"#000",border:"none",borderRadius:8,padding:"12px 24px",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>Mon dashboard <span>→</span></button>
+                :<>
+                  <button onClick={()=>go("auth")} style={{background:"#fff",color:"#000",border:"none",borderRadius:8,padding:"12px 24px",fontSize:15,fontWeight:700,cursor:"pointer"}}>Commencer gratuitement</button>
+                  <button onClick={()=>go("auth")} style={{background:"transparent",color:"rgba(255,255,255,.8)",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,padding:"12px 24px",fontSize:15,fontWeight:500,cursor:"pointer"}}>Se connecter</button>
+                </>
+              }
             </div>
-            <div className="fu" style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(0,196,106,.1)",border:"1px solid rgba(0,196,106,.2)",borderRadius:100,padding:"8px 18px"}}>
-              <Ico.drop/><span style={{fontSize:13,color:C.ga,fontWeight:700}}>SMASHD Drop — Livraison gratuite & sécurisée</span>
-            </div>
-            <div className="fu" style={{display:"flex",gap:32,marginTop:44,paddingTop:32,borderTop:"1px solid rgba(255,255,255,.1)",flexWrap:"wrap"}}>
-              {[["4 200+","articles en ligne"],["0€","frais de livraison"],["98%","avis positifs"]].map(([v,l])=><div key={l}><div style={{fontSize:22,fontWeight:900,color:C.w,letterSpacing:"-1px"}}>{v}</div><div style={{fontSize:12,color:"rgba(255,255,255,.4)",marginTop:3}}>{l}</div></div>)}
+ 
+            {/* Stats */}
+            <div style={{display:"flex",gap:32,flexWrap:"wrap",paddingTop:32,borderTop:"1px solid rgba(255,255,255,.08)"}}>
+              {[["4 200+","articles"],["0€","livraison"],["98%","avis positifs"],["0€","commission"]].map(([v,l])=>(
+                <div key={l}>
+                  <div style={{fontSize:20,fontWeight:900,color:"#fff",letterSpacing:"-1px"}}>{v}</div>
+                  <div style={{fontSize:12,color:"rgba(255,255,255,.3)",marginTop:2}}>{l}</div>
+                </div>
+              ))}
             </div>
           </div>
  
-          {/* Colonne droite — Rubik's cube 3D */}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:340}}>
+          {/* Colonne droite — Rubik's cube */}
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",position:"relative"}}>
             <canvas id="heroRubiks" style={{display:"block",cursor:"grab"}}></canvas>
           </div>
  
         </div>
+ 
+        {/* Bande logos partenaires */}
+        <div style={{borderTop:"1px solid rgba(255,255,255,.06)",padding:"20px 48px",display:"flex",alignItems:"center",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
+          <span style={{fontSize:12,color:"rgba(255,255,255,.3)",marginRight:16}}>Sports supportés</span>
+          {["🎾 Tennis","🟩 Padel","🏸 Badminton","🟤 Squash","🏓 Ping-Pong","🥒 Pickleball","🔵 Raquetball","🏖️ Beach Tennis"].map(s=>(
+            <span key={s} style={{fontSize:12,color:"rgba(255,255,255,.4)",padding:"4px 12px",borderRadius:100,border:"1px solid rgba(255,255,255,.08)"}}>{s}</span>
+          ))}
+        </div>
       </div>
- 
- 
  
         {/* DROP BANNER */}
       <div style={{background:C.k,padding:"28px 20px"}}>
@@ -2538,3 +2606,4 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
+ 
