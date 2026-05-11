@@ -1323,7 +1323,7 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
                 <button onClick={()=>go("auth")} className="btn" style={{background:C.g,color:C.w,border:"none",borderRadius:100,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer"}}>S'inscrire</button>
               </>
             )}
-            <button onClick={()=>setMob(!mob)} className="btn" style={{background:C.f100,border:"none",borderRadius:10,padding:"8px",cursor:"pointer",display:"flex"}}><Ico.menu/></button>
+            <button onClick={()=>setMob(!mob)} className="btn hm" style={{background:C.f100,border:"none",borderRadius:10,padding:"8px",cursor:"pointer",display:"flex"}}><Ico.menu/></button>
           </div>
         </div>
         <div style={{maxWidth:1200,margin:"0 auto",borderTop:`1px solid ${C.f100}`,display:"flex",overflowX:"auto"}} className="hm">
@@ -1394,8 +1394,9 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
             const canvas=document.getElementById('heroRubiks');
             if(!canvas||!window.THREE)return;
             const container=canvas.parentElement;
-            const SIZE=Math.min(420, container ? container.offsetWidth-20 : window.innerWidth/2-40);
-            if(SIZE<100){ setTimeout(()=>initRubiks(),500); return; } // pas encore rendu
+            const availW = container ? container.offsetWidth : 0;
+            const SIZE = availW > 100 ? Math.min(420, availW-20) : Math.min(420, window.innerWidth/2-60);
+            if(SIZE < 80){ setTimeout(()=>initRubiks(),400); return; }
             const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
             renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
             renderer.setSize(SIZE,SIZE);
@@ -2399,3 +2400,4 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
+ 
