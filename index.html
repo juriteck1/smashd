@@ -1551,7 +1551,8 @@ function App(){
   const p={user,prof,load,tw,go,login,register,logout,publish,toggleA,deleteA,placeOrder,
     myA,myO,myS,myDropsV,myDropsA,myDropCr,myDropMsgs,clubs,wal,dtab,setDtab,
     ann:fil,allAnn:ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,sel,
-    lang,setLang,favs,setFavs,pendingV,pendingA,onDropRefresh};
+    lang,setLang,favs,setFavs,pendingV,pendingA,onDropRefr,
+    menuOpen,setMenuOpen,setSc,setSportesh};
  
   return(
     <div>
@@ -1566,7 +1567,7 @@ function App(){
 }
  
 // ═══ HOME ═══
-function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,lang,setLang,favs,setFavs,pendingV,pendingA}){
+function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,lang,setLang,favs,setFavs,pendingV,pendingA,menuOpen,setMenuOpen,myDropsV,myDropsA,logout,setSc,setSport}){
   const[sc,setSc]=useState(false);
   const[mob,setMob]=useState(false);
   useEffect(()=>{const h=()=>setSc(window.scrollY>10);window.addEventListener("scroll",h);return()=>window.removeEventListener("scroll",h)},[]);
@@ -2606,4 +2607,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
- 
