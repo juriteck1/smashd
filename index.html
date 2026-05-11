@@ -1345,7 +1345,7 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
         <div style={{position:"absolute",inset:0,opacity:.04,backgroundImage:"radial-gradient(circle,white 1px,transparent 1px)",backgroundSize:"48px 48px"}}/>
  
         {/* Layout 2 colonnes sur desktop */}
-        <div style={{maxWidth:1100,width:"100%",margin:"0 auto",display:"grid",gridTemplateColumns:"1fr 1fr",gap:60,alignItems:"center"}} className="g1m">
+        <div style={{maxWidth:1100,width:"100%",margin:"0 auto",display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,alignItems:"center"}}>
  
           {/* Colonne gauche — texte */}
           <div style={{textAlign:"left"}}>
@@ -1369,8 +1369,8 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
           </div>
  
           {/* Colonne droite — Rubik's cube 3D */}
-          <div style={{display:"flex",alignItems:"center",justifyContent:"center"}} className="hm">
-            <canvas id="heroRubiks" style={{display:"block",cursor:"grab",width:"420px",height:"420px"}}></canvas>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:340}}>
+            <canvas id="heroRubiks" style={{display:"block",cursor:"grab"}}></canvas>
           </div>
  
         </div>
@@ -1389,7 +1389,9 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
           function initRubiks(){
             const canvas=document.getElementById('heroRubiks');
             if(!canvas||!window.THREE)return;
-            const SIZE=Math.min(420,window.innerWidth/2-60);
+            const container=canvas.parentElement;
+            const SIZE=Math.min(420, container ? container.offsetWidth-20 : window.innerWidth/2-40);
+            if(SIZE<100){ setTimeout(()=>initRubiks(),500); return; } // pas encore rendu
             const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
             renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
             renderer.setSize(SIZE,SIZE);
@@ -1526,8 +1528,14 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
             }
             animate();
           }
-          // Attendre que React rende le canvas
-          setTimeout(loadAndInit, 500);
+          // Attendre que React rende le canvas avec retry
+          function tryInit(attempts){
+            if(attempts<=0) return;
+            const cv=document.getElementById('heroRubiks');
+            if(cv){ loadAndInit(); }
+            else{ setTimeout(()=>tryInit(attempts-1), 300); }
+          }
+          setTimeout(()=>tryInit(10), 200);
         })();
       `}}/>
  
