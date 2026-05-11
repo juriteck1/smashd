@@ -1552,7 +1552,7 @@ function App(){
     myA,myO,myS,myDropsV,myDropsA,myDropCr,myDropMsgs,clubs,wal,dtab,setDtab,
     ann:fil,allAnn:ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,sel,
     lang,setLang,favs,setFavs,pendingV,pendingA,onDropRefresh,
-    menuOpen,setMenuOpen,setSc,setSport};
+    menuOpen,setMenuOpen,setSc};
  
   return(
     <div>
@@ -1567,7 +1567,7 @@ function App(){
 }
  
 // ═══ HOME ═══
-function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,lang,setLang,favs,setFavs,pendingV,pendingA,menuOpen,setMenuOpen,myDropsV,myDropsA,logout,setSc:setGlobalSc,setSport}){
+function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,lang,setLang,favs,setFavs,pendingV,pendingA,menuOpen,setMenuOpen,myDropsV,myDropsA,logout,setSc:setGlobalSc}){
   const[sc,setSc]=useState(false);
   const[mob,setMob]=useState(false);
   useEffect(()=>{const h=()=>setSc(window.scrollY>10);window.addEventListener("scroll",h);return()=>window.removeEventListener("scroll",h)},[]);
@@ -1588,7 +1588,7 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
           {/* Nav links desktop */}
           <div style={{display:"flex",gap:4,marginLeft:16}} className="hm">
             {["Tous","Tennis","Padel","Badminton","Squash"].map(cat=>(
-              <button key={cat} onClick={()=>{setSport(cat==="Tous"?"":cat);go("home");}} style={{background:"none",border:"none",padding:"6px 12px",borderRadius:6,fontSize:13,fontWeight:500,color:"rgba(255,255,255,.5)",cursor:"pointer",transition:"color .15s"}}
+              <button key={cat} onClick={()=>{setFcat(cat==="Tous"?"":cat);go("home");}} style={{background:"none",border:"none",padding:"6px 12px",borderRadius:6,fontSize:13,fontWeight:500,color:"rgba(255,255,255,.5)",cursor:"pointer",transition:"color .15s"}}
                 onMouseEnter={e=>e.target.style.color="#fff"}
                 onMouseLeave={e=>e.target.style.color="rgba(255,255,255,.5)"}
               >{cat}</button>
