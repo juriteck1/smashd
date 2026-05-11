@@ -1174,9 +1174,21 @@ function App(){
     if(savedTok&&savedUser){
       try{
         const u=JSON.parse(savedUser);
-        st(savedTok);setUser(u);
-        fetch(`${SB}/rest/v1/profiles?id=eq.${u.id}`,{headers:{"apikey":KEY,"Authorization":"Bearer "+savedTok}})
-          .then(r=>r.json()).then(d=>{if(d[0])setProf(d[0]);});
+        // Vérifier que le token est encore valide
+        fetch(`${SB}/auth/v1/user`,{headers:{"apikey":KEY,"Authorization":"Bearer "+savedTok}})
+          .then(r=>{
+            if(r.ok){
+              st(savedTok);setUser(u);
+              return fetch(`${SB}/rest/v1/profiles?id=eq.${u.id}`,{headers:{"apikey":KEY,"Authorization":"Bearer "+savedTok}});
+            } else {
+              // Token expiré → nettoyer
+              ct();sessionStorage.removeItem("smashd_user");
+              return Promise.reject("expired");
+            }
+          })
+          .then(r=>r&&r.json())
+          .then(d=>{if(d&&d[0]){setProf(d[0]);loadMy(u.id);loadDrops(u.id);}})
+          .catch(e=>console.log("Session:",e));
       }catch(e){ct();}
     }
   },[]);
@@ -1358,7 +1370,7 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
  
           {/* Colonne droite — Rubik's cube 3D */}
           <div style={{display:"flex",alignItems:"center",justifyContent:"center"}} className="hm">
-            <canvas id="heroRubiks" style={{display:"block",cursor:"grab"}}></canvas>
+            <canvas id="heroRubiks" style={{display:"block",cursor:"grab",width:"420px",height:"420px"}}></canvas>
           </div>
  
         </div>
@@ -1514,8 +1526,8 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
             }
             animate();
           }
-          if(document.readyState==='complete') loadAndInit();
-          else window.addEventListener('load',loadAndInit);
+          // Attendre que React rende le canvas
+          setTimeout(loadAndInit, 500);
         })();
       `}}/>
  
