@@ -52,12 +52,38 @@ input,textarea,select,button{font-family:inherit}
   .g2m{grid-template-columns:1fr 1fr!important}
   .g1m{grid-template-columns:1fr!important}
   .ht{font-size:36px!important;letter-spacing:-1px!important}
-  .hp{padding:96px 20px 52px!important}
+  .hp{padding:80px 16px 40px!important}
   .drop-modal{border-radius:20px 20px 0 0;max-height:95vh;position:fixed;bottom:0;left:0;right:0;width:100%}
   .drop-overlay{align-items:flex-end;padding:0}
   .drop-header{border-radius:20px 20px 0 0}
+
+  /* Hero mobile — 1 colonne centrée */
+  .hp>div>div[style]{grid-template-columns:1fr!important;gap:24px!important;text-align:center!important}
+  .hp h1{font-size:30px!important;letter-spacing:-1px!important;line-height:1.1!important}
+  .hp p{font-size:14px!important;margin:0 auto 24px!important}
+  .hp [style*="display:flex"][style*="gap:12px"]{justify-content:center!important;flex-wrap:wrap!important}
+  .hp [style*="display:flex"][style*="gap:40px"]{justify-content:center!important;gap:20px!important}
+  .hp [style*="textAlign:left"]{text-align:center!important}
+
+  /* Dashboard mobile */
+  .dash-grid{grid-template-columns:1fr!important;gap:12px!important}
+  .dash-tabs-wrap{overflow-x:auto!important;scrollbar-width:none!important}
+  .dash-tabs-wrap::-webkit-scrollbar{display:none!important}
 }
 
+
+/* Hero grid mobile */
+@media(max-width:768px){
+  .hero-grid{grid-template-columns:1fr!important;gap:20px!important;padding:0!important}
+  .hero-text-col{text-align:center!important}
+  .hero-text-col h1{font-size:28px!important;letter-spacing:-1px!important;line-height:1.15!important}
+  .hero-text-col p{font-size:14px!important;max-width:100%!important}
+  .hero-text-col [style*="display:"flex""]{justify-content:center!important;flex-wrap:wrap!important}
+  .hero-text-col [style*="gap:40px"]{gap:16px!important}
+  .hero-text-col [style*="gap:12px"]{justify-content:center!important}
+  .hero-text-col [style*="textAlign:"left""]{text-align:center!important}
+  .hp{padding:70px 16px 32px!important;min-height:auto!important}
+}
 
 /* ═══ BOTTOM NAV MOBILE ═══ */
 .bottom-nav{
@@ -75,6 +101,9 @@ input,textarea,select,button{font-family:inherit}
   body{padding-bottom:70px}
   /* Cacher sidebar dashboard sur mobile */
   .dash-sidebar-hm{display:none!important}
+  /* Dashboard mobile adjustments */
+  .dash-overview-stats{grid-template-columns:repeat(2,1fr)!important}
+  .dash-ann-grid{grid-template-columns:repeat(2,1fr)!important;gap:8px!important}
   /* Inputs 16px pour éviter zoom iOS */
   input,textarea,select{font-size:16px!important}
   /* Hero mobile */
@@ -1567,7 +1596,7 @@ function ProPage({user, prof, go, tw}){
               <div>
                 <div style={{background:"rgba(0,196,106,.15)",border:"1px solid rgba(0,196,106,.3)",borderRadius:12,padding:"14px 20px",marginBottom:16,display:"inline-flex",alignItems:"center",gap:10}}>
                   <span style={{fontSize:20}}>✅</span>
-                  <div style={{textAlign:"left"}}>
+                  <div style={{textAlign:"left"}} className="hero-text-col">
                     <div style={{fontSize:14,fontWeight:700,color:"#00C46A"}}>Vous êtes Pro !</div>
                     <div style={{fontSize:12,color:"rgba(255,255,255,.5)"}}>Valide jusqu'au {new Date(prof.pro_expires_at).toLocaleDateString("fr-FR")}</div>
                   </div>
@@ -2044,7 +2073,7 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
         <div style={{position:"absolute",inset:0,opacity:.04,backgroundImage:"radial-gradient(circle,white 1px,transparent 1px)",backgroundSize:"48px 48px"}}/>
 
         {/* Layout 2 colonnes sur desktop */}
-        <div style={{maxWidth:1100,width:"100%",margin:"0 auto",display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,alignItems:"center"}}>
+        <div style={{maxWidth:1100,width:"100%",margin:"0 auto",display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,alignItems:"center"}} className="hero-grid">
 
           {/* Colonne gauche — texte */}
           <div style={{textAlign:"left"}}>
@@ -2718,7 +2747,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
         </div>
       </nav>
 
-      <div style={{maxWidth:1060,margin:"0 auto",padding:"24px 20px",display:"grid",gridTemplateColumns:"200px 1fr",gap:20}} className="g1m">
+      <div style={{maxWidth:1060,margin:"0 auto",padding:"16px",display:"grid",gridTemplateColumns:"200px 1fr",gap:20}} className="g1m">
         {/* Sidebar */}
         <div className="hm" style={{display:"flex",flexDirection:"column",gap:4}}>
           <div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:14,padding:"14px",marginBottom:10}}>
@@ -2764,7 +2793,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
                   <button onClick={()=>setDtab(pendingV>0?"drop-vendeur":"drop-acheteur")} style={{background:C.o,color:"#fff",border:"none",borderRadius:100,padding:"8px 16px",fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0}}>Gérer →</button>
                 </div>
               )}
-              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:18}} className="g2m">
+              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:16}} className="g2m dash-overview-stats">
                 {[[`${rev.toFixed(2)} €`,"Revenus confirmés",C.g],[myA.filter(a=>a.status==="active").length,"Annonces actives",C.k],[myS.length,"Ventes",C.o],[myO.length,"Achats",C.f600]].map(([v,l,col])=>(
                   <div key={l} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:12,padding:"16px"}}>
                     <div style={{fontSize:22,fontWeight:900,color:col,letterSpacing:"-1px"}}>{v}</div>
