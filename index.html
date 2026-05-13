@@ -47,6 +47,9 @@ input,textarea,select,button{font-family:inherit}
 .status-badge{font-size:11px;font-weight:700;border-radius:100px;padding:4px 10px;white-space:nowrap}
 .msg-bubble-me{background:#0A2A1E;color:#fff;border-radius:10px;padding:8px 12px;font-size:13px;align-self:flex-end;max-width:85%}
 .msg-bubble-other{background:#F5F5F5;color:#0A0A0A;border-radius:10px;padding:8px 12px;font-size:13px;align-self:flex-start;max-width:85%}
+@media(min-width:769px){
+  .fu{display:none!important}
+}
 @media(max-width:768px){
   .hm{display:none!important}
   .g2m{grid-template-columns:1fr 1fr!important}
@@ -2052,9 +2055,20 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
             
           </div>
         </div>
-        <div style={{display:"flex",overflowX:"auto",background:"#FAF7F2",borderTop:"1px solid #EDE8E0",padding:"0 20px"}} className="hm">
-          <button onClick={()=>setFcat("Tous")} style={{padding:"9px 14px",fontSize:13,fontWeight:fcat==="Tous"?700:500,color:fcat==="Tous"?C.g:C.f600,border:"none",borderBottom:`2px solid ${fcat==="Tous"?C.g:"transparent"}`,background:"transparent",cursor:"pointer",whiteSpace:"nowrap"}}>Tous</button>
-          {SPORTS.map(s=><button key={s} onClick={()=>setFcat(s)} style={{padding:"9px 14px",fontSize:13,fontWeight:fcat===s?700:500,color:fcat===s?C.g:C.f600,border:"none",borderBottom:`2px solid ${fcat===s?C.g:"transparent"}`,background:"transparent",cursor:"pointer",whiteSpace:"nowrap"}}>{CAT_TREE[s].icon} {s}</button>)}
+        <div style={{background:"#FAF7F2",borderTop:"1px solid #EDE8E0",padding:"0 20px"}}>
+          {/* Desktop — boutons scrollables */}
+          <div style={{display:"flex",overflowX:"auto",scrollbarWidth:"none"}} className="hm">
+            <button onClick={()=>setFcat("Tous")} style={{padding:"9px 14px",fontSize:13,fontWeight:fcat==="Tous"?700:500,color:fcat==="Tous"?C.g:C.f600,border:"none",borderBottom:`2px solid ${fcat==="Tous"?C.g:"transparent"}`,background:"transparent",cursor:"pointer",whiteSpace:"nowrap"}}>Tous</button>
+            {SPORTS.map(s=><button key={s} onClick={()=>setFcat(s)} style={{padding:"9px 14px",fontSize:13,fontWeight:fcat===s?700:500,color:fcat===s?C.g:C.f600,border:"none",borderBottom:`2px solid ${fcat===s?C.g:"transparent"}`,background:"transparent",cursor:"pointer",whiteSpace:"nowrap"}}>{CAT_TREE[s].icon} {s}</button>)}
+          </div>
+          {/* Mobile — select déroulant */}
+          <div style={{padding:"8px 0"}} className="fu">
+            <select value={fcat||""} onChange={e=>setFcat(e.target.value)}
+              style={{width:"100%",padding:"10px 16px",fontSize:14,fontWeight:600,border:`1.5px solid ${C.f200}`,borderRadius:100,background:C.w,color:C.k,outline:"none",cursor:"pointer"}}>
+              <option value="">🏅 Tous les sports</option>
+              {SPORTS.map(s=><option key={s} value={s}>{CAT_TREE[s].icon} {s}</option>)}
+            </select>
+          </div>
         </div>
         {mob&&(
           <div style={{position:"fixed",inset:0,zIndex:99,top:58}} onClick={()=>setMob(false)}>
@@ -2730,7 +2744,6 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
     {id:"ventes",l:"Mes ventes"},
     {id:"achats",l:"Mes achats"},
     {id:"wallet",l:"E-Wallet"},
-    {id:"stats",l:isPro?"📊 Stats Pro":"Stats"},
     {id:"settings",l:"Paramètres"},
   ];
 
