@@ -1127,13 +1127,46 @@ function App(){
     const params=new URLSearchParams(window.location.search);
     const payment=params.get("payment");
     const session_id=params.get("session_id");
+    const pro=params.get("pro");
+ 
     if(payment==="success"&&session_id){
       tw("✅ Paiement confirmé ! Votre commande est sécurisée.");
-      // Nettoyer l'URL
       window.history.replaceState({},"",window.location.pathname);
       setSc("dashboard");setDtab("drop-acheteur");
     } else if(payment==="cancelled"){
       tw("Paiement annulé.","error");
+      window.history.replaceState({},"",window.location.pathname);
+    } else if(pro==="success"){
+      // Retour abonnement Pro — mettre à jour le profil directement
+      window.history.replaceState({},"",window.location.pathname);
+      const savedTok=sessionStorage.getItem("smashd_tok");
+      const u=JSON.parse(sessionStorage.getItem("smashd_user")||"null");
+      if(u&&savedTok){
+        // Mettre à jour user_type=pro et pro_expires_at (1 an)
+        const expires=new Date(Date.now()+365*24*3600*1000).toISOString();
+        fetch(`https://gcnmgtwbouakwaufqswh.supabase.co/rest/v1/profiles?id=eq.${u.id}`,{
+          method:"PATCH",
+          headers:{
+            "apikey":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjbm1ndHdib3Vha3dhdWZxc3doIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTk4NDQsImV4cCI6MjA5MzgzNTg0NH0.qtHQ4si2Ybsriiaaj9F-1Z6WeN52sZ1ry7T7VpcIMpM",
+            "Authorization":"Bearer "+savedTok,
+            "Content-Type":"application/json",
+            "Prefer":"return=representation"
+          },
+          body:JSON.stringify({user_type:"pro",pro_expires_at:expires})
+        }).then(r=>r.json()).then(d=>{
+          if(d[0]) setProf(d[0]);
+          tw("🎉 Bienvenue dans SMASHD Pro !");
+          setSc("dashboard");
+        }).catch(()=>{
+          tw("🎉 Bienvenue dans SMASHD Pro !");
+          setSc("dashboard");
+        });
+      } else {
+        tw("🎉 Bienvenue dans SMASHD Pro !");
+        setSc("dashboard");
+      }
+    } else if(pro==="cancelled"){
+      tw("Abonnement annulé.","error");
       window.history.replaceState({},"",window.location.pathname);
     }
   },[]);
