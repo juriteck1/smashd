@@ -57,8 +57,8 @@ input,textarea,select,button{font-family:inherit}
   .drop-overlay{align-items:flex-end;padding:0}
   .drop-header{border-radius:20px 20px 0 0}
 }
- 
- 
+
+
 /* ═══ BOTTOM NAV MOBILE ═══ */
 .bottom-nav{
   display:none;
@@ -139,9 +139,9 @@ let tok=sessionStorage.getItem("smashd_tok")||KEY;
 const gt=()=>tok;
 const st=t=>{tok=t||KEY;if(t)sessionStorage.setItem("smashd_tok",t);else sessionStorage.removeItem("smashd_tok");};
 const ct=()=>{tok=KEY;sessionStorage.removeItem("smashd_tok");};
- 
+
 const C={g:"#0A2A1E",gm:"#1A5C3A",gl:"#F0F7F4",ga:"#00C46A",o:"#E8470A",w:"#fff",k:"#0A0A0A",f50:"#FAFAFA",f100:"#F5F5F5",f200:"#E8E8E8",f400:"#9A9A9A",f600:"#5A5A5A",r:"#E8290A",rl:"#FFF0EE"};
- 
+
 const CAT_TREE={
   Tennis:{icon:"🎾",subs:{Raquettes:{fields:[{key:"brand",label:"Marque",type:"pills",opts:["Wilson","Babolat","Head","Yonex","Prince","Dunlop","Tecnifibre","Artengo","Autre"]},{key:"head_size",label:"Taille de tête",type:"pills",opts:["85-94 sqin","95-99 sqin","100-104 sqin","105-110 sqin"]},{key:"weight",label:"Poids",type:"pills",opts:["Moins de 270g","270-285g","286-300g","Plus de 300g"]},{key:"grip",label:"Grip",type:"pills",opts:["Grip 1","Grip 2","Grip 3","Grip 4","Grip 5"]},{key:"level",label:"Niveau",type:"pills",opts:["Débutant","Intermédiaire","Avancé","Compétition"]},{key:"string",label:"Cordage",type:"pills",opts:["Oui, d'origine","Oui, recordée","Non / À corder"]}]},Chaussures:{fields:[{key:"brand",label:"Marque",type:"pills",opts:["Nike","Adidas","Asics","New Balance","Babolat","Wilson","K-Swiss","Autre"]},{key:"size_eu",label:"Pointure",type:"pills",opts:["36","37","38","39","40","41","42","43","44","45","46","47","48"]},{key:"gender",label:"Genre",type:"pills",opts:["Homme","Femme","Junior","Mixte"]},{key:"surface",label:"Surface",type:"pills",opts:["Terre battue","Dur / Résine","Gazon","Indoor","Toutes surfaces"]}]},Vêtements:{fields:[{key:"type",label:"Type",type:"pills",opts:["T-shirt / Polo","Short","Jupe","Survêtement","Veste","Legging","Autre"]},{key:"size",label:"Taille",type:"pills",opts:["XS","S","M","L","XL","XXL","3XL"]},{key:"gender",label:"Genre",type:"pills",opts:["Homme","Femme","Fille","Garçon","Mixte"]}]},"Sacs & Bagagerie":{fields:[{key:"type",label:"Type",type:"pills",opts:["Sac 1 raquette","Sac 3 raquettes","Sac 6 raquettes","Sac 9 raquettes","Trolley","Backpack","Tote bag"]}]},Accessoires:{fields:[{key:"type",label:"Type",type:"pills",opts:["Overgrip","Grip de remplacement","Protège-cadre","Vibrastop","Bracelet","Genouillère","Chevillère","Autre"]}]}}},
   Padel:{icon:"🟩",subs:{Raquettes:{fields:[{key:"brand",label:"Marque",type:"pills",opts:["Bullpadel","Head","Nox","Adidas","Wilson","Babolat","Dunlop","StarVie","Autre"]},{key:"shape",label:"Forme",type:"pills",opts:["Ronde (contrôle)","Larme (polyvalent)","Diamant (puissance)"]},{key:"level",label:"Niveau",type:"pills",opts:["Débutant","Intermédiaire","Avancé","Compétition"]},{key:"weight",label:"Poids",type:"pills",opts:["Moins de 350g","350-365g","365-375g","Plus de 375g"]}]},Chaussures:{fields:[{key:"brand",label:"Marque",type:"pills",opts:["Adidas","Nike","Asics","Bullpadel","Head","Wilson","Autre"]},{key:"size_eu",label:"Pointure",type:"pills",opts:["36","37","38","39","40","41","42","43","44","45","46","47"]},{key:"surface",label:"Surface",type:"pills",opts:["Moquette","Gazon artificiel","Indoor","Toutes surfaces"]}]},Balles:{fields:[{key:"brand",label:"Marque",type:"pills",opts:["Head","Bullpadel","Wilson","Adidas","Dunlop","Autre"]},{key:"qty",label:"Quantité",type:"pills",opts:["3 balles","6 balles","12 balles","24 balles+"]}]}}},
@@ -152,12 +152,12 @@ const CAT_TREE={
   Raquetball:{icon:"🔵",subs:{Raquettes:{fields:[{key:"brand",label:"Marque",type:"pills",opts:["Head","Wilson","Ektelon","Python","Autre"]},{key:"level",label:"Niveau",type:"pills",opts:["Débutant","Intermédiaire","Avancé"]}]}}},
   "Beach Tennis":{icon:"🏖️",subs:{Raquettes:{fields:[{key:"brand",label:"Marque",type:"pills",opts:["Babolat","Head","Wilson","Artengo","Autre"]},{key:"level",label:"Niveau",type:"pills",opts:["Débutant","Intermédiaire","Avancé"]}]}}}
 };
- 
+
 const SPORTS=Object.keys(CAT_TREE);
 const STATES=["Neuf avec étiquette","Neuf sans étiquette","Très bon état","Bon état","Acceptable"];
- 
+
 // ═══ CONSTANTES DROP ═══
- 
+
 const DEPARTEMENTS=[
   {code:"06",nom:"Alpes-Maritimes"},{code:"13",nom:"Bouches-du-Rhône"},
   {code:"31",nom:"Haute-Garonne"},{code:"33",nom:"Gironde"},
@@ -169,13 +169,13 @@ const DEPARTEMENTS=[
   {code:"92",nom:"Hauts-de-Seine"},{code:"93",nom:"Seine-Saint-Denis"},
   {code:"94",nom:"Val-de-Marne"},{code:"95",nom:"Val-d'Oise"},
 ];
- 
+
 const DROP_MODES={
   meet:{icon:"📍",label:"Point de rencontre",desc:"Lieu public de votre choix. Code généré après confirmation du RDV.",color:"#F0F7F4",badge:"Gratuit · Rapide"},
   club:{icon:"🏆",label:"Club partenaire SMASHD",desc:"Dépôt dans un club partenaire de votre département.",color:"#FFF3E0",badge:"Gratuit · Éco"},
   box:{icon:"📦",label:"Boîte / Consigne",desc:"Consigne ou boîte. Adresse partagée après paiement.",color:"#F0F0FF",badge:"Gratuit"},
 };
- 
+
 // Filtre anti-bypass
 function filterMsg(txt){
   return txt
@@ -184,12 +184,12 @@ function filterMsg(txt){
     .replace(/@[a-zA-Z0-9_.]{2,}/g,"[compte masqué]")
     .replace(/whatsapp|telegram|signal|instagram|snapchat|facebook|messenger/gi,"[réseau masqué]");
 }
- 
+
 function genCode(){
   const c="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let r="SMD-";for(let i=0;i<4;i++)r+=c[Math.floor(Math.random()*c.length)];return r;
 }
- 
+
 // ═══ STATUS BADGE ═══
 function StatusBadge({s}){
   const map={
@@ -204,7 +204,7 @@ function StatusBadge({s}){
   const st=map[s]||map["mode_choisi"];
   return<span className="status-badge" style={{background:st.bg,color:st.c}}>{st.l}</span>;
 }
- 
+
 // ═══ API ═══
 const api=async(p,o={})=>{
   const hdrs={"apikey":KEY,"Authorization":"Bearer "+gt(),"Content-Type":"application/json","Prefer":o.prefer||"return=representation"};
@@ -215,7 +215,7 @@ const api=async(p,o={})=>{
 };
 const authApi=async(ep,b)=>{const r=await fetch(`${SB}/auth/v1/${ep}`,{method:"POST",headers:{"apikey":KEY,"Content-Type":"application/json"},body:JSON.stringify(b)});const d=await r.json();if(d.error||d.error_description)throw new Error(d.error_description||d.error);return d};
 const uploadPhoto=async f=>{const x=f.name.split('.').pop(),n=`${Date.now()}-${Math.random().toString(36).slice(2)}.${x}`;const r=await fetch(`${SB}/storage/v1/object/smashd-photos/${n}`,{method:"POST",headers:{"apikey":KEY,"Authorization":"Bearer "+gt(),"Content-Type":f.type},body:f});if(!r.ok)throw new Error("Upload fail");return`${SB}/storage/v1/object/public/smashd-photos/${n}`};
- 
+
 // ═══ ICONS ═══
 const Ico={
   search:()=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>,
@@ -232,12 +232,12 @@ const Ico={
   menu:()=><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>,
   drop:()=><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
 };
- 
+
 const Logo=({s=20})=><span style={{fontWeight:900,fontSize:s,letterSpacing:"-0.5px",cursor:"pointer"}}>SMASH<span style={{color:C.o}}>D</span></span>;
 const Toast=({msg,type})=><div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",background:type==="error"?C.r:C.g,color:"#fff",borderRadius:100,padding:"12px 24px",fontSize:14,fontWeight:600,zIndex:9999,boxShadow:"0 8px 32px rgba(0,0,0,.15)",whiteSpace:"nowrap"}}>{msg}</div>;
 const Tag=({state})=>{const m={"Neuf avec étiquette":C.g,"Neuf sans étiquette":C.gm,"Très bon état":"#2A2A2A","Bon état":C.f600,"Acceptable":C.f400};return<span style={{fontSize:10,fontWeight:700,color:m[state]||C.f400,letterSpacing:".5px",textTransform:"uppercase"}}>{state}</span>};
 const Pill=({l,a,onClick})=><button onClick={onClick} className="btn" style={{borderRadius:100,padding:"7px 15px",fontSize:13,fontWeight:600,cursor:"pointer",border:`1.5px solid ${a?C.g:C.f200}`,background:a?C.g:C.w,color:a?C.w:C.f600,transition:"all .15s",whiteSpace:"nowrap"}}>{l}</button>;
- 
+
 function MessageInput({dropId,onSend,busy}){
   const[val,setVal]=useState("");
   return(
@@ -247,7 +247,7 @@ function MessageInput({dropId,onSend,busy}){
     </div>
   );
 }
- 
+
 // ═══ MODAL VENDEUR : Configurer Drop sur l'annonce ═══
 function SellDropConfig({onClose,onConfirm,clubs=[]}){
   const[modes,setModes]=useState([]);
@@ -255,7 +255,7 @@ function SellDropConfig({onClose,onConfirm,clubs=[]}){
   const[ville,setVille]=useState("");
   const toggleMode=m=>setModes(ms=>ms.includes(m)?ms.filter(x=>x!==m):[...ms,m]);
   const clubsDept=clubs.filter(c=>c.departement===dept);
- 
+
   return(
     <div className="drop-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
       <div className="drop-modal">
@@ -282,7 +282,7 @@ function SellDropConfig({onClose,onConfirm,clubs=[]}){
               </div>
             ))}
           </div>
- 
+
           <div className="drop-group">
             <label className="drop-label">Votre département *</label>
             <select className="drop-input" value={dept} onChange={e=>setDept(e.target.value)}>
@@ -290,12 +290,12 @@ function SellDropConfig({onClose,onConfirm,clubs=[]}){
               {DEPARTEMENTS.map(d=><option key={d.code} value={d.code}>{d.code} — {d.nom}</option>)}
             </select>
           </div>
- 
+
           <div className="drop-group">
             <label className="drop-label">Votre ville</label>
             <input className="drop-input" value={ville} onChange={e=>setVille(e.target.value)} placeholder="Ex: Paris, Lyon, Bordeaux…"/>
           </div>
- 
+
           {modes.includes("club")&&dept&&(
             <div style={{background:"#F0F7F4",borderRadius:12,padding:"12px 14px",marginBottom:14}}>
               <div style={{fontSize:11,fontWeight:700,color:"#9A9A9A",textTransform:"uppercase",letterSpacing:"1px",marginBottom:8}}>Clubs partenaires — Dép. {dept}</div>
@@ -310,7 +310,7 @@ function SellDropConfig({onClose,onConfirm,clubs=[]}){
               }
             </div>
           )}
- 
+
           <button
             className="btn-drop-primary"
             onClick={()=>{
@@ -326,7 +326,7 @@ function SellDropConfig({onClose,onConfirm,clubs=[]}){
     </div>
   );
 }
- 
+
 // ═══ MODAL ACHETEUR : Choisir mode + payer via Stripe ═══
 function BuyerDropModal({ann,onClose,onConfirm,load,tw}){
   const[modeChoisi,setModeChoisi]=useState("");
@@ -336,7 +336,7 @@ function BuyerDropModal({ann,onClose,onConfirm,load,tw}){
   const total=(parseFloat(ann.price)+protection).toFixed(2);
   let dropInfo={};try{if(ann.drop_info)dropInfo=JSON.parse(ann.drop_info)}catch(e){}
   const modesDispos=dropInfo.modes||["meet"];
- 
+
   const doOrder=async()=>{
     setPaying(true);
     try{
@@ -364,7 +364,7 @@ function BuyerDropModal({ann,onClose,onConfirm,load,tw}){
       setPaying(false);
     }
   };
- 
+
   return(
     <div className="drop-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
       <div className="drop-modal">
@@ -375,7 +375,7 @@ function BuyerDropModal({ann,onClose,onConfirm,load,tw}){
           <p>{step===1?"Sélectionnez le mode proposé par le vendeur.":step===2?"Votre argent sera sécurisé jusqu'à la remise confirmée.":"Vous allez être redirigé vers Stripe."}</p>
         </div>
         <div className="drop-body">
- 
+
           {step===1&&(
             <div>
               <div style={{background:"#F0F7F4",borderRadius:10,padding:"11px 14px",marginBottom:14,fontSize:13,color:"#1A5C3A",lineHeight:1.6}}>
@@ -401,7 +401,7 @@ function BuyerDropModal({ann,onClose,onConfirm,load,tw}){
               </button>
             </div>
           )}
- 
+
           {step===2&&(
             <div>
               <div style={{background:"#F5F5F5",borderRadius:12,padding:"14px",marginBottom:14}}>
@@ -425,14 +425,14 @@ function BuyerDropModal({ann,onClose,onConfirm,load,tw}){
               <button className="btn-drop-secondary" onClick={()=>setStep(1)}>Retour</button>
             </div>
           )}
- 
+
         </div>
       </div>
     </div>
   );
 }
- 
- 
+
+
 function DropVendeurCard({drop,annonces,creneaux,messages,sel,setSel,dates,setDates,lieux,setLieux,codeVal,setCodeVal,codeErr,setCodeErr,busy,validerCode,proposer,api,tw}){
     const isOpen=sel===drop.id;
     const mode=DROP_MODES[drop.mode_choisi]||DROP_MODES.meet;
@@ -440,7 +440,7 @@ function DropVendeurCard({drop,annonces,creneaux,messages,sel,setSel,dates,setDa
     const dropMsgs=messages.filter(m=>m.remise_id===drop.id);
     const annonce=annonces.find(a=>a.id===drop.annonce_id);
     const border=drop.status==="mode_choisi"?"#F5C07A":drop.status==="confirme"?"#00C46A":drop.status==="litige"?"#E8290A":"#E8E8E8";
- 
+
     return(
       <div style={{background:"#fff",border:`1.5px solid ${border}`,borderRadius:16,marginBottom:10,overflow:"hidden"}}>
         {/* Header */}
@@ -464,10 +464,10 @@ function DropVendeurCard({drop,annonces,creneaux,messages,sel,setSel,dates,setDa
             <span style={{color:"#9A9A9A",fontSize:12}}>{isOpen?"▲":"▼"}</span>
           </div>
         </div>
- 
+
         {isOpen&&(
           <div style={{borderTop:"1px solid #F5F5F5",padding:"16px 18px"}}>
- 
+
             {/* ÉTAPE 1 : Proposer créneaux */}
             {drop.status==="mode_choisi"&&(
               <div>
@@ -488,7 +488,7 @@ function DropVendeurCard({drop,annonces,creneaux,messages,sel,setSel,dates,setDa
                 </button>
               </div>
             )}
- 
+
             {/* Créneaux proposés */}
             {drop.status==="creneaux_proposes"&&(
               <div>
@@ -506,7 +506,7 @@ function DropVendeurCard({drop,annonces,creneaux,messages,sel,setSel,dates,setDa
                 ))}
               </div>
             )}
- 
+
             {/* Code envoyé → vendeur saisit le code */}
             {drop.status==="code_envoye"&&(
               <div>
@@ -528,7 +528,7 @@ function DropVendeurCard({drop,annonces,creneaux,messages,sel,setSel,dates,setDa
                 {codeErr&&<div style={{fontSize:12,color:"#E8290A",fontWeight:600}}>❌ {codeErr}</div>}
               </div>
             )}
- 
+
             {/* Terminé */}
             {drop.status==="confirme"&&(
               <div style={{background:"#F0F7F4",borderRadius:10,padding:"14px",display:"flex",gap:10,alignItems:"center"}}>
@@ -541,14 +541,14 @@ function DropVendeurCard({drop,annonces,creneaux,messages,sel,setSel,dates,setDa
                 </div>
               </div>
             )}
- 
+
           </div>
         )}
       </div>
     );
   };
- 
- 
+
+
 // ═══ PANEL DROP VENDEUR ═══
 function DropVendeurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw,onRefresh}){
   const[sel,setSel]=useState(null);
@@ -557,9 +557,9 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw,
   const[codeVal,setCodeVal]=useState("");
   const[codeErr,setCodeErr]=useState("");
   const[busy,setBusy]=useState(false);
- 
+
   const getAnnonce=(drop)=>annonces.find(a=>a.id===drop.annonce_id);
- 
+
   const proposer=async(drop)=>{
     const slots=[];
     for(let i=0;i<3;i++){
@@ -585,7 +585,7 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw,
     }catch(e){tw("Erreur","error")}
     finally{setBusy(false)}
   };
- 
+
   const validerCode=async(drop)=>{
     const code=codeVal.trim().toUpperCase();
     if(code!==drop.code){setCodeErr("Code incorrect");return;}
@@ -606,12 +606,12 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw,
     }catch(e){tw("Erreur","error")}
     finally{setBusy(false)}
   };
- 
+
   const pending=drops.filter(d=>d.status==="mode_choisi");
   const active=drops.filter(d=>["creneaux_proposes","creneau_accepte","code_envoye"].includes(d.status));
   const done=drops.filter(d=>["confirme","litige","expire"].includes(d.status));
- 
- 
+
+
   return(
     <div>
       <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Drop Vendeur</h2>
@@ -638,7 +638,7 @@ function DropVendeurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw,
     </div>
   );
 }
- 
+
 function DropAcheteurCard({drop,annonces,creneaux,sel,setSel,busy,accepter,tw}){
     const isOpen=sel===drop.id;
     const mode=DROP_MODES[drop.mode_choisi]||DROP_MODES.meet;
@@ -646,10 +646,10 @@ function DropAcheteurCard({drop,annonces,creneaux,sel,setSel,busy,accepter,tw}){
     const dropCr=creneaux.filter(c=>c.remise_id===drop.id&&(c.status==="proposé"||c.status==="propose"));
     const crAccepte=creneaux.find(c=>c.remise_id===drop.id&&(c.status==="accepté"||c.status==="accepte"));
     const border=drop.status==="creneaux_proposes"?"#F5C07A":drop.status==="code_envoye"?"#0A2A1E":drop.status==="confirme"?"#00C46A":"#E8E8E8";
- 
+
     // Créneaux dispo → ouvrir automatiquement
     const autoOpen=drop.status==="creneaux_proposes";
- 
+
     return(
       <div style={{background:"#fff",border:`1.5px solid ${border}`,borderRadius:16,marginBottom:10,overflow:"hidden"}}>
         <div onClick={()=>setSel(isOpen?null:drop.id)} style={{padding:"14px 18px",cursor:"pointer",display:"flex",gap:12,alignItems:"center"}}>
@@ -671,7 +671,7 @@ function DropAcheteurCard({drop,annonces,creneaux,sel,setSel,busy,accepter,tw}){
             <span style={{color:"#9A9A9A",fontSize:12}}>{isOpen?"▲":"▼"}</span>
           </div>
         </div>
- 
+
         {/* Créneaux dispo — toujours visibles */}
         {drop.status==="creneaux_proposes"&&dropCr.length>0&&(
           <div style={{borderTop:"1px solid #F5F5F5",padding:"0 18px 16px"}}>
@@ -691,16 +691,16 @@ function DropAcheteurCard({drop,annonces,creneaux,sel,setSel,busy,accepter,tw}){
             ))}
           </div>
         )}
- 
+
         {isOpen&&(
           <div style={{borderTop:`1px solid ${drop.status==="creneaux_proposes"?"transparent":"#F5F5F5"}`,padding:"0 18px 16px"}}>
- 
+
             {drop.status==="mode_choisi"&&(
               <div style={{background:"#F5F5F5",borderRadius:10,padding:"12px 14px",marginTop:12,fontSize:13,color:"#5A5A5A",lineHeight:1.6}}>
                 ⏳ Paiement sécurisé reçu. Le vendeur prépare ses créneaux de rendez-vous. Vous serez notifié dès qu'ils sont disponibles.
               </div>
             )}
- 
+
             {drop.status==="code_envoye"&&(
               <div style={{marginTop:12}}>
                 <div style={{background:"#F0F7F4",borderRadius:10,padding:"12px 14px",marginBottom:14}}>
@@ -722,7 +722,7 @@ function DropAcheteurCard({drop,annonces,creneaux,sel,setSel,busy,accepter,tw}){
                 </div>
               </div>
             )}
- 
+
             {drop.status==="confirme"&&(
               <div style={{background:"#F0F7F4",borderRadius:10,padding:"14px",marginTop:12,display:"flex",gap:10,alignItems:"center"}}>
                 <span style={{fontSize:24}}>✅</span>
@@ -732,21 +732,21 @@ function DropAcheteurCard({drop,annonces,creneaux,sel,setSel,busy,accepter,tw}){
                 </div>
               </div>
             )}
- 
+
           </div>
         )}
       </div>
     );
   };
- 
- 
+
+
 // ═══ PANEL DROP ACHETEUR ═══
 function DropAcheteurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw,onRefresh}){
   const[sel,setSel]=useState(null);
   const[busy,setBusy]=useState(false);
- 
+
   const getAnnonce=(drop)=>annonces.find(a=>a.id===drop.annonce_id);
- 
+
   const accepter=async(drop,cr)=>{
     setBusy(true);
     try{
@@ -775,8 +775,8 @@ function DropAcheteurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw
     }catch(e){tw("Erreur","error")}
     finally{setBusy(false)}
   };
- 
- 
+
+
   return(
     <div>
       <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Drop Acheteur</h2>
@@ -788,10 +788,10 @@ function DropAcheteurPanel({drops=[],creneaux=[],messages=[],annonces=[],user,tw
     </div>
   );
 }
- 
- 
- 
- 
+
+
+
+
 // ═══ PROFIL PUBLIC ═══
 function Stars({note, size=16}){
   return(
@@ -804,7 +804,7 @@ function Stars({note, size=16}){
     </div>
   );
 }
- 
+
 function StarPicker({value, onChange}){
   const[hover,setHover]=useState(0);
   return(
@@ -822,7 +822,7 @@ function StarPicker({value, onChange}){
     </div>
   );
 }
- 
+
 function ProfilPublic({userId, go, user, tw}){
   const[profil,setProfil]=useState(null);
   const[annonces,setAnnonces]=useState([]);
@@ -838,10 +838,10 @@ function ProfilPublic({userId, go, user, tw}){
   const[canRate,setCanRate]=useState(false);
   const[alreadyRated,setAlreadyRated]=useState(false);
   const avatarRef=useRef();
- 
+
   const isOwnProfile=user?.id===userId;
   const avgNote=avis.length>0?(avis.reduce((a,b)=>a+b.note,0)/avis.length).toFixed(1):null;
- 
+
   useEffect(()=>{
     if(!userId)return;
     setLoading(true);
@@ -867,7 +867,7 @@ function ProfilPublic({userId, go, user, tw}){
       setLoading(false);
     }).catch(()=>setLoading(false));
   },[userId]);
- 
+
   const saveAvis=async()=>{
     if(!myNote){tw("Choisissez une note","error");return;}
     if(!user){go("auth");return;}
@@ -887,7 +887,7 @@ function ProfilPublic({userId, go, user, tw}){
     }catch(e){tw("Erreur : vous avez peut-être déjà laissé un avis","error")}
     finally{setSendingAvis(false)}
   };
- 
+
   const saveBio=async()=>{
     try{
       await api(`profiles?id=eq.${userId}`,{method:"PATCH",body:JSON.stringify({bio:bioText})});
@@ -896,7 +896,7 @@ function ProfilPublic({userId, go, user, tw}){
       tw("Bio mise à jour !");
     }catch(e){tw("Erreur","error")}
   };
- 
+
   const uploadAvatar=async(e)=>{
     const f=e.target.files[0];if(!f)return;
     setAvatarLoad(true);
@@ -908,28 +908,28 @@ function ProfilPublic({userId, go, user, tw}){
     }catch(e){tw("Erreur upload","error")}
     finally{setAvatarLoad(false)}
   };
- 
+
   if(loading)return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}>
       <div style={{width:36,height:36,border:`3px solid ${C.f200}`,borderTopColor:C.g,borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
     </div>
   );
- 
+
   if(!profil)return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}>
       <div style={{textAlign:"center"}}><div style={{fontSize:48,marginBottom:16}}>🔍</div><div style={{fontSize:17,fontWeight:700}}>Profil introuvable</div></div>
     </div>
   );
- 
+
   const joinDate=new Date(profil.membre_depuis||profil.created_at||Date.now()).toLocaleDateString("fr-FR",{month:"long",year:"numeric"});
- 
+
   return(
     <div style={{minHeight:"100vh",background:C.f50}}>
       <nav style={{background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"0 20px",height:54,display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,zIndex:100}}>
         <button onClick={()=>go("home")} style={{background:"none",border:"none",cursor:"pointer",color:C.f600,display:"flex",alignItems:"center",gap:5,fontSize:14}}><Ico.chL/> Retour</button>
         <Logo s={18}/>
       </nav>
- 
+
       <div style={{maxWidth:900,margin:"0 auto",padding:"32px 20px"}}>
         {/* Header profil */}
         <div style={{background:C.w,borderRadius:20,padding:"28px",marginBottom:16,border:`1px solid ${C.f200}`}}>
@@ -951,7 +951,7 @@ function ProfilPublic({userId, go, user, tw}){
                 </>
               )}
             </div>
- 
+
             {/* Infos */}
             <div style={{flex:1,minWidth:200}}>
               <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:6}}>
@@ -969,7 +969,7 @@ function ProfilPublic({userId, go, user, tw}){
                 Membre depuis {joinDate}
                 {profil.ville&&<span> · 📍 {profil.ville}</span>}
               </div>
- 
+
               {/* Bio */}
               {editBio?(
                 <div>
@@ -988,7 +988,7 @@ function ProfilPublic({userId, go, user, tw}){
                 </div>
               )}
             </div>
- 
+
             {/* Stats */}
             <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
               {[
@@ -1004,7 +1004,7 @@ function ProfilPublic({userId, go, user, tw}){
             </div>
           </div>
         </div>
- 
+
         <div style={{display:"grid",gridTemplateColumns:"1fr 340px",gap:16}} className="g1m">
           {/* Annonces actives */}
           <div>
@@ -1026,7 +1026,7 @@ function ProfilPublic({userId, go, user, tw}){
               </div>
             }
           </div>
- 
+
           {/* Avis */}
           <div>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
@@ -1039,7 +1039,7 @@ function ProfilPublic({userId, go, user, tw}){
                     :<span style={{fontSize:11,color:C.f400,fontStyle:"italic"}}>Transaction requise pour noter</span>
               )}
             </div>
- 
+
             {/* Formulaire avis */}
             {showAvisForm&&(
               <div style={{background:C.w,borderRadius:14,border:`1.5px solid ${C.g}`,padding:"16px",marginBottom:12}}>
@@ -1056,7 +1056,7 @@ function ProfilPublic({userId, go, user, tw}){
                 </div>
               </div>
             )}
- 
+
             {/* Liste avis */}
             <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:500,overflowY:"auto"}}>
               {avis.length===0
@@ -1083,7 +1083,7 @@ function ProfilPublic({userId, go, user, tw}){
     </div>
   );
 }
- 
+
 // ═══ RESET PASSWORD PAGE ═══
 function ResetPassword({go}){
   const[pwd,setPwd]=useState("");
@@ -1091,7 +1091,7 @@ function ResetPassword({go}){
   const[load,setLoad]=useState(false);
   const[done,setDone]=useState(false);
   const[err,setErr]=useState("");
- 
+
   const doReset=async()=>{
     if(!pwd||pwd.length<6){setErr("6 caractères minimum");return;}
     if(pwd!==pwd2){setErr("Les mots de passe ne correspondent pas");return;}
@@ -1115,7 +1115,7 @@ function ResetPassword({go}){
     }catch(e){setErr(e.message||"Erreur, réessayez")}
     finally{setLoad(false)}
   };
- 
+
   return(
     <div style={{minHeight:"100vh",background:C.f50,display:"flex",flexDirection:"column"}}>
       <nav style={{background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"0 20px",height:54,display:"flex",alignItems:"center"}}><Logo s={18}/></nav>
@@ -1152,7 +1152,7 @@ function ResetPassword({go}){
     </div>
   );
 }
- 
+
 // ═══ APP ═══
 function App(){
   // Détecter lien de reset Supabase
@@ -1160,6 +1160,7 @@ function App(){
   const isPro_return=window.location.search.includes("pro=success");
   const[sc,setSc]=useState(isReset?"reset":isPro_return?"dashboard":"home");
   const[profileId,setProfileId]=useState(null);
+  const[legalPage,setLegalPage]=useState("cgu");
   const[user,setUser]=useState(null);
   const[prof,setProf]=useState(null);
   const[ann,setAnn]=useState([]);
@@ -1181,24 +1182,25 @@ function App(){
   const[dtab,setDtab]=useState("overview");
   const[lang,setLang]=useState("FR");
   const[favs,setFavs]=useState({});
- 
+
   const tw=(msg,type="success")=>{setToast({msg,type});setTimeout(()=>setToast(null),3500)};
-  const go=(s,d=null,pid=null)=>{
+  const go=(s,d=null,pid=null,legal=null)=>{
     setSc(s);
     if(d)setSel(d);
     if(pid)setProfileId(pid);
+    if(legal)setLegalPage(legal);
     window.scrollTo(0,0);
   };
- 
+
   const loadA=async()=>{try{const d=await api("annonces?status=eq.active&order=created_at.desc&limit=60");setAnn(d)}catch(e){}};
- 
+
   // Gérer retour Stripe
   useEffect(()=>{
     const params=new URLSearchParams(window.location.search);
     const payment=params.get("payment");
     const session_id=params.get("session_id");
     const pro=params.get("pro");
- 
+
     if(payment==="success"&&session_id){
       tw("✅ Paiement confirmé ! Votre commande est sécurisée.");
       window.history.replaceState({},"",window.location.pathname);
@@ -1241,7 +1243,7 @@ function App(){
     }
   },[]);
   const loadClubs=async()=>{try{const d=await api("drop_clubs?actif=eq.true&order=departement");setClubs(d)}catch(e){}};
- 
+
   const toggleFavori=async(annonce_id)=>{
     if(!user){go("auth");return;}
     const isFav=!!favs[annonce_id];
@@ -1259,7 +1261,7 @@ function App(){
       tw("Erreur","error");
     }
   };
- 
+
   const loadMy=async uid=>{
     try{
       const[a,o,s,favData]=await Promise.all([
@@ -1274,7 +1276,7 @@ function App(){
       setFavs(favsObj);setMyO(o);setMyS(s);
     }catch(e){}
   };
- 
+
   const loadDrops=async uid=>{
     try{
       const[dv,da]=await Promise.all([
@@ -1292,7 +1294,7 @@ function App(){
       }
     }catch(e){}
   };
- 
+
   // Restaurer session depuis sessionStorage
   useEffect(()=>{
     loadA();loadClubs();
@@ -1320,11 +1322,11 @@ function App(){
     }
   },[]);
   useEffect(()=>{if(user?.id){loadMy(user.id);loadDrops(user.id)}},[user?.id]);
- 
+
   const login=async(email,pwd)=>{setLoad(true);try{const d=await authApi("token?grant_type=password",{email,password:pwd});st(d.access_token);setUser(d.user);sessionStorage.setItem('smashd_user',JSON.stringify(d.user));const p=await api(`profiles?id=eq.${d.user.id}`);setProf(p[0]||null);tw("Bienvenue !");go("home")}catch(e){throw e}finally{setLoad(false)}};
   const register=async(email,pwd,name,ut,siret,company)=>{setLoad(true);try{const d=await authApi("signup",{email,password:pwd});if(d.user){if(d.access_token)st(d.access_token);await api("profiles",{method:"POST",body:JSON.stringify({id:d.user.id,name,email,user_type:ut,siret:siret||null,company:company||null})});setUser(d.user);setProf({id:d.user.id,name,email,user_type:ut});tw("Compte créé !");go("home")}}catch(e){throw e}finally{setLoad(false)}};
   const logout=()=>{ct();setUser(null);setProf(null);setMyA([]);setMyO([]);setMyS([]);setMyDropsV([]);setMyDropsA([]);go("home")};
- 
+
   const publish=async f=>{
     if(!user){go("auth");return}
     setLoad(true);
@@ -1334,11 +1336,11 @@ function App(){
     }catch(e){tw("Erreur : "+e.message,"error")}
     finally{setLoad(false)}
   };
- 
+
   const toggleA=async(id,status)=>{try{await api(`annonces?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({status})});await loadMy(user.id);await loadA()}catch(e){}};
   const deleteA=async id=>{try{await api(`annonces?id=eq.${id}`,{method:"PATCH",body:JSON.stringify({status:"supprimé"})});await loadMy(user.id);await loadA()}catch(e){}};
- 
- 
+
+
   const sendNotif=async(type,to,data)=>{
     try{
       await fetch("https://gcnmgtwbouakwaufqswh.supabase.co/functions/v1/smashd-notify",{
@@ -1348,7 +1350,7 @@ function App(){
       });
     }catch(e){console.log("Notif failed:",e)}
   };
- 
+
   const placeOrder=async(a,modeChoisi)=>{
     if(!user){go("auth");return false}
     setLoad(true);
@@ -1382,30 +1384,31 @@ function App(){
     }catch(e){tw("Erreur","error");return false}
     finally{setLoad(false)}
   };
- 
+
   const onDropRefresh=()=>{if(user?.id)loadDrops(user.id)};
- 
+
   const fil=ann
     .filter(a=>fcat==="Tous"||a.category===fcat||a.sub_category===fcat)
     .filter(a=>fst==="Tous"||a.state===fst)
     .filter(a=>!fpr.min||a.price>=parseFloat(fpr.min))
     .filter(a=>!fpr.max||a.price<=parseFloat(fpr.max))
     .filter(a=>!srch||a.title?.toLowerCase().includes(srch.toLowerCase())||a.brand?.toLowerCase().includes(srch.toLowerCase()));
- 
+
   const pendingV=myDropsV.filter(d=>d.status==="mode_choisi").length;
   const pendingA=myDropsA.filter(d=>d.status==="creneaux_proposes").length;
   const newSales=myDropsV.filter(d=>d.status==="mode_choisi");
   const wal=myS.filter(s=>myDropsV.find(d=>d.commande_id===s.id&&d.status==="confirme")).reduce((acc,s)=>acc+(s.gain||0),0);
- 
+
   const p={user,prof,load,tw,go,login,register,logout,publish,toggleA,deleteA,placeOrder,toggleFavori,
     myA,myO,myS,myDropsV,myDropsA,myDropCr,myDropMsgs,clubs,wal,dtab,setDtab,
     ann:fil,allAnn:ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,sel,
     lang,setLang,favs,setFavs,pendingV,pendingA,onDropRefresh};
- 
+
   return(
     <div>
       {toast&&<Toast {...toast}/>}
-      {sc==="reset"&&<ResetPassword go={go}/>}{sc==="pro"&&<ProPage user={user} prof={prof} go={go} tw={tw}/>}{sc==="profil"&&<ProfilPublic userId={profileId} go={go} user={user} tw={tw}/>}{sc==="home"&&<Home {...p}/>}
+      {sc==="reset"&&<ResetPassword go={go}/>}{sc==="pro"&&<ProPage user={user} prof={prof} go={go} tw={tw}/>}{sc==="profil"&&<ProfilPublic userId={profileId} go={go} user={user} tw={tw}/>}
+      {sc==="legal"&&<LegalPage page={legalPage} go={go}/>}{sc==="home"&&<Home {...p}/>}
       {sc==="auth"&&<Auth {...p}/>}
       {sc==="sell"&&<Sell {...p}/>}
       {sc==="article"&&<Article {...p}/>}
@@ -1414,8 +1417,8 @@ function App(){
     </div>
   );
 }
- 
- 
+
+
 // ═══ PUBLICITÉ ROTATIVE ═══
 const ADS=[
   {bg:"#1a1a2a",color:"#FFD700",logo:"🎾",brand:"Wilson",title:"Raquettes Wilson 2026",sub:"Découvrez la nouvelle collection Pro Staff",cta:"Voir l'offre",url:"https://wilson.com",badge:"PARTENAIRE"},
@@ -1468,14 +1471,14 @@ function AdBanner(){
     </div>
   );
 }
- 
- 
+
+
 // ═══ PAGE PRO ═══
 function ProPage({user, prof, go, tw}){
   const[loading,setLoading]=useState(false);
   const[sub,setSub]=useState(null);
   const isPro=prof?.user_type==="pro"&&prof?.pro_expires_at&&new Date(prof.pro_expires_at)>new Date();
- 
+
   useEffect(()=>{
     if(!user)return;
     // Vérifier statut abonnement
@@ -1485,7 +1488,7 @@ function ProPage({user, prof, go, tw}){
       body:JSON.stringify({action:"status",user_id:user.id,email:user.email})
     }).then(r=>r.json()).then(d=>setSub(d)).catch(()=>{});
   },[user?.id]);
- 
+
   const subscribe=async()=>{
     if(!user){go("auth");return;}
     setLoading(true);
@@ -1501,7 +1504,7 @@ function ProPage({user, prof, go, tw}){
     }catch(e){tw("Erreur connexion Stripe","error")}
     finally{setLoading(false)}
   };
- 
+
   const openPortal=async()=>{
     setLoading(true);
     try{
@@ -1515,7 +1518,7 @@ function ProPage({user, prof, go, tw}){
     }catch(e){tw("Erreur","error")}
     finally{setLoading(false)}
   };
- 
+
   const AVANTAGES=[
     {ico:"🏅",title:"Badge PRO",desc:"Badge visible sur votre profil et toutes vos annonces. Inspirez confiance aux acheteurs."},
     {ico:"♾️",title:"Annonces illimitées",desc:"Publiez autant d'annonces que vous voulez. Les comptes gratuits sont limités à 5 annonces actives."},
@@ -1524,16 +1527,16 @@ function ProPage({user, prof, go, tw}){
     {ico:"⚡",title:"Support prioritaire",desc:"Accès à un support dédié avec réponse sous 24h."},
     {ico:"🎾",title:"Accès Early Access",desc:"Testez les nouvelles fonctionnalités SMASHD en avant-première."},
   ];
- 
+
   return(
     <div style={{minHeight:"100vh",background:C.f50}}>
       <nav style={{background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"0 20px",height:54,display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,zIndex:100}}>
         <button onClick={()=>go("home")} style={{background:"none",border:"none",cursor:"pointer",color:C.f600,display:"flex",alignItems:"center",gap:5,fontSize:14}}><Ico.chL/> Retour</button>
         <Logo s={18}/>
       </nav>
- 
+
       <div style={{maxWidth:860,margin:"0 auto",padding:"48px 20px"}}>
- 
+
         {/* Header */}
         <div style={{textAlign:"center",marginBottom:48}}>
           <div style={{display:"inline-flex",alignItems:"center",gap:8,background:"#0A2A1E",borderRadius:100,padding:"6px 16px",marginBottom:20}}>
@@ -1547,7 +1550,7 @@ function ProPage({user, prof, go, tw}){
             Passez Pro et accédez à tous les outils pour maximiser vos ventes sur SMASHD.
           </p>
         </div>
- 
+
         {/* Prix */}
         <div style={{background:C.k,borderRadius:24,padding:"36px",textAlign:"center",marginBottom:36,position:"relative",overflow:"hidden"}}>
           <div style={{position:"absolute",top:-40,right:-40,width:200,height:200,background:"rgba(0,196,106,.06)",borderRadius:"50%"}}/>
@@ -1559,7 +1562,7 @@ function ProPage({user, prof, go, tw}){
               <span style={{fontSize:22,fontWeight:700,color:"rgba(255,255,255,.6)",marginBottom:8}}>€ / an</span>
             </div>
             <div style={{fontSize:14,color:"rgba(255,255,255,.4)",marginBottom:28}}>soit 8,25€ / mois · Sans engagement · Résiliable à tout moment</div>
- 
+
             {isPro?(
               <div>
                 <div style={{background:"rgba(0,196,106,.15)",border:"1px solid rgba(0,196,106,.3)",borderRadius:12,padding:"14px 20px",marginBottom:16,display:"inline-flex",alignItems:"center",gap:10}}>
@@ -1587,7 +1590,7 @@ function ProPage({user, prof, go, tw}){
             )}
           </div>
         </div>
- 
+
         {/* Avantages */}
         <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:14,marginBottom:40}}>
           {AVANTAGES.map((av,i)=>(
@@ -1598,7 +1601,7 @@ function ProPage({user, prof, go, tw}){
             </div>
           ))}
         </div>
- 
+
         {/* Comparatif */}
         <div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:20,overflow:"hidden",marginBottom:40}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",background:C.f50,borderBottom:`1px solid ${C.f200}`}}>
@@ -1621,7 +1624,7 @@ function ProPage({user, prof, go, tw}){
             </div>
           ))}
         </div>
- 
+
         {/* CTA bas */}
         {!isPro&&(
           <div style={{textAlign:"center"}}>
@@ -1631,19 +1634,19 @@ function ProPage({user, prof, go, tw}){
             <div style={{fontSize:12,color:C.f300,marginTop:10}}>Satisfait ou remboursé sous 14 jours</div>
           </div>
         )}
- 
+
       </div>
     </div>
   );
 }
- 
- 
+
+
 // ═══ BOTTOM NAV MOBILE ═══
 function BottomNav({sc, setSc, go, user, myDropsV, myDropsA, dtab, setDtab, prof}){
   const pendingV=(myDropsV||[]).filter(d=>d.status==="mode_choisi").length;
   const pendingA=(myDropsA||[]).filter(d=>d.status==="creneaux_proposes").length;
   const totalPending=pendingV+pendingA;
- 
+
   const items=[
     {
       id:"home",
@@ -1687,7 +1690,7 @@ function BottomNav({sc, setSc, go, user, myDropsV, myDropsA, dtab, setDtab, prof
       icon:<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>
     },
   ];
- 
+
   return(
     <nav className="bottom-nav" role="navigation" aria-label="Navigation principale">
       {items.map(item=>(
@@ -1712,12 +1715,208 @@ function BottomNav({sc, setSc, go, user, myDropsV, myDropsA, dtab, setDtab, prof
     </nav>
   );
 }
- 
+
+
+// ═══ PAGES LÉGALES ═══
+function LegalPage({page, go}){
+  const pages = {
+    cgu: {
+      title: "Conditions Générales d'Utilisation",
+      date: "Mai 2026",
+      content: [
+        {h: "1. Présentation de SMASHD", p: "SMASHD est une marketplace de seconde main dédiée aux sports de raquette (Tennis, Padel, Badminton, Squash, Ping-Pong, Pickleball, Raquetball, Beach Tennis). La plateforme met en relation des vendeurs particuliers ou professionnels avec des acheteurs, via le système de livraison communautaire SMASHD Drop. SMASHD est édité par [Nom de la société], [Adresse], [Email de contact]."},
+        {h: "2. Accès et inscription", p: "L'utilisation de SMASHD est gratuite pour les acheteurs et vendeurs particuliers. La création d'un compte est requise pour publier une annonce ou effectuer un achat. L'utilisateur s'engage à fournir des informations exactes et à maintenir la confidentialité de ses identifiants. SMASHD se réserve le droit de suspendre tout compte en cas d'utilisation frauduleuse."},
+        {h: "3. Rôle de SMASHD", p: "SMASHD agit en tant qu'intermédiaire technique entre vendeurs et acheteurs. SMASHD n'est pas vendeur des articles présentés sur la plateforme. La responsabilité de SMASHD est limitée au bon fonctionnement de la plateforme et du système de paiement sécurisé. SMASHD ne garantit pas la qualité, la conformité ou l'authenticité des articles vendus."},
+        {h: "4. Tarification et commissions", p: "La vente est gratuite pour le vendeur qui reçoit 100% du prix affiché. L'acheteur paie une Protection Acheteur SMASHD de 4% + 0,60€ par transaction, qui couvre le paiement sécurisé en escrow. L'abonnement SMASHD Pro est proposé à 99€/an et donne accès à des fonctionnalités avancées. Les prix sont indiqués en euros TTC."},
+        {h: "5. SMASHD Drop — Système de livraison", p: "SMASHD Drop est un système de remise en main propre communautaire. Le paiement est bloqué en escrow jusqu'à confirmation de la remise via un code unique. L'acheteur donne le code au vendeur uniquement après avoir vérifié l'état de l'article. En cas de litige, SMASHD peut intervenir comme médiateur. SMASHD ne peut être tenu responsable des incidents survenant lors des remises physiques."},
+        {h: "6. Obligations du vendeur", p: "Le vendeur s'engage à : décrire honnêtement l'état de l'article, fixer un prix correspondant à la réalité, répondre aux acheteurs dans un délai raisonnable, proposer des créneaux de remise dans les 48h suivant un paiement, ne pas contourner le système de paiement SMASHD (anti-bypass). Tout article décrit de manière mensongère pourra entraîner la suspension du compte."},
+        {h: "7. Obligations de l'acheteur", p: "L'acheteur s'engage à : effectuer le paiement via la plateforme SMASHD uniquement, se présenter au créneau convenu ou prévenir en cas d'empêchement, remettre le code Drop uniquement après vérification de l'article, ne pas tenter de contourner le système de paiement. Tout abus pourra entraîner la suspension du compte et des poursuites judiciaires."},
+        {h: "8. Propriété intellectuelle", p: "L'ensemble des contenus présents sur SMASHD (textes, images, logos, interface) sont protégés par le droit de la propriété intellectuelle. Toute reproduction sans autorisation est interdite. Les vendeurs accordent à SMASHD une licence non-exclusive pour afficher leurs annonces sur la plateforme."},
+        {h: "9. Protection des données", p: "SMASHD collecte et traite des données personnelles conformément au RGPD. Pour plus d'informations, consultez notre Politique de Confidentialité. Les données ne sont jamais vendues à des tiers. L'utilisateur dispose d'un droit d'accès, de rectification et de suppression de ses données."},
+        {h: "10. Droit applicable", p: "Les présentes CGU sont soumises au droit français. En cas de litige, les parties s'efforceront de trouver une solution amiable. À défaut, les tribunaux français seront compétents."},
+      ]
+    },
+    confidentialite: {
+      title: "Politique de Confidentialité",
+      date: "Mai 2026",
+      content: [
+        {h: "1. Responsable du traitement", p: "SMASHD ([Nom société], [Adresse], [Email DPO]) est responsable du traitement de vos données personnelles."},
+        {h: "2. Données collectées", p: "Nous collectons : données d'identité (nom, prénom), données de contact (email), données de transaction (historique achats/ventes), données techniques (adresse IP, cookies), données de profil (photo, bio, département). Nous ne collectons pas de données sensibles (santé, opinions politiques, etc.)."},
+        {h: "3. Finalités du traitement", p: "Vos données sont utilisées pour : créer et gérer votre compte, traiter les paiements via Stripe, envoyer des notifications email via Resend, améliorer nos services, assurer la sécurité de la plateforme, respecter nos obligations légales."},
+        {h: "4. Base légale", p: "Les traitements reposent sur : l'exécution du contrat (création de compte, transactions), le consentement (communications marketing), l'intérêt légitime (sécurité, prévention fraude), l'obligation légale (conservation comptable)."},
+        {h: "5. Durée de conservation", p: "Données de compte : durée du compte + 3 ans après clôture. Données de transaction : 10 ans (obligation comptable). Données de navigation : 13 mois maximum. Les données sont supprimées ou anonymisées à l'issue de ces délais."},
+        {h: "6. Partage des données", p: "Vos données peuvent être partagées avec : Stripe (paiement), Resend (emails), Supabase (hébergement base de données). Aucune vente de données à des tiers. Transferts hors UE uniquement avec garanties appropriées (clauses contractuelles types)."},
+        {h: "7. Vos droits", p: "Conformément au RGPD, vous disposez des droits d'accès, rectification, effacement, opposition, limitation et portabilité. Pour exercer ces droits : [email DPO]. Délai de réponse : 30 jours. Vous pouvez également vous plaindre auprès de la CNIL (www.cnil.fr)."},
+        {h: "8. Cookies", p: "SMASHD utilise des cookies techniques essentiels au fonctionnement (session, authentification). Pas de cookies publicitaires tiers. Durée de vie : session ou 13 mois maximum. Vous pouvez les désactiver dans les paramètres de votre navigateur."},
+        {h: "9. Sécurité", p: "SMASHD met en œuvre des mesures techniques et organisationnelles pour protéger vos données : chiffrement HTTPS, Row Level Security Supabase, tokens JWT, accès restreint aux données. En cas de violation, nous vous notifierons dans les 72h conformément au RGPD."},
+      ]
+    },
+    mentions: {
+      title: "Mentions Légales",
+      date: "Mai 2026",
+      content: [
+        {h: "Éditeur du site", p: "Nom : SMASHD\nForme juridique : [À compléter]\nSiège social : [Adresse]\nRCS : [Numéro]\nEmail : contact@smashd.fr\nDirecteur de la publication : [Nom]"},
+        {h: "Hébergement", p: "Le site est hébergé par :\nVercel Inc. — 340 Pine Street, Suite 701, San Francisco, CA 94104, USA\nBase de données : Supabase (West EU — Ireland)"},
+        {h: "Propriété intellectuelle", p: "Le site SMASHD et l'ensemble de ses contenus sont protégés par les lois françaises et internationales relatives à la propriété intellectuelle. Toute reproduction, représentation ou diffusion sans autorisation expresse est strictement interdite."},
+        {h: "Données personnelles", p: "Conformément à la loi Informatique et Libertés et au RGPD, vous disposez d'un droit d'accès, de rectification et de suppression de vos données. Pour exercer ces droits : contact@smashd.fr"},
+        {h: "Cookies", p: "Ce site utilise des cookies techniques nécessaires à son fonctionnement. En continuant à naviguer, vous acceptez leur utilisation."},
+        {h: "Limitation de responsabilité", p: "SMASHD ne peut être tenu responsable des dommages directs ou indirects résultant de l'utilisation de la plateforme, d'une interruption de service ou d'informations inexactes fournies par les utilisateurs."},
+        {h: "Droit applicable", p: "Le présent site est soumis au droit français. Tout litige relatif à son utilisation sera soumis aux tribunaux compétents de [Ville]."},
+      ]
+    }
+  };
+
+  const p = pages[page];
+  if(!p) return null;
+
+  return(
+    <div style={{minHeight:"100vh",background:C.f50}}>
+      <nav style={{background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"0 20px",height:54,display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,zIndex:100}}>
+        <button onClick={()=>go("home")} style={{background:"none",border:"none",cursor:"pointer",color:C.f600,display:"flex",alignItems:"center",gap:5,fontSize:14}}><Ico.chL/> Retour</button>
+        <Logo s={18}/>
+      </nav>
+      <div style={{maxWidth:760,margin:"0 auto",padding:"48px 20px 80px"}}>
+        <div style={{marginBottom:32}}>
+          <h1 style={{fontSize:32,fontWeight:900,letterSpacing:"-1px",color:C.k,marginBottom:8}}>{p.title}</h1>
+          <div style={{fontSize:13,color:C.f400}}>Dernière mise à jour : {p.date}</div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:24}}>
+          {p.content.map((section,i)=>(
+            <div key={i} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:14,padding:"22px 24px"}}>
+              <h2 style={{fontSize:16,fontWeight:800,color:C.k,marginBottom:10}}>{section.h}</h2>
+              <p style={{fontSize:14,color:C.f600,lineHeight:1.8,whiteSpace:"pre-line",margin:0}}>{section.p}</p>
+            </div>
+          ))}
+        </div>
+        <div style={{marginTop:40,padding:"20px",background:C.w,border:`1px solid ${C.f200}`,borderRadius:14,textAlign:"center"}}>
+          <div style={{fontSize:13,color:C.f400,marginBottom:8}}>Des questions ?</div>
+          <a href="mailto:contact@smashd.fr" style={{fontSize:14,fontWeight:700,color:C.g,textDecoration:"none"}}>contact@smashd.fr</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+// ═══ STATS PRO PANEL ═══
+function StatsPanel({myA, user, isPro, go}){
+  const[stats,setStats]=useState([]);
+  const[loading,setLoading]=useState(true);
+  const[period,setPeriod]=useState(7);
+
+  useEffect(()=>{
+    if(!user||!myA.length){setLoading(false);return;}
+    setLoading(true);
+    const annonceIds=myA.map(a=>a.id);
+    const since=new Date(Date.now()-period*24*3600*1000).toISOString();
+
+    Promise.all(
+      annonceIds.map(id=>
+        Promise.all([
+          api(`annonce_views?annonce_id=eq.${id}&viewed_at=gte.${since}`),
+          api(`favoris?annonce_id=eq.${id}`)
+        ]).then(([views,favs])=>({
+          annonce:myA.find(a=>a.id===id),
+          vues:views.length,
+          favoris:favs.length,
+        }))
+      )
+    ).then(data=>{
+      setStats(data.sort((a,b)=>b.vues-a.vues));
+      setLoading(false);
+    }).catch(()=>setLoading(false));
+  },[user?.id, myA.length, period]);
+
+  const totalVues=stats.reduce((s,d)=>s+d.vues,0);
+  const totalFavoris=stats.reduce((s,d)=>s+d.favoris,0);
+  const activeAnn=myA.filter(a=>a.status==="active").length;
+  const convRate=totalVues>0?((myA.filter(a=>a.status==="vendu").length/Math.max(totalVues,1))*100).toFixed(1):0;
+
+  if(!isPro) return(
+    <div style={{textAlign:"center",padding:"60px 20px"}}>
+      <div style={{fontSize:48,marginBottom:16}}>📊</div>
+      <h3 style={{fontSize:20,fontWeight:900,marginBottom:8}}>Stats avancées — SMASHD Pro</h3>
+      <p style={{fontSize:14,color:"#9A9A9A",marginBottom:24,lineHeight:1.7,maxWidth:400,margin:"0 auto 24px"}}>
+        Accédez aux vues, favoris et taux de conversion de chaque annonce avec l'abonnement Pro.
+      </p>
+      <button onClick={()=>go("pro")} style={{background:"#0A2A1E",color:"#fff",border:"none",borderRadius:100,padding:"13px 28px",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+        🚀 Passer Pro — 99€/an
+      </button>
+    </div>
+  );
+
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:10}}>
+        <div>
+          <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:4}}>📊 Stats Pro</h2>
+          <p style={{fontSize:13,color:"#9A9A9A",margin:0}}>Performances de vos annonces</p>
+        </div>
+        <div style={{display:"flex",gap:6,background:"#F5F5F5",borderRadius:100,padding:3}}>
+          {[[7,"7j"],[30,"30j"],[90,"90j"]].map(([d,l])=>(
+            <button key={d} onClick={()=>setPeriod(d)} style={{padding:"6px 14px",borderRadius:100,border:"none",fontSize:12,fontWeight:700,cursor:"pointer",background:period===d?"#0A2A1E":"transparent",color:period===d?"#fff":"#9A9A9A",transition:"all .2s"}}>{l}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* KPIs */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:20}} className="g2m">
+        {[
+          {v:totalVues,l:"Vues totales",ico:"👁️",color:"#0A2A1E"},
+          {v:totalFavoris,l:"Mis en favoris",ico:"❤️",color:"#E8470A"},
+          {v:activeAnn,l:"Annonces actives",ico:"📦",color:"#0A2A1E"},
+          {v:convRate+"%",l:"Taux conversion",ico:"🎯",color:"#00C46A"},
+        ].map((kpi,i)=>(
+          <div key={i} style={{background:"#fff",border:"1px solid #E8E8E8",borderRadius:14,padding:"16px",textAlign:"center"}}>
+            <div style={{fontSize:24,marginBottom:6}}>{kpi.ico}</div>
+            <div style={{fontSize:22,fontWeight:900,color:kpi.color,letterSpacing:"-1px"}}>{kpi.v}</div>
+            <div style={{fontSize:11,color:"#9A9A9A",marginTop:3}}>{kpi.l}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tableau par annonce */}
+      <div style={{background:"#fff",border:"1px solid #E8E8E8",borderRadius:16,overflow:"hidden"}}>
+        <div style={{padding:"14px 18px",borderBottom:"1px solid #F5F5F5",display:"grid",gridTemplateColumns:"1fr 80px 80px 80px",gap:8,fontSize:11,fontWeight:700,color:"#9A9A9A",textTransform:"uppercase",letterSpacing:"1px"}}>
+          <span>Annonce</span>
+          <span style={{textAlign:"center"}}>Vues</span>
+          <span style={{textAlign:"center"}}>Favoris</span>
+          <span style={{textAlign:"center"}}>Statut</span>
+        </div>
+        {loading?(
+          <div style={{padding:40,textAlign:"center",color:"#9A9A9A"}}>Chargement…</div>
+        ):stats.length===0?(
+          <div style={{padding:40,textAlign:"center",color:"#9A9A9A"}}>Aucune annonce</div>
+        ):stats.map((d,i)=>(
+          <div key={i} style={{padding:"12px 18px",borderBottom:i<stats.length-1?"1px solid #F5F5F5":"none",display:"grid",gridTemplateColumns:"1fr 80px 80px 80px",gap:8,alignItems:"center"}}>
+            <div style={{display:"flex",gap:10,alignItems:"center",minWidth:0}}>
+              <div style={{width:36,height:36,borderRadius:8,overflow:"hidden",background:"#F5F5F5",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>
+                {d.annonce?.photo_url?<img src={d.annonce.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:"🏅"}
+              </div>
+              <div style={{minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.annonce?.title}</div>
+                <div style={{fontSize:12,color:"#9A9A9A"}}>{d.annonce?.price} €</div>
+              </div>
+            </div>
+            <div style={{textAlign:"center",fontSize:15,fontWeight:700,color:"#0A2A1E"}}>{d.vues}</div>
+            <div style={{textAlign:"center",fontSize:15,fontWeight:700,color:"#E8470A"}}>{d.favoris}</div>
+            <div style={{textAlign:"center"}}>
+              <span style={{fontSize:10,fontWeight:700,padding:"3px 8px",borderRadius:100,background:d.annonce?.status==="active"?"#F0F7F4":"#F5F5F5",color:d.annonce?.status==="active"?"#0A2A1E":"#9A9A9A",textTransform:"uppercase"}}>
+                {d.annonce?.status==="active"?"En ligne":"Hors ligne"}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ═══ HOME ═══
 function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,lang,setLang,favs,setFavs,pendingV,pendingA,toggleFavori}){
   const[sc,setSc]=useState(false);
   const[mob,setMob]=useState(false);
- 
+
   // ── Rubik's cube Three.js ──
   useEffect(()=>{
     let renderer, animId;
@@ -1788,11 +1987,11 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
     if(window.THREE){initCube();}else{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';s.onload=initCube;document.head.appendChild(s);}
     return()=>{if(animId)cancelAnimationFrame(animId);if(renderer)renderer.dispose();};
   },[]);
- 
+
   useEffect(()=>{const h=()=>setSc(window.scrollY>10);window.addEventListener("scroll",h);return()=>window.removeEventListener("scroll",h)},[]);
   const fn=(prof?.name&&!prof.name.includes("@"))?prof.name.split(" ")[0]:"";
   const CBG={Tennis:"#0A2A1E",Padel:"#1A3A5C",Badminton:"#2A1A5C",Squash:"#5C1A1A","Ping-Pong":"#1A5C3A",Pickleball:"#5C3A1A",Raquetball:"#3A1A5C","Beach Tennis":"#1A4A5C"};
- 
+
   return(
     <div style={{minHeight:"100vh",background:C.w}}>
       {/* NAV */}
@@ -1839,14 +2038,14 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
           </div>
         )}
       </nav>
- 
+
       {/* HERO */}
       <div className="hp" style={{background:C.g,minHeight:"88vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"110px 24px 68px 24px",position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",inset:0,opacity:.04,backgroundImage:"radial-gradient(circle,white 1px,transparent 1px)",backgroundSize:"48px 48px"}}/>
- 
+
         {/* Layout 2 colonnes sur desktop */}
         <div style={{maxWidth:1100,width:"100%",margin:"0 auto",display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,alignItems:"center"}}>
- 
+
           {/* Colonne gauche — texte */}
           <div style={{textAlign:"left"}}>
             <div className="fu" style={{display:"inline-flex",alignItems:"center",gap:7,background:"rgba(255,255,255,.1)",borderRadius:100,padding:"6px 14px",fontSize:12,fontWeight:600,color:"rgba(255,255,255,.7)",marginBottom:24,border:"1px solid rgba(255,255,255,.12)"}}><Ico.leaf/> Marketplace éco-responsable</div>
@@ -1867,16 +2066,16 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
               {[["4 200+","articles en ligne"],["0€","frais de livraison"],["98%","avis positifs"]].map(([v,l])=><div key={l}><div style={{fontSize:22,fontWeight:900,color:C.w,letterSpacing:"-1px"}}>{v}</div><div style={{fontSize:12,color:"rgba(255,255,255,.4)",marginTop:3}}>{l}</div></div>)}
             </div>
           </div>
- 
+
           {/* Colonne droite — Rubik's cube + Pub */}
           <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:20}}>
             <canvas id="heroRubiks" width="380" height="380" style={{display:"block",cursor:"grab",width:"380px",height:"380px"}}></canvas>
             <AdBanner/>
           </div>
- 
+
         </div>
       </div>
- 
+
         {/* DROP BANNER */}
       <div style={{background:C.k,padding:"28px 20px"}}>
         <div style={{maxWidth:960,margin:"0 auto",display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:20}} className="g1m">
@@ -1888,7 +2087,7 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
           ))}
         </div>
       </div>
- 
+
       {/* FILTERS */}
       <div style={{padding:"16px 20px 0",maxWidth:1200,margin:"0 auto",display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
         <div style={{position:"relative",flex:1,maxWidth:260}}><div style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:C.f400}}><Ico.search/></div><input value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Raquette, marque…" style={{width:"100%",padding:"9px 14px 9px 34px",borderRadius:100,border:`1.5px solid ${C.f200}`,fontSize:13,outline:"none",background:C.f50,boxSizing:"border-box"}}/></div>
@@ -1900,7 +2099,7 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
         <button onClick={()=>setFcat("Tous")} style={{padding:"7px 14px",fontSize:12,fontWeight:fcat==="Tous"?700:500,color:fcat==="Tous"?C.w:C.f600,border:`1.5px solid ${fcat==="Tous"?C.g:C.f200}`,background:fcat==="Tous"?C.g:"transparent",borderRadius:100,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>Tous</button>
         {SPORTS.map(s=><button key={s} onClick={()=>setFcat(s)} style={{padding:"7px 14px",fontSize:12,fontWeight:fcat===s?700:500,color:fcat===s?C.w:C.f600,border:`1.5px solid ${fcat===s?C.g:C.f200}`,background:fcat===s?C.g:"transparent",borderRadius:100,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>{CAT_TREE[s].icon} {s}</button>)}
       </div>
- 
+
       {/* GRID */}
       <div style={{padding:"16px 20px 80px",maxWidth:1200,margin:"0 auto"}}>
         {ann.length===0?(
@@ -1934,7 +2133,7 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
           </div>
         )}
       </div>
- 
+
       {/* TRUST */}
       <div style={{background:C.f50,borderTop:`1px solid ${C.f200}`,padding:"56px 20px"}}>
         <div style={{maxWidth:960,margin:"0 auto",display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:36}}>
@@ -1943,7 +2142,7 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
           ))}
         </div>
       </div>
- 
+
       <footer style={{background:C.k,color:C.w,padding:"44px 20px 32px"}}>
         <div style={{maxWidth:1200,margin:"0 auto"}}>
           <div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:28,marginBottom:36}}>
@@ -1952,14 +2151,14 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
           </div>
           <div style={{borderTop:"1px solid rgba(255,255,255,.08)",paddingTop:18,display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
             <div style={{fontSize:12,color:"rgba(255,255,255,.2)"}}>© 2026 SMASHD.</div>
-            <div style={{display:"flex",gap:14,fontSize:12,color:"rgba(255,255,255,.2)"}}>{["CGV","Confidentialité","Cookies"].map(l=><span key={l} style={{cursor:"pointer"}}>{l}</span>)}</div>
+            <div style={{display:"flex",gap:14,fontSize:12,color:"rgba(255,255,255,.2)"}}>{[["CGU","cgu"],["Confidentialité","confidentialite"],["Mentions légales","mentions"]].map(([l,p])=><button key={p} onClick={()=>go("legal",null,null,p)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,color:"rgba(255,255,255,.35)",padding:0,textDecoration:"underline"}}>{l}</button>)}</div>
           </div>
         </div>
       </footer>
     </div>
   );
 }
- 
+
 // ═══ AUTH ═══
 function Field({label,children,error}){
   return(
@@ -1970,7 +2169,7 @@ function Field({label,children,error}){
     </div>
   );
 }
- 
+
 function Auth({login,register,load,go}){
   const[mode,setMode]=useState("login");
   const[step,setStep]=useState(0);
@@ -1987,7 +2186,7 @@ function Auth({login,register,load,go}){
   const[forgotEmail,setForgotEmail]=useState("");
   const[forgotSent,setForgotSent]=useState(false);
   const[forgotLoad,setForgotLoad]=useState(false);
- 
+
   const doForgot=async()=>{
     if(!forgotEmail||!/\S+@\S+\.\S+/.test(forgotEmail)){setErr({forgotEmail:"Email invalide"});return;}
     setForgotLoad(true);
@@ -2001,15 +2200,15 @@ function Auth({login,register,load,go}){
     }catch(e){setErr({forgotEmail:"Erreur, réessayez"})}
     finally{setForgotLoad(false)}
   };
- 
+
   const inp={width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${C.f200}`,fontSize:14,outline:"none",boxSizing:"border-box"};
   const v0=()=>{const e={};if(!email||!/\S+@\S+\.\S+/.test(email))e.email="Email invalide";if(!pwd||pwd.length<6)e.pwd="6 min";if(mode==="register"&&pwd!==pwd2)e.pwd2="Différents";setErr(e);return!Object.keys(e).length};
   const v1=()=>{const e={};if(!name)e.name="Requis";if(ut==="pro"&&!siret)e.siret="Requis";if(!cgv)e.cgv="Requis";setErr(e);return!Object.keys(e).length};
   const doLogin=async()=>{if(!v0())return;try{await login(email,pwd)}catch(e){setErr({email:"Email ou mot de passe incorrect"})}};
   const doReg=async()=>{if(!v1())return;try{await register(email,pwd,name,ut,siret,company)}catch(e){setErr({email:e.message})}};
- 
- 
- 
+
+
+
   return(
     <div style={{minHeight:"100vh",background:C.f50,display:"flex",flexDirection:"column"}}>
       <nav style={{background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"0 20px",height:54,display:"flex",alignItems:"center"}}><Logo s={18}/></nav>
@@ -2031,7 +2230,7 @@ function Auth({login,register,load,go}){
               <button onClick={()=>setForgot(true)} style={{width:"100%",background:"none",border:"none",color:C.f400,fontSize:13,cursor:"pointer",marginTop:12,textDecoration:"underline"}}>Mot de passe oublié ?</button>
             </div>
           )}
- 
+
           {/* FORGOT PASSWORD */}
           {forgot&&(
             <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.5)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:300,padding:20}}>
@@ -2109,7 +2308,7 @@ function Auth({login,register,load,go}){
     </div>
   );
 }
- 
+
 // ═══ SELL ═══
 function Sell({publish,load,go,clubs}){
   const[step,setStep]=useState(0);
@@ -2125,7 +2324,7 @@ function Sell({publish,load,go,clubs}){
   const[dropConfig,setDropConfig]=useState(null);
   const[showDropConfig,setShowDropConfig]=useState(false);
   const ref=useRef();
- 
+
   const setAttr=(k,v)=>setAttrs(a=>({...a,[k]:v}));
   const protection=price?(parseFloat(price)*0.04+0.60).toFixed(2):0;
   const gain=price?parseFloat(price).toFixed(2):0;
@@ -2134,16 +2333,16 @@ function Sell({publish,load,go,clubs}){
   const subCats=sportData?Object.keys(sportData.subs):[];
   const attrsOk=()=>{if(!subData)return false;return subData.fields.every(f=>attrs[f.key])};
   const STEPS=["Sport","Type","Photos","Détails","Annonce","Livraison","Vérif."];
- 
+
   const handleUp=async e=>{const fs=Array.from(e.target.files);if(photos.length+fs.length>8)return;setUp(true);try{const urls=await Promise.all(fs.map(f=>uploadPhoto(f)));setPhotos(p=>[...p,...urls])}catch(e){alert("Erreur upload")}finally{setUp(false)}};
- 
+
   const canNext=()=>{
     if(step===0)return sport;if(step===1)return subCat;
     if(step===2)return photos.length>0;if(step===3)return attrsOk()&&state;
     if(step===4)return title&&price>0;if(step===5)return !!dropConfig;
     return true;
   };
- 
+
   const doPublish=()=>{
     publish({
       title,description:desc,category:sport,sub_category:subCat,
@@ -2156,7 +2355,7 @@ function Sell({publish,load,go,clubs}){
       drop_ville:dropConfig?.ville||"",
     });
   };
- 
+
   return(
     <div style={{minHeight:"100vh",background:C.w}}>
       {showDropConfig&&<SellDropConfig onClose={()=>setShowDropConfig(false)} onConfirm={cfg=>{setDropConfig(cfg);setShowDropConfig(false)}} clubs={clubs}/>}
@@ -2176,7 +2375,7 @@ function Sell({publish,load,go,clubs}){
         </div>
         <span style={{fontSize:12,color:C.f400,fontWeight:500,flexShrink:0}}>{step+1}/{STEPS.length}</span>
       </nav>
- 
+
       <div style={{maxWidth:600,margin:"0 auto",padding:"36px 20px"}}>
         {step===0&&(
           <div>
@@ -2192,7 +2391,7 @@ function Sell({publish,load,go,clubs}){
             </div>
           </div>
         )}
- 
+
         {step===1&&sport&&(
           <div>
             <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Quel type d'article ?</h2>
@@ -2207,7 +2406,7 @@ function Sell({publish,load,go,clubs}){
             </div>
           </div>
         )}
- 
+
         {step===2&&(
           <div>
             <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Photos de l'article</h2>
@@ -2232,7 +2431,7 @@ function Sell({publish,load,go,clubs}){
             )}
           </div>
         )}
- 
+
         {step===3&&subData&&(
           <div>
             <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Caractéristiques</h2>
@@ -2251,7 +2450,7 @@ function Sell({publish,load,go,clubs}){
             ))}
           </div>
         )}
- 
+
         {step===4&&(
           <div style={{display:"flex",flexDirection:"column",gap:18}}>
             <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",margin:0}}>L'annonce</h2>
@@ -2279,7 +2478,7 @@ function Sell({publish,load,go,clubs}){
             )}
           </div>
         )}
- 
+
         {step===5&&(
           <div>
             <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Mode de livraison</h2>
@@ -2321,7 +2520,7 @@ function Sell({publish,load,go,clubs}){
             )}
           </div>
         )}
- 
+
         {step===6&&(
           <div>
             <h2 style={{fontSize:24,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Vérification</h2>
@@ -2349,7 +2548,7 @@ function Sell({publish,load,go,clubs}){
             </div>
           </div>
         )}
- 
+
         <div style={{display:"flex",justifyContent:"space-between",marginTop:32,paddingTop:24,borderTop:`1px solid ${C.f100}`}}>
           {step>0?<button onClick={()=>setStep(s=>s-1)} style={{background:C.f100,color:C.k,border:"none",borderRadius:100,padding:"12px 22px",fontSize:14,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><Ico.chL/> Retour</button>:<div/>}
           {step<STEPS.length-1
@@ -2361,11 +2560,25 @@ function Sell({publish,load,go,clubs}){
     </div>
   );
 }
- 
+
 // ═══ ARTICLE ═══
 function Article({sel,go,user,placeOrder,load,favs,setFavs,tw,toggleFavori}){
   const a=sel;
   const[tab,setTab]=useState("desc");
+
+  // Tracker la vue
+  useEffect(()=>{
+    if(!a?.id) return;
+    // Enregistrer la vue (1 par session max)
+    const key="viewed_"+a.id;
+    if(sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key,"1");
+    api("annonce_views",{
+      method:"POST",
+      body:JSON.stringify({annonce_id:a.id,viewer_id:user?.id||null}),
+      prefer:"return=minimal"
+    }).catch(()=>{});
+  },[a?.id]);
   const[ofr,setOfr]=useState("");
   const[ofrSent,setOfrSent]=useState(false);
   const[showBuyDrop,setShowBuyDrop]=useState(false);
@@ -2377,22 +2590,22 @@ function Article({sel,go,user,placeOrder,load,favs,setFavs,tw,toggleFavori}){
   const total=(parseFloat(a.price)+protection).toFixed(2);
   let parsedAttrs={};try{if(a.attributes)parsedAttrs=JSON.parse(a.attributes)}catch(e){}
   let dropInfo={};try{if(a.drop_info)dropInfo=JSON.parse(a.drop_info)}catch(e){}
- 
+
   const handleOrder=async(ann,mode)=>{
     const ok=await placeOrder(ann,mode);
     if(ok){setShowBuyDrop(false);setOrdered(true)}
     return ok;
   };
- 
+
   return(
     <div style={{minHeight:"100vh",background:C.w}}>
       <nav style={{background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"0 20px",height:54,display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,zIndex:100}}>
         <button onClick={()=>go("home")} style={{background:"none",border:"none",cursor:"pointer",color:C.f600,display:"flex",alignItems:"center",gap:5,fontSize:14}}><Ico.chL/> Retour</button>
         <Logo s={18}/>
       </nav>
- 
+
       {showBuyDrop&&<BuyerDropModal ann={a} onClose={()=>setShowBuyDrop(false)} onConfirm={handleOrder} load={load} tw={tw}/>}
- 
+
       {ordered&&(
         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}}>
           <div style={{background:C.w,borderRadius:20,padding:"40px 32px",maxWidth:360,textAlign:"center"}}>
@@ -2403,7 +2616,7 @@ function Article({sel,go,user,placeOrder,load,favs,setFavs,tw,toggleFavori}){
           </div>
         </div>
       )}
- 
+
       <div style={{maxWidth:1060,margin:"0 auto",padding:"36px 20px",display:"grid",gridTemplateColumns:"1fr 320px",gap:40}} className="g1m">
         <div>
           <div style={{background:C.f100,borderRadius:16,height:340,overflow:"hidden",marginBottom:10,display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -2441,7 +2654,7 @@ function Article({sel,go,user,placeOrder,load,favs,setFavs,tw,toggleFavori}){
             </div>
           )}
         </div>
- 
+
         <div style={{position:"sticky",top:64,alignSelf:"start"}}>
           <div style={{display:"flex",gap:7,marginBottom:10,flexWrap:"wrap"}}>
             <span style={{background:C.gl,color:C.g,fontSize:11,fontWeight:700,borderRadius:6,padding:"3px 9px"}}>{CAT_TREE[a.category]?.icon} {a.category}</span>
@@ -2474,7 +2687,7 @@ function Article({sel,go,user,placeOrder,load,favs,setFavs,tw,toggleFavori}){
     </div>
   );
 }
- 
+
 // ═══ DASHBOARD ═══
 function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDropMsgs,wal,dtab,setDtab,toggleA,deleteA,tw,pendingV,pendingA,onDropRefresh}){
   const isPro=prof?.user_type==="pro";
@@ -2488,9 +2701,10 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
     {id:"ventes",l:"Mes ventes"},
     {id:"achats",l:"Mes achats"},
     {id:"wallet",l:"E-Wallet"},
+    {id:"stats",l:isPro?"📊 Stats Pro":"Stats"},
     {id:"settings",l:"Paramètres"},
   ];
- 
+
   return(
     <div style={{minHeight:"100vh",background:C.f50}}>
       <nav style={{background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"0 20px",height:54,display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,zIndex:100}}>
@@ -2503,7 +2717,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
           <button onClick={logout} className="btn" style={{background:C.f100,color:C.r,border:`1px solid ${C.f200}`,borderRadius:100,padding:"8px 14px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Déconnexion</button>
         </div>
       </nav>
- 
+
       <div style={{maxWidth:1060,margin:"0 auto",padding:"24px 20px",display:"grid",gridTemplateColumns:"200px 1fr",gap:20}} className="g1m">
         {/* Sidebar */}
         <div className="hm" style={{display:"flex",flexDirection:"column",gap:4}}>
@@ -2523,7 +2737,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
             </div>
           </div>
         </div>
- 
+
         <div style={{minWidth:0}}>
           {/* Mobile tabs */}
           <div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:20,paddingBottom:4}}>
@@ -2531,7 +2745,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
               <button key={t.id} onClick={()=>setDtab(t.id)} className="btn" style={{padding:"7px 14px",borderRadius:100,border:`1.5px solid ${dtab===t.id?C.g:C.f200}`,background:dtab===t.id?C.g:C.w,color:dtab===t.id?C.w:t.id.includes("drop")&&(pendingV+pendingA)>0?C.o:C.f600,fontSize:12,fontWeight:dtab===t.id?700:500,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>{t.l}</button>
             ))}
           </div>
- 
+
           {dtab==="overview"&&(
             <div>
               <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Bonjour 👋</h2>
@@ -2579,7 +2793,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
               </div>
             </div>
           )}
- 
+
           {dtab==="annonces"&&(
             <div>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
@@ -2613,15 +2827,15 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
               </div>
             </div>
           )}
- 
+
           {dtab==="drop-vendeur"&&(
             <DropVendeurPanel drops={myDropsV} creneaux={myDropCr} messages={myDropMsgs} annonces={myA} user={user} tw={tw} onRefresh={onDropRefresh}/>
           )}
- 
+
           {dtab==="drop-acheteur"&&(
             <DropAcheteurPanel drops={myDropsA} creneaux={myDropCr} messages={myDropMsgs} annonces={myA} user={user} tw={tw} onRefresh={onDropRefresh}/>
           )}
- 
+
           {dtab==="ventes"&&(
             <div>
               <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Mes ventes</h2>
@@ -2648,7 +2862,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
               )}
             </div>
           )}
- 
+
           {dtab==="achats"&&(
             <div>
               <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Mes achats</h2>
@@ -2682,7 +2896,10 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
               )}
             </div>
           )}
- 
+
+          {dtab==="stats"&&(
+            <StatsPanel myA={myA} user={user} isPro={isPro} go={go}/>
+          )}
           {dtab==="wallet"&&(
             <div>
               <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>E-Wallet</h2>
@@ -2706,7 +2923,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
               </div>
             </div>
           )}
- 
+
           {dtab==="settings"&&(
             <div>
               <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Paramètres</h2>
@@ -2724,13 +2941,13 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
               </div>
             </div>
           )}
- 
+
         </div>
       </div>
     </div>
   );
 }
- 
+
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
