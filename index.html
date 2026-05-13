@@ -57,6 +57,76 @@ input,textarea,select,button{font-family:inherit}
   .drop-overlay{align-items:flex-end;padding:0}
   .drop-header{border-radius:20px 20px 0 0}
 }
+ 
+ 
+/* ═══ BOTTOM NAV MOBILE ═══ */
+.bottom-nav{
+  display:none;
+  position:fixed;
+  bottom:0;left:0;right:0;
+  background:#fff;
+  border-top:1.5px solid #E8E8E8;
+  padding:6px 0 calc(6px + env(safe-area-inset-bottom));
+  z-index:500;
+  box-shadow:0 -4px 20px rgba(0,0,0,.06);
+}
+@media(max-width:768px){
+  .bottom-nav{display:flex!important}
+  body{padding-bottom:70px}
+  /* Cacher sidebar dashboard sur mobile */
+  .dash-sidebar-hm{display:none!important}
+  /* Inputs 16px pour éviter zoom iOS */
+  input,textarea,select{font-size:16px!important}
+  /* Hero mobile */
+  #heroRubiks{display:none!important}
+}
+.bnav-item{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:3px;
+  padding:5px 2px;
+  cursor:pointer;
+  background:none;
+  border:none;
+  color:#9A9A9A;
+  font-size:10px;
+  font-weight:600;
+  font-family:inherit;
+  position:relative;
+  -webkit-tap-highlight-color:transparent;
+  min-height:44px;
+  transition:color .15s;
+}
+.bnav-item.active{color:#0A2A1E}
+.bnav-item svg{
+  width:22px;height:22px;
+  fill:none;stroke:currentColor;
+  stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+}
+.bnav-item.sell-btn{
+  background:none;border:none;
+}
+.bnav-item.sell-btn .sell-circle{
+  width:48px;height:48px;
+  background:#E8470A;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  margin-top:-18px;
+  box-shadow:0 4px 16px rgba(232,71,10,.35);
+}
+.bnav-item.sell-btn svg{stroke:#fff;width:22px;height:22px}
+.bnav-badge{
+  position:absolute;
+  top:4px;
+  right:calc(50% - 16px);
+  width:8px;height:8px;
+  background:#E8470A;
+  border-radius:50%;
+  border:2px solid #fff;
+}
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -1340,6 +1410,7 @@ function App(){
       {sc==="sell"&&<Sell {...p}/>}
       {sc==="article"&&<Article {...p}/>}
       {sc==="dashboard"&&<Dash {...p}/>}
+      <BottomNav sc={sc} setSc={setSc} go={go} user={user} myDropsV={myDropsV} myDropsA={myDropsA} dtab={dtab} setDtab={setDtab} prof={prof}/>
     </div>
   );
 }
@@ -1563,6 +1634,82 @@ function ProPage({user, prof, go, tw}){
  
       </div>
     </div>
+  );
+}
+ 
+ 
+// ═══ BOTTOM NAV MOBILE ═══
+function BottomNav({sc, setSc, go, user, myDropsV, myDropsA, dtab, setDtab, prof}){
+  const pendingV=(myDropsV||[]).filter(d=>d.status==="mode_choisi").length;
+  const pendingA=(myDropsA||[]).filter(d=>d.status==="creneaux_proposes").length;
+  const totalPending=pendingV+pendingA;
+ 
+  const items=[
+    {
+      id:"home",
+      label:"Accueil",
+      active:sc==="home",
+      onClick:()=>go("home"),
+      icon:<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>
+    },
+    {
+      id:"achats",
+      label:"Achats",
+      active:sc==="dashboard"&&dtab==="drop-acheteur",
+      badge:pendingA>0,
+      onClick:()=>{if(!user){go("auth");return;}setSc("dashboard");setDtab("drop-acheteur");},
+      icon:<><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></>
+    },
+    {
+      id:"sell",
+      label:"Vendre",
+      active:sc==="sell",
+      isSell:true,
+      onClick:()=>{if(!user){go("auth");return;}go("sell");},
+      icon:<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>
+    },
+    {
+      id:"ventes",
+      label:"Ventes",
+      active:sc==="dashboard"&&dtab==="drop-vendeur",
+      badge:pendingV>0,
+      onClick:()=>{if(!user){go("auth");return;}setSc("dashboard");setDtab("drop-vendeur");},
+      icon:<><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></>
+    },
+    {
+      id:"profil",
+      label:"Profil",
+      active:sc==="dashboard"&&dtab==="overview"||sc==="profil",
+      onClick:()=>{
+        if(!user){go("auth");return;}
+        setSc("dashboard");setDtab("overview");
+      },
+      icon:<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>
+    },
+  ];
+ 
+  return(
+    <nav className="bottom-nav" role="navigation" aria-label="Navigation principale">
+      {items.map(item=>(
+        <button
+          key={item.id}
+          className={"bnav-item"+(item.active?" active":"")+(item.isSell?" sell-btn":"")}
+          onClick={item.onClick}
+          aria-label={item.label}
+          aria-current={item.active?"page":undefined}
+        >
+          {item.isSell?(
+            <div className="sell-circle">
+              <svg viewBox="0 0 24 24">{item.icon}</svg>
+            </div>
+          ):(
+            <svg viewBox="0 0 24 24">{item.icon}</svg>
+          )}
+          <span>{item.label}</span>
+          {item.badge&&<span className="bnav-badge"/>}
+        </button>
+      ))}
+    </nav>
   );
 }
  
@@ -2588,4 +2735,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
- 
