@@ -52,12 +52,43 @@ input,textarea,select,button{font-family:inherit}
   .g2m{grid-template-columns:1fr 1fr!important}
   .g1m{grid-template-columns:1fr!important}
   .ht{font-size:36px!important;letter-spacing:-1px!important}
-  .hp{padding:96px 20px 52px!important}
+  .hp{padding:80px 16px 40px!important}
   .drop-modal{border-radius:20px 20px 0 0;max-height:95vh;position:fixed;bottom:0;left:0;right:0;width:100%}
   .drop-overlay{align-items:flex-end;padding:0}
   .drop-header{border-radius:20px 20px 0 0}
+
+  /* Hero mobile — 1 colonne centrée */
+  .hp>div>div[style]{grid-template-columns:1fr!important;gap:24px!important;text-align:center!important}
+  .hp h1{font-size:30px!important;letter-spacing:-1px!important;line-height:1.1!important}
+  .hp p{font-size:14px!important;margin:0 auto 24px!important}
+  .hp [style*="display:flex"][style*="gap:12px"]{justify-content:center!important;flex-wrap:wrap!important}
+  .hp [style*="display:flex"][style*="gap:40px"]{justify-content:center!important;gap:20px!important}
+  .hp [style*="textAlign:left"]{text-align:center!important}
+
+  /* Dashboard mobile */
+  .dash-grid{grid-template-columns:1fr!important;gap:12px!important}
+  .dash-tabs-wrap{overflow-x:auto!important;scrollbar-width:none!important}
+  .dash-tabs-wrap::-webkit-scrollbar{display:none!important}
 }
 
+
+/* Hero grid mobile */
+@media(max-width:768px){
+  .hero-grid{grid-template-columns:1fr!important;gap:20px!important;padding:0!important}
+  .hero-text-col{text-align:center!important}
+  .hero-text-col h1{font-size:28px!important;letter-spacing:-1px!important;line-height:1.15!important}
+  .hero-text-col p{font-size:14px!important;max-width:100%!important}
+  .hero-text-col [style*="display:"flex""]{justify-content:center!important;flex-wrap:wrap!important}
+  .hero-text-col [style*="gap:40px"]{gap:16px!important}
+  .hero-text-col [style*="gap:12px"]{justify-content:center!important}
+  .hero-text-col [style*="textAlign:"left""]{text-align:center!important}
+  .hp{padding:70px 16px 32px!important;min-height:auto!important}
+}
+
+.mobile-only{display:none}
+@media(max-width:768px){
+  .mobile-only{display:block!important}
+}
 
 /* ═══ BOTTOM NAV MOBILE ═══ */
 .bottom-nav{
@@ -75,6 +106,9 @@ input,textarea,select,button{font-family:inherit}
   body{padding-bottom:70px}
   /* Cacher sidebar dashboard sur mobile */
   .dash-sidebar-hm{display:none!important}
+  /* Dashboard mobile adjustments */
+  .dash-overview-stats{grid-template-columns:repeat(2,1fr)!important}
+  .dash-ann-grid{grid-template-columns:repeat(2,1fr)!important;gap:8px!important}
   /* Inputs 16px pour éviter zoom iOS */
   input,textarea,select{font-size:16px!important}
   /* Hero mobile */
@@ -1567,7 +1601,7 @@ function ProPage({user, prof, go, tw}){
               <div>
                 <div style={{background:"rgba(0,196,106,.15)",border:"1px solid rgba(0,196,106,.3)",borderRadius:12,padding:"14px 20px",marginBottom:16,display:"inline-flex",alignItems:"center",gap:10}}>
                   <span style={{fontSize:20}}>✅</span>
-                  <div style={{textAlign:"left"}}>
+                  <div style={{textAlign:"left"}} className="hero-text-col">
                     <div style={{fontSize:14,fontWeight:700,color:"#00C46A"}}>Vous êtes Pro !</div>
                     <div style={{fontSize:12,color:"rgba(255,255,255,.5)"}}>Valide jusqu'au {new Date(prof.pro_expires_at).toLocaleDateString("fr-FR")}</div>
                   </div>
@@ -2023,9 +2057,20 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
             
           </div>
         </div>
-        <div style={{display:"flex",overflowX:"auto",background:"#FAF7F2",borderTop:"1px solid #EDE8E0",padding:"0 20px"}} className="hm">
-          <button onClick={()=>setFcat("Tous")} style={{padding:"9px 14px",fontSize:13,fontWeight:fcat==="Tous"?700:500,color:fcat==="Tous"?C.g:C.f600,border:"none",borderBottom:`2px solid ${fcat==="Tous"?C.g:"transparent"}`,background:"transparent",cursor:"pointer",whiteSpace:"nowrap"}}>Tous</button>
-          {SPORTS.map(s=><button key={s} onClick={()=>setFcat(s)} style={{padding:"9px 14px",fontSize:13,fontWeight:fcat===s?700:500,color:fcat===s?C.g:C.f600,border:"none",borderBottom:`2px solid ${fcat===s?C.g:"transparent"}`,background:"transparent",cursor:"pointer",whiteSpace:"nowrap"}}>{CAT_TREE[s].icon} {s}</button>)}
+        <div style={{background:"#FAF7F2",borderTop:"1px solid #EDE8E0",padding:"0 20px"}}>
+          {/* Desktop — boutons scrollables */}
+          <div style={{display:"flex",overflowX:"auto",scrollbarWidth:"none"}} className="hm">
+            <button onClick={()=>setFcat("Tous")} style={{padding:"9px 14px",fontSize:13,fontWeight:fcat==="Tous"?700:500,color:fcat==="Tous"?C.g:C.f600,border:"none",borderBottom:`2px solid ${fcat==="Tous"?C.g:"transparent"}`,background:"transparent",cursor:"pointer",whiteSpace:"nowrap"}}>Tous</button>
+            {SPORTS.map(s=><button key={s} onClick={()=>setFcat(s)} style={{padding:"9px 14px",fontSize:13,fontWeight:fcat===s?700:500,color:fcat===s?C.g:C.f600,border:"none",borderBottom:`2px solid ${fcat===s?C.g:"transparent"}`,background:"transparent",cursor:"pointer",whiteSpace:"nowrap"}}>{CAT_TREE[s].icon} {s}</button>)}
+          </div>
+          {/* Mobile — select déroulant */}
+          <div style={{padding:"8px 0"}} className="mobile-only">
+            <select value={fcat||""} onChange={e=>setFcat(e.target.value)}
+              style={{width:"100%",padding:"10px 16px",fontSize:14,fontWeight:600,border:`1.5px solid ${C.f200}`,borderRadius:100,background:C.w,color:C.k,outline:"none",cursor:"pointer"}}>
+              <option value="">🏅 Tous les sports</option>
+              {SPORTS.map(s=><option key={s} value={s}>{CAT_TREE[s].icon} {s}</option>)}
+            </select>
+          </div>
         </div>
         {mob&&(
           <div style={{position:"fixed",inset:0,zIndex:99,top:58}} onClick={()=>setMob(false)}>
@@ -2044,7 +2089,7 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
         <div style={{position:"absolute",inset:0,opacity:.04,backgroundImage:"radial-gradient(circle,white 1px,transparent 1px)",backgroundSize:"48px 48px"}}/>
 
         {/* Layout 2 colonnes sur desktop */}
-        <div style={{maxWidth:1100,width:"100%",margin:"0 auto",display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,alignItems:"center"}}>
+        <div style={{maxWidth:1100,width:"100%",margin:"0 auto",display:"grid",gridTemplateColumns:"1fr 1fr",gap:40,alignItems:"center"}} className="hero-grid">
 
           {/* Colonne gauche — texte */}
           <div style={{textAlign:"left"}}>
@@ -2091,14 +2136,15 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
       {/* FILTERS */}
       <div style={{padding:"16px 20px 0",maxWidth:1200,margin:"0 auto",display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
         <div style={{position:"relative",flex:1,maxWidth:260}}><div style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:C.f400}}><Ico.search/></div><input value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Raquette, marque…" style={{width:"100%",padding:"9px 14px 9px 34px",borderRadius:100,border:`1.5px solid ${C.f200}`,fontSize:13,outline:"none",background:C.f50,boxSizing:"border-box"}}/></div>
+        <select value={fcat||""} onChange={e=>setFcat(e.target.value)} style={{padding:"9px 14px",borderRadius:100,border:`1.5px solid ${C.f200}`,fontSize:13,background:C.w,cursor:"pointer",outline:"none",fontWeight:600}}>
+          <option value="">🏅 Tous les sports</option>
+          {SPORTS.map(s=><option key={s} value={s}>{CAT_TREE[s].icon} {s}</option>)}
+        </select>
         <select value={fst} onChange={e=>setFst(e.target.value)} style={{padding:"9px 14px",borderRadius:100,border:`1.5px solid ${C.f200}`,fontSize:13,background:C.w,cursor:"pointer",outline:"none"}}><option value="Tous">Tous les états</option>{STATES.map(s=><option key={s}>{s}</option>)}</select>
         <div style={{display:"flex",gap:6,alignItems:"center",background:C.f50,borderRadius:100,padding:"4px 14px",border:`1.5px solid ${C.f200}`}}><input type="number" value={fpr.min} onChange={e=>setFpr(f=>({...f,min:e.target.value}))} placeholder="Min €" style={{width:54,border:"none",background:"transparent",fontSize:13,outline:"none"}}/><span style={{color:C.f400}}>—</span><input type="number" value={fpr.max} onChange={e=>setFpr(f=>({...f,max:e.target.value}))} placeholder="Max €" style={{width:54,border:"none",background:"transparent",fontSize:13,outline:"none"}}/></div>
         <span style={{marginLeft:"auto",fontSize:13,color:C.f400,fontWeight:500}}>{ann.length} résultat{ann.length!==1?"s":""}</span>
       </div>
-      <div style={{padding:"12px 20px 0",display:"flex",gap:7,overflowX:"auto",maxWidth:1200,margin:"0 auto"}}>
-        <button onClick={()=>setFcat("Tous")} style={{padding:"7px 14px",fontSize:12,fontWeight:fcat==="Tous"?700:500,color:fcat==="Tous"?C.w:C.f600,border:`1.5px solid ${fcat==="Tous"?C.g:C.f200}`,background:fcat==="Tous"?C.g:"transparent",borderRadius:100,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>Tous</button>
-        {SPORTS.map(s=><button key={s} onClick={()=>setFcat(s)} style={{padding:"7px 14px",fontSize:12,fontWeight:fcat===s?700:500,color:fcat===s?C.w:C.f600,border:`1.5px solid ${fcat===s?C.g:C.f200}`,background:fcat===s?C.g:"transparent",borderRadius:100,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>{CAT_TREE[s].icon} {s}</button>)}
-      </div>
+
 
       {/* GRID */}
       <div style={{padding:"16px 20px 80px",maxWidth:1200,margin:"0 auto"}}>
@@ -2701,7 +2747,6 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
     {id:"ventes",l:"Mes ventes"},
     {id:"achats",l:"Mes achats"},
     {id:"wallet",l:"E-Wallet"},
-    {id:"stats",l:isPro?"📊 Stats Pro":"Stats"},
     {id:"settings",l:"Paramètres"},
   ];
 
@@ -2718,7 +2763,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
         </div>
       </nav>
 
-      <div style={{maxWidth:1060,margin:"0 auto",padding:"24px 20px",display:"grid",gridTemplateColumns:"200px 1fr",gap:20}} className="g1m">
+      <div style={{maxWidth:1060,margin:"0 auto",padding:"16px",display:"grid",gridTemplateColumns:"200px 1fr",gap:20}} className="g1m">
         {/* Sidebar */}
         <div className="hm" style={{display:"flex",flexDirection:"column",gap:4}}>
           <div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:14,padding:"14px",marginBottom:10}}>
@@ -2764,7 +2809,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
                   <button onClick={()=>setDtab(pendingV>0?"drop-vendeur":"drop-acheteur")} style={{background:C.o,color:"#fff",border:"none",borderRadius:100,padding:"8px 16px",fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0}}>Gérer →</button>
                 </div>
               )}
-              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:18}} className="g2m">
+              <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:16}} className="g2m dash-overview-stats">
                 {[[`${rev.toFixed(2)} €`,"Revenus confirmés",C.g],[myA.filter(a=>a.status==="active").length,"Annonces actives",C.k],[myS.length,"Ventes",C.o],[myO.length,"Achats",C.f600]].map(([v,l,col])=>(
                   <div key={l} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:12,padding:"16px"}}>
                     <div style={{fontSize:22,fontWeight:900,color:col,letterSpacing:"-1px"}}>{v}</div>
