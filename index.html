@@ -2057,31 +2057,7 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
             
           </div>
         </div>
-        <div style={{background:"#FAF7F2",borderTop:"1px solid #EDE8E0",padding:"0 20px"}}>
-          {/* Desktop — boutons scrollables */}
-          <div style={{display:"flex",overflowX:"auto",scrollbarWidth:"none"}} className="hm">
-            <button onClick={()=>setFcat("Tous")} style={{padding:"9px 14px",fontSize:13,fontWeight:fcat==="Tous"?700:500,color:fcat==="Tous"?C.g:C.f600,border:"none",borderBottom:`2px solid ${fcat==="Tous"?C.g:"transparent"}`,background:"transparent",cursor:"pointer",whiteSpace:"nowrap"}}>Tous</button>
-            {SPORTS.map(s=><button key={s} onClick={()=>setFcat(s)} style={{padding:"9px 14px",fontSize:13,fontWeight:fcat===s?700:500,color:fcat===s?C.g:C.f600,border:"none",borderBottom:`2px solid ${fcat===s?C.g:"transparent"}`,background:"transparent",cursor:"pointer",whiteSpace:"nowrap"}}>{CAT_TREE[s].icon} {s}</button>)}
-          </div>
-          {/* Mobile — select déroulant */}
-          <div style={{padding:"8px 0"}} className="mobile-only">
-            <select value={fcat||""} onChange={e=>setFcat(e.target.value)}
-              style={{width:"100%",padding:"10px 16px",fontSize:14,fontWeight:600,border:`1.5px solid ${C.f200}`,borderRadius:100,background:C.w,color:C.k,outline:"none",cursor:"pointer"}}>
-              <option value="">🏅 Tous les sports</option>
-              {SPORTS.map(s=><option key={s} value={s}>{CAT_TREE[s].icon} {s}</option>)}
-            </select>
-          </div>
-        </div>
-        {mob&&(
-          <div style={{position:"fixed",inset:0,zIndex:99,top:58}} onClick={()=>setMob(false)}>
-          <div style={{position:"absolute",top:0,left:0,right:0,background:C.w,borderBottom:`1px solid ${C.f200}`,padding:"16px 20px",boxShadow:"0 8px 24px rgba(0,0,0,.08)"}} onClick={e=>e.stopPropagation()}>
-            <div style={{position:"relative",marginBottom:12}}><div style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:C.f400}}><Ico.search/></div><input value={srch} onChange={e=>setSrch(e.target.value)} placeholder="Raquette…" style={{width:"100%",padding:"10px 14px 10px 34px",borderRadius:100,border:`1.5px solid ${C.f200}`,fontSize:14,outline:"none",background:C.f50,boxSizing:"border-box"}}/></div>
-            {!user&&<div style={{display:"flex",gap:8,marginBottom:12}}><button onClick={()=>{go("auth");setMob(false)}} style={{flex:1,background:C.f100,color:C.k,border:`1.5px solid ${C.f200}`,borderRadius:100,padding:"10px",fontSize:14,fontWeight:600,cursor:"pointer"}}>Connexion</button><button onClick={()=>{go("auth");setMob(false)}} style={{flex:1,background:C.g,color:C.w,border:"none",borderRadius:100,padding:"10px",fontSize:14,fontWeight:700,cursor:"pointer"}}>S'inscrire</button></div>}
-            {user&&<div style={{display:"flex",gap:8,marginBottom:12}}><button onClick={()=>{go("sell");setMob(false)}} style={{flex:1,background:C.o,color:C.w,border:"none",borderRadius:100,padding:"10px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Ico.plus/> Vendre</button><button onClick={()=>{go("dashboard");setMob(false)}} style={{flex:1,background:C.f100,color:C.k,border:`1.5px solid ${C.f200}`,borderRadius:100,padding:"10px",fontSize:14,fontWeight:600,cursor:"pointer"}}>Mon compte</button></div>}
-            <div style={{display:"flex",flexWrap:"wrap",gap:7}}>{SPORTS.map(s=><button key={s} onClick={()=>{setFcat(s);setMob(false)}} style={{padding:"7px 13px",fontSize:12,fontWeight:500,color:fcat===s?C.w:C.f600,border:`1.5px solid ${fcat===s?C.g:C.f200}`,background:fcat===s?C.g:"transparent",borderRadius:100,cursor:"pointer"}}>{CAT_TREE[s].icon} {s}</button>)}</div>
-          </div>
-          </div>
-        )}
+                )}
       </nav>
 
       {/* HERO */}
