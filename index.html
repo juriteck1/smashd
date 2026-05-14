@@ -2765,7 +2765,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
 
         <div style={{minWidth:0}}>
           {/* Mobile tabs */}
-          <div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:20,paddingBottom:4,scrollbarWidth:"none",msOverflowStyle:"none",className:"dash-tabs-scroll"}>
+          <div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:20,paddingBottom:4,scrollbarWidth:"none",msOverflowStyle:"none"}}>
             {DTABS.map(t=>(
               <button key={t.id} onClick={()=>setDtab(t.id)} className="btn" style={{padding:"7px 14px",borderRadius:100,border:`1.5px solid ${dtab===t.id?C.g:C.f200}`,background:dtab===t.id?C.g:C.w,color:dtab===t.id?C.w:t.id.includes("drop")&&(pendingV+pendingA)>0?C.o:C.f600,fontSize:12,fontWeight:dtab===t.id?700:500,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>{t.l}</button>
             ))}
