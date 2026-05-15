@@ -1966,6 +1966,318 @@ function StatsPanel({myA, user, isPro, go}){
 }
 
 
+// ═══ SETTINGS PANEL ═══
+function SettingsPanel({user,prof,tw,logout,go}){
+  const[section,setSection]=useState(null);
+
+  // ── Infos perso ──
+  const[form,setForm]=useState({name:prof?.name||"",phone:prof?.phone||"",ville:prof?.ville||""});
+  const[savingInfo,setSavingInfo]=useState(false);
+
+  // ── Mot de passe ──
+  const[pwdForm,setPwdForm]=useState({current:"",newPwd:"",confirm:""});
+  const[savingPwd,setSavingPwd]=useState(false);
+  const[showCur,setShowCur]=useState(false);
+  const[showNew,setShowNew]=useState(false);
+
+  // ── Notifications ──
+  const[notifs,setNotifs]=useState({
+    email_vente:prof?.notif_email_vente!==false,
+    email_achat:prof?.notif_email_achat!==false,
+    email_drop:prof?.notif_email_drop!==false,
+    email_promo:prof?.notif_email_promo===true,
+  });
+  const[savingNotif,setSavingNotif]=useState(false);
+
+  // ── Suppression compte ──
+  const[delConfirm,setDelConfirm]=useState("");
+  const[delBusy,setDelBusy]=useState(false);
+
+  const saveInfo=async()=>{
+    if(!form.name.trim()){tw("Le nom est obligatoire","error");return;}
+    setSavingInfo(true);
+    try{
+      await api(`profiles?id=eq.${user.id}`,{method:"PATCH",body:JSON.stringify({
+        name:form.name.trim(),
+        phone:form.phone.trim()||null,
+        ville:form.ville.trim()||null,
+      })});
+      tw("✅ Informations mises à jour !");
+      setSection(null);
+    }catch(e){tw("Erreur lors de la sauvegarde","error")}
+    finally{setSavingInfo(false)}
+  };
+
+  const savePwd=async()=>{
+    if(!pwdForm.newPwd||pwdForm.newPwd.length<8){tw("Minimum 8 caractères","error");return;}
+    if(pwdForm.newPwd!==pwdForm.confirm){tw("Les mots de passe ne correspondent pas","error");return;}
+    setSavingPwd(true);
+    try{
+      // Vérifier l'ancien mot de passe via signin
+      await authApi("token?grant_type=password",{email:user.email,password:pwdForm.current});
+      // Mettre à jour via Supabase Auth
+      const r=await fetch(`${SB}/auth/v1/user`,{
+        method:"PUT",
+        headers:{"apikey":KEY,"Authorization":"Bearer "+gt(),"Content-Type":"application/json"},
+        body:JSON.stringify({password:pwdForm.newPwd})
+      });
+      if(!r.ok){const e=await r.json();throw new Error(e.message||"Erreur");}
+      tw("✅ Mot de passe mis à jour !");
+      setPwdForm({current:"",newPwd:"",confirm:""});
+      setSection(null);
+    }catch(e){
+      if(e.message&&e.message.toLowerCase().includes("invalid")){tw("Mot de passe actuel incorrect","error");}
+      else{tw("Erreur : "+e.message,"error");}
+    }
+    finally{setSavingPwd(false)}
+  };
+
+  const saveNotifs=async()=>{
+    setSavingNotif(true);
+    try{
+      await api(`profiles?id=eq.${user.id}`,{method:"PATCH",body:JSON.stringify({
+        notif_email_vente:notifs.email_vente,
+        notif_email_achat:notifs.email_achat,
+        notif_email_drop:notifs.email_drop,
+        notif_email_promo:notifs.email_promo,
+      })});
+      tw("✅ Préférences de notifications enregistrées !");
+      setSection(null);
+    }catch(e){tw("Erreur","error")}
+    finally{setSavingNotif(false)}
+  };
+
+  const deleteAccount=async()=>{
+    if(delConfirm!=="SUPPRIMER"){tw("Tapez SUPPRIMER pour confirmer","error");return;}
+    setDelBusy(true);
+    try{
+      // Anonymiser le profil
+      await api(`profiles?id=eq.${user.id}`,{method:"PATCH",body:JSON.stringify({
+        name:"Compte supprimé",email:null,phone:null,ville:null,bio:null,avatar_url:null,
+      })});
+      tw("Compte supprimé. Au revoir !");
+      setTimeout(()=>logout(),1500);
+    }catch(e){tw("Erreur lors de la suppression","error")}
+    finally{setDelBusy(false)}
+  };
+
+  const SectionHeader=({title,onBack})=>(
+    <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+      <button onClick={onBack} style={{background:C.f100,border:"none",borderRadius:"50%",width:32,height:32,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.f600,flexShrink:0}}>
+        <Ico.chL/>
+      </button>
+      <h2 style={{fontSize:19,fontWeight:900,letterSpacing:"-0.5px",margin:0}}>{title}</h2>
+    </div>
+  );
+
+  const Toggle=({checked,onChange,label,sub})=>(
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"13px 0",borderBottom:`1px solid ${C.f100}`}}>
+      <div>
+        <div style={{fontSize:14,fontWeight:600,color:C.k}}>{label}</div>
+        {sub&&<div style={{fontSize:12,color:C.f400,marginTop:2}}>{sub}</div>}
+      </div>
+      <div onClick={()=>onChange(!checked)}
+        style={{width:44,height:24,borderRadius:100,background:checked?C.g:C.f200,cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}>
+        <div style={{position:"absolute",top:3,left:checked?22:3,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.15)"}}/>
+      </div>
+    </div>
+  );
+
+  const inp={width:"100%",padding:"11px 13px",borderRadius:11,border:`1.5px solid ${C.f200}`,fontSize:14,fontFamily:"'Inter',sans-serif",outline:"none",boxSizing:"border-box",marginBottom:12,transition:"border .15s"};
+  const lbl={fontSize:11,fontWeight:700,color:C.f400,textTransform:"uppercase",letterSpacing:"1px",display:"block",marginBottom:6};
+  const btn=(col="#0A2A1E",txt="#fff")=>({background:col,color:txt,border:"none",borderRadius:100,padding:"12px 22px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",transition:"all .15s"});
+
+  // Liste des sections (menu principal)
+  if(!section){
+    const MENU=[
+      {id:"infos",icon:"👤",title:"Informations personnelles",sub:`${prof?.name||"—"} · ${prof?.ville||"Ville non renseignée"}`},
+      {id:"pwd",icon:"🔐",title:"Mot de passe",sub:"Modifier votre mot de passe"},
+      {id:"notifs",icon:"🔔",title:"Notifications",sub:"Emails de ventes, achats, Drop"},
+      {id:"del",icon:"🗑️",title:"Supprimer mon compte",sub:"Action irréversible",danger:true},
+    ];
+    return(
+      <div>
+        <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Paramètres</h2>
+        <p style={{fontSize:14,color:C.f400,marginBottom:20}}>{user?.email}</p>
+
+        {/* Aperçu rapide profil */}
+        <div style={{background:C.g,borderRadius:16,padding:"18px 20px",marginBottom:18,display:"flex",gap:14,alignItems:"center",color:"#fff",cursor:"pointer"}} onClick={()=>go("profil",null,user?.id)}>
+          <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:900,overflow:"hidden",flexShrink:0}}>
+            {prof?.avatar_url?<img src={prof.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(prof?.name||"?").charAt(0).toUpperCase()}
+          </div>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:15,fontWeight:700}}>{prof?.name||"Mon compte"}</div>
+            <div style={{fontSize:12,color:"rgba(255,255,255,.6)",marginTop:2}}>Voir mon profil public →</div>
+          </div>
+          {prof?.user_type==="pro"&&<span style={{background:"rgba(255,255,255,.15)",borderRadius:6,padding:"2px 9px",fontSize:11,fontWeight:700}}>PRO</span>}
+        </div>
+
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {MENU.map(m=>(
+            <div key={m.id} onClick={()=>setSection(m.id)}
+              style={{background:C.w,border:`1px solid ${m.danger?C.r+"33":C.f200}`,borderRadius:12,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,cursor:"pointer",transition:"box-shadow .15s"}}
+              onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.06)"}
+              onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+              <span style={{fontSize:22,width:32,textAlign:"center",flexShrink:0}}>{m.icon}</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:14,fontWeight:600,color:m.danger?C.r:C.k}}>{m.title}</div>
+                <div style={{fontSize:12,color:C.f400,marginTop:2}}>{m.sub}</div>
+              </div>
+              <Ico.chR/>
+            </div>
+          ))}
+
+          {/* Déconnexion */}
+          <div onClick={logout}
+            style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:12,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,cursor:"pointer"}}
+            onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.06)"}
+            onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}>
+            <span style={{fontSize:22,width:32,textAlign:"center",flexShrink:0}}>🚪</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:14,fontWeight:600,color:C.r}}>Déconnexion</div>
+              <div style={{fontSize:12,color:C.f400,marginTop:2}}>Se déconnecter de SMASHD</div>
+            </div>
+            <Ico.chR/>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Section : Informations personnelles ──
+  if(section==="infos") return(
+    <div>
+      <SectionHeader title="Informations personnelles" onBack={()=>setSection(null)}/>
+      <div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:16,padding:"22px"}}>
+        <div style={{background:C.f50,borderRadius:10,padding:"11px 14px",marginBottom:20,fontSize:13,color:C.f600,lineHeight:1.6}}>
+          Ces informations sont utilisées pour votre profil et vos transactions SMASHD.
+        </div>
+        <label style={lbl}>Nom complet *</label>
+        <input style={inp} value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Prénom Nom"
+          onFocus={e=>e.target.style.borderColor=C.g} onBlur={e=>e.target.style.borderColor=C.f200}/>
+        <label style={lbl}>Email</label>
+        <input style={{...inp,background:C.f50,color:C.f400,cursor:"not-allowed"}} value={user?.email||""} disabled/>
+        <div style={{fontSize:11,color:C.f400,marginTop:-8,marginBottom:12}}>L'email ne peut pas être modifié ici. Contactez support@smashd.fr.</div>
+        <label style={lbl}>Téléphone</label>
+        <input style={inp} value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="06 12 34 56 78" type="tel"
+          onFocus={e=>e.target.style.borderColor=C.g} onBlur={e=>e.target.style.borderColor=C.f200}/>
+        <label style={lbl}>Ville</label>
+        <input style={inp} value={form.ville} onChange={e=>setForm(f=>({...f,ville:e.target.value}))} placeholder="Paris, Lyon, Bordeaux…"
+          onFocus={e=>e.target.style.borderColor=C.g} onBlur={e=>e.target.style.borderColor=C.f200}/>
+        <div style={{display:"flex",gap:8,marginTop:4}}>
+          <button onClick={saveInfo} disabled={savingInfo} style={btn()}>
+            {savingInfo?<span>Enregistrement…</span>:"✓ Enregistrer"}
+          </button>
+          <button onClick={()=>setSection(null)} style={btn(C.f100,C.k)}>Annuler</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Section : Mot de passe ──
+  if(section==="pwd") return(
+    <div>
+      <SectionHeader title="Modifier le mot de passe" onBack={()=>setSection(null)}/>
+      <div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:16,padding:"22px"}}>
+        <div style={{background:"#FFF3E0",borderRadius:10,padding:"11px 14px",marginBottom:20,fontSize:13,color:"#8a4a00",lineHeight:1.6}}>
+          🔐 Choisissez un mot de passe d'au moins 8 caractères avec des lettres et des chiffres.
+        </div>
+        <label style={lbl}>Mot de passe actuel *</label>
+        <div style={{position:"relative",marginBottom:12}}>
+          <input style={{...inp,marginBottom:0,paddingRight:44}} type={showCur?"text":"password"} value={pwdForm.current}
+            onChange={e=>setPwdForm(f=>({...f,current:e.target.value}))} placeholder="••••••••"
+            onFocus={e=>e.target.style.borderColor=C.g} onBlur={e=>e.target.style.borderColor=C.f200}/>
+          <button onClick={()=>setShowCur(v=>!v)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:C.f400,fontSize:14,padding:4}}>{showCur?"🙈":"👁️"}</button>
+        </div>
+        <label style={lbl}>Nouveau mot de passe *</label>
+        <div style={{position:"relative",marginBottom:4}}>
+          <input style={{...inp,marginBottom:0,paddingRight:44}} type={showNew?"text":"password"} value={pwdForm.newPwd}
+            onChange={e=>setPwdForm(f=>({...f,newPwd:e.target.value}))} placeholder="••••••••"
+            onFocus={e=>e.target.style.borderColor=C.g} onBlur={e=>e.target.style.borderColor=C.f200}/>
+          <button onClick={()=>setShowNew(v=>!v)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:C.f400,fontSize:14,padding:4}}>{showNew?"🙈":"👁️"}</button>
+        </div>
+        {/* Barre de force */}
+        {pwdForm.newPwd&&(()=>{
+          const s=pwdForm.newPwd.length>=12&&/[A-Z]/.test(pwdForm.newPwd)&&/[0-9]/.test(pwdForm.newPwd)?3:pwdForm.newPwd.length>=8?2:1;
+          const cols=["#E8290A","#F5A623","#00C46A"];const labs=["Faible","Moyen","Fort"];
+          return<div style={{marginBottom:12}}>
+            <div style={{display:"flex",gap:4,marginBottom:4}}>
+              {[1,2,3].map(i=><div key={i} style={{flex:1,height:4,borderRadius:2,background:i<=s?cols[s-1]:C.f200,transition:"background .3s"}}/>)}
+            </div>
+            <div style={{fontSize:11,color:cols[s-1],fontWeight:700}}>{labs[s-1]}</div>
+          </div>;
+        })()}
+        <label style={lbl}>Confirmer le nouveau mot de passe *</label>
+        <input style={{...inp,borderColor:pwdForm.confirm&&pwdForm.confirm!==pwdForm.newPwd?C.r:C.f200}} type="password" value={pwdForm.confirm}
+          onChange={e=>setPwdForm(f=>({...f,confirm:e.target.value}))} placeholder="••••••••"
+          onFocus={e=>e.target.style.borderColor=C.g} onBlur={e=>e.target.style.borderColor=pwdForm.confirm&&pwdForm.confirm!==pwdForm.newPwd?C.r:C.f200}/>
+        {pwdForm.confirm&&pwdForm.confirm!==pwdForm.newPwd&&(
+          <div style={{fontSize:12,color:C.r,marginTop:-8,marginBottom:12}}>Les mots de passe ne correspondent pas</div>
+        )}
+        <div style={{display:"flex",gap:8,marginTop:4}}>
+          <button onClick={savePwd} disabled={savingPwd||!pwdForm.current||!pwdForm.newPwd||pwdForm.newPwd!==pwdForm.confirm} style={{...btn(),opacity:savingPwd||!pwdForm.current||!pwdForm.newPwd||pwdForm.newPwd!==pwdForm.confirm?.5:1,cursor:savingPwd?"wait":"pointer"}}>
+            {savingPwd?"Mise à jour…":"✓ Changer le mot de passe"}
+          </button>
+          <button onClick={()=>setSection(null)} style={btn(C.f100,C.k)}>Annuler</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Section : Notifications ──
+  if(section==="notifs") return(
+    <div>
+      <SectionHeader title="Notifications" onBack={()=>setSection(null)}/>
+      <div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:16,padding:"22px"}}>
+        <div style={{fontSize:13,fontWeight:700,color:C.f400,textTransform:"uppercase",letterSpacing:"1px",marginBottom:4}}>Emails transactionnels</div>
+        <Toggle checked={notifs.email_vente} onChange={v=>setNotifs(n=>({...n,email_vente:v}))} label="Nouvelle vente confirmée" sub="Reçu quand un acheteur paie votre article"/>
+        <Toggle checked={notifs.email_achat} onChange={v=>setNotifs(n=>({...n,email_achat:v}))} label="Confirmation d'achat" sub="Reçu après votre paiement"/>
+        <Toggle checked={notifs.email_drop} onChange={v=>setNotifs(n=>({...n,email_drop:v}))} label="Alertes SMASHD Drop" sub="Créneaux proposés, code Drop, confirmations"/>
+        <div style={{fontSize:13,fontWeight:700,color:C.f400,textTransform:"uppercase",letterSpacing:"1px",marginBottom:4,marginTop:16}}>Emails marketing</div>
+        <Toggle checked={notifs.email_promo} onChange={v=>setNotifs(n=>({...n,email_promo:v}))} label="Offres et nouveautés SMASHD" sub="Promos partenaires, nouvelles fonctionnalités"/>
+        <div style={{background:C.f50,borderRadius:10,padding:"11px 14px",margin:"16px 0",fontSize:12,color:C.f400,lineHeight:1.6}}>
+          Les emails liés aux transactions (sécurité, paiement, litige) sont toujours envoyés et ne peuvent pas être désactivés.
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={saveNotifs} disabled={savingNotif} style={btn()}>
+            {savingNotif?"Enregistrement…":"✓ Enregistrer"}
+          </button>
+          <button onClick={()=>setSection(null)} style={btn(C.f100,C.k)}>Annuler</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Section : Supprimer le compte ──
+  if(section==="del") return(
+    <div>
+      <SectionHeader title="Supprimer mon compte" onBack={()=>setSection(null)}/>
+      <div style={{background:"#FFF0EE",border:`1.5px solid ${C.r}`,borderRadius:16,padding:"22px"}}>
+        <div style={{fontSize:32,marginBottom:12,textAlign:"center"}}>⚠️</div>
+        <h3 style={{fontSize:16,fontWeight:800,color:C.r,marginBottom:12,textAlign:"center"}}>Cette action est irréversible</h3>
+        <div style={{fontSize:13,color:C.f600,lineHeight:1.8,marginBottom:16}}>
+          La suppression de votre compte entraînera :<br/>
+          • <strong>Anonymisation</strong> de vos données personnelles<br/>
+          • <strong>Désactivation</strong> de vos annonces actives<br/>
+          • <strong>Perte</strong> de vos avis et statistiques<br/>
+          • <strong>Conservation</strong> des données de transactions (obligation légale 10 ans)
+        </div>
+        <div style={{background:"#fff",borderRadius:10,padding:"14px",marginBottom:16}}>
+          <div style={{fontSize:13,fontWeight:600,marginBottom:8}}>Tapez <strong>SUPPRIMER</strong> pour confirmer :</div>
+          <input style={{...inp,marginBottom:0,borderColor:C.r}} value={delConfirm} onChange={e=>setDelConfirm(e.target.value)} placeholder="SUPPRIMER"/>
+        </div>
+        <button onClick={deleteAccount} disabled={delBusy||delConfirm!=="SUPPRIMER"}
+          style={{...btn(C.r),width:"100%",opacity:delBusy||delConfirm!=="SUPPRIMER"?.4:1,cursor:delBusy||delConfirm!=="SUPPRIMER"?"not-allowed":"pointer"}}>
+          {delBusy?"Suppression…":"Supprimer définitivement mon compte"}
+        </button>
+        <button onClick={()=>setSection(null)} style={{...btn(C.f100,C.k),width:"100%",marginTop:8}}>Annuler</button>
+      </div>
+    </div>
+  );
+
+  return null;
+}
+
 // ═══ ADMIN PANEL ═══
 function AdminPanel({user, prof, go, tw, api}){
   const[tab,setTab]=useState("litiges");
@@ -3168,21 +3480,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
           )}
 
           {dtab==="settings"&&(
-            <div>
-              <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Paramètres</h2>
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                {[["Informations personnelles","Nom, email, téléphone"],["Sécurité","Mot de passe, 2FA"],["Moyens de paiement","Carte, IBAN"],["Notifications","Email, push, SMS"],["Langue","Français / English"],["Supprimer mon compte","Irréversible"]].map(([t,s],i)=>(
-                  <div key={t} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:12,padding:"13px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
-                    <div><div style={{fontSize:14,fontWeight:600,color:i===5?C.r:C.k}}>{t}</div><div style={{fontSize:12,color:C.f400,marginTop:2}}>{s}</div></div>
-                    <Ico.chR/>
-                  </div>
-                ))}
-                <div onClick={logout} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:12,padding:"13px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
-                  <div><div style={{fontSize:14,fontWeight:600,color:C.r}}>Déconnexion</div><div style={{fontSize:12,color:C.f400,marginTop:2}}>Se déconnecter de SMASHD</div></div>
-                  <Ico.chR/>
-                </div>
-              </div>
-            </div>
+            <SettingsPanel user={user} prof={prof} tw={tw} logout={logout} go={go}/>
           )}
 
         </div>
