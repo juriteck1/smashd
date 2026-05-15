@@ -165,21 +165,6 @@ input,textarea,select,button{font-family:inherit}
 
 /* Cacher scrollbar des tabs dashboard */
 .dash-tabs-scroll::-webkit-scrollbar{display:none}
-
-/* ═══ MESSAGERIE ═══ */
-.msg-overlay{position:fixed;inset:0;background:rgba(10,10,10,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;z-index:3000;padding:16px;animation:fu .2s ease}
-.msg-modal{background:#fff;border-radius:20px;width:100%;max-width:860px;height:86vh;max-height:700px;display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.25);overflow:hidden}
-.msg-modal-inner{display:flex;flex:1;min-height:0}
-.msg-sidebar{width:280px;border-right:1px solid #E8E8E8;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
-.msg-chat{flex:1;display:flex;flex-direction:column;min-width:0}
-.msg-conv-item{padding:12px 14px;cursor:pointer;border-bottom:1px solid #F5F5F5;transition:background .15s}
-.msg-conv-item:hover{background:#FAFAFA}
-.msg-conv-item.active{background:#F0F7F4}
-.msg-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:8px}
-@media(max-width:640px){
-  .msg-modal{border-radius:16px 16px 0 0;position:fixed;bottom:0;left:0;right:0;height:92vh;max-height:none;width:100%;max-width:none;border-radius:16px 16px 0 0}
-  .msg-overlay{align-items:flex-end;padding:0}
-}
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -188,10 +173,20 @@ input,textarea,select,button{font-family:inherit}
 const {useState,useEffect,useRef}=React;
 const SB="https://gcnmgtwbouakwaufqswh.supabase.co";
 const KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjbm1ndHdib3Vha3dhdWZxc3doIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTk4NDQsImV4cCI6MjA5MzgzNTg0NH0.qtHQ4si2Ybsriiaaj9F-1Z6WeN52sZ1ry7T7VpcIMpM";
-let tok=sessionStorage.getItem("smashd_tok")||KEY;
+let tok=localStorage.getItem("smashd_tok")||sessionStorage.getItem("smashd_tok")||KEY;
 const gt=()=>tok;
-const st=t=>{tok=t||KEY;if(t)sessionStorage.setItem("smashd_tok",t);else sessionStorage.removeItem("smashd_tok");};
-const ct=()=>{tok=KEY;sessionStorage.removeItem("smashd_tok");};
+const st=(t,remember=false)=>{
+  tok=t||KEY;
+  if(t){
+    if(remember){localStorage.setItem("smashd_tok",t);localStorage.setItem("smashd_remember","1");}
+    else{sessionStorage.setItem("smashd_tok",t);}
+  } else {
+    sessionStorage.removeItem("smashd_tok");
+    localStorage.removeItem("smashd_tok");
+    localStorage.removeItem("smashd_remember");
+  }
+};
+const ct=()=>{tok=KEY;sessionStorage.removeItem("smashd_tok");sessionStorage.removeItem("smashd_user");localStorage.removeItem("smashd_tok");localStorage.removeItem("smashd_user");localStorage.removeItem("smashd_remember");};
 
 const C={g:"#0A2A1E",gm:"#1A5C3A",gl:"#F0F7F4",ga:"#00C46A",o:"#E8470A",w:"#fff",k:"#0A0A0A",f50:"#FAFAFA",f100:"#F5F5F5",f200:"#E8E8E8",f400:"#9A9A9A",f600:"#5A5A5A",r:"#E8290A",rl:"#FFF0EE"};
 
@@ -284,7 +279,6 @@ const Ico={
   trk:()=><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="1" y="3" width="15" height="13"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
   menu:()=><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 12h18M3 6h18M3 18h18"/></svg>,
   drop:()=><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
-  msg:()=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
 };
 
 const Logo=({s=20})=><span style={{fontWeight:900,fontSize:s,letterSpacing:"-0.5px",cursor:"pointer"}}>SMASH<span style={{color:C.o}}>D</span></span>;
@@ -1237,16 +1231,15 @@ function App(){
   const[dtab,setDtab]=useState("overview");
   const[lang,setLang]=useState("FR");
   const[favs,setFavs]=useState({});
-  const[showMsg,setShowMsg]=useState(false);
-  const[msgOpenConvId,setMsgOpenConvId]=useState(null);
-  const[totalUnreadMsg,setTotalUnreadMsg]=useState(0);
+  const[authInitMode,setAuthInitMode]=useState("login");
 
   const tw=(msg,type="success")=>{setToast({msg,type});setTimeout(()=>setToast(null),3500)};
-  const go=(s,d=null,pid=null,legal=null)=>{
+  const go=(s,d=null,pid=null,legal=null,authMode=null)=>{
     setSc(s);
     if(d)setSel(d);
     if(pid)setProfileId(pid);
     if(legal)setLegalPage(legal);
+    if(s==="auth")setAuthInitMode(authMode||"login");
     window.scrollTo(0,0);
   };
 
@@ -1355,29 +1348,27 @@ function App(){
     }catch(e){}
   };
 
-  // Restaurer session depuis sessionStorage
+  // Restaurer session depuis localStorage (remember me) ou sessionStorage
   useEffect(()=>{
     loadA();loadClubs();
-    const savedTok=sessionStorage.getItem("smashd_tok");
-    const savedUser=sessionStorage.getItem("smashd_user");
+    const remember=localStorage.getItem("smashd_remember")==="1";
+    const savedTok=localStorage.getItem("smashd_tok")||sessionStorage.getItem("smashd_tok");
+    const savedUser=localStorage.getItem("smashd_user")||sessionStorage.getItem("smashd_user");
     if(savedTok&&savedUser){
       try{
         const u=JSON.parse(savedUser);
-        // Vérifier que le token est encore valide
         fetch(`${SB}/auth/v1/user`,{headers:{"apikey":KEY,"Authorization":"Bearer "+savedTok}})
           .then(r=>{
             if(r.ok){
-              st(savedTok);setUser(u);
+              st(savedTok,remember);setUser(u);
               return fetch(`${SB}/rest/v1/profiles?id=eq.${u.id}`,{headers:{"apikey":KEY,"Authorization":"Bearer "+savedTok}});
             } else {
-              // Token expiré → nettoyer
-              ct();sessionStorage.removeItem("smashd_user");
+              ct();
               return Promise.reject("expired");
             }
           })
           .then(r=>r&&r.json())
           .then(d=>{if(d&&d[0]){setProf(d[0]);loadMy(u.id);loadDrops(u.id);
-        // Vérifier si admin
         api(`admins?id=eq.${u.id}`).then(r=>setIsAdmin(Array.isArray(r)&&r.length>0)).catch(()=>setIsAdmin(false));
       }})
           .catch(e=>console.log("Session:",e));
@@ -1386,7 +1377,21 @@ function App(){
   },[]);
   useEffect(()=>{if(user?.id){loadMy(user.id);loadDrops(user.id)}},[user?.id]);
 
-  const login=async(email,pwd)=>{setLoad(true);try{const d=await authApi("token?grant_type=password",{email,password:pwd});st(d.access_token);setUser(d.user);sessionStorage.setItem('smashd_user',JSON.stringify(d.user));const p=await api(`profiles?id=eq.${d.user.id}`);setProf(p[0]||null);tw("Bienvenue !");go("home")}catch(e){throw e}finally{setLoad(false)}};
+  const login=async(email,pwd,remember=false)=>{
+    setLoad(true);
+    try{
+      const d=await authApi("token?grant_type=password",{email,password:pwd});
+      st(d.access_token,remember);
+      setUser(d.user);
+      const store=remember?localStorage:sessionStorage;
+      store.setItem("smashd_user",JSON.stringify(d.user));
+      const p=await api(`profiles?id=eq.${d.user.id}`);
+      setProf(p[0]||null);
+      tw("Bienvenue !");
+      go("home");
+    }catch(e){throw e}
+    finally{setLoad(false)}
+  };
   const register=async(email,pwd,name,ut,siret,company)=>{setLoad(true);try{const d=await authApi("signup",{email,password:pwd});if(d.user){if(d.access_token)st(d.access_token);await api("profiles",{method:"POST",body:JSON.stringify({id:d.user.id,name,email,user_type:ut,siret:siret||null,company:company||null})});setUser(d.user);setProf({id:d.user.id,name,email,user_type:ut});tw("Compte créé !");go("home")}}catch(e){throw e}finally{setLoad(false)}};
   const logout=()=>{ct();setUser(null);setProf(null);setMyA([]);setMyO([]);setMyS([]);setMyDropsV([]);setMyDropsA([]);go("home")};
 
@@ -1451,16 +1456,6 @@ function App(){
 
   const onDropRefresh=()=>{if(user?.id)loadDrops(user.id)};
 
-  const loadUnreadMsg=async(uid)=>{
-    try{
-      const data=await api(`conversations?or=(acheteur_id.eq.${uid},vendeur_id.eq.${uid})`);
-      const total=(data||[]).reduce((s,c)=>s+(c.acheteur_id===uid?c.unread_acheteur||0:c.unread_vendeur||0),0);
-      setTotalUnreadMsg(total);
-    }catch(e){}
-  };
-
-  useEffect(()=>{if(user?.id){loadUnreadMsg(user.id);const iv=setInterval(()=>loadUnreadMsg(user.id),15000);return()=>clearInterval(iv);}},[user?.id]);
-
   const fil=ann
     .filter(a=>fcat==="Tous"||a.category===fcat||a.sub_category===fcat)
     .filter(a=>fst==="Tous"||a.state===fst)
@@ -1483,21 +1478,19 @@ function App(){
   const p={user,prof,load,tw,go,login,register,logout,publish,toggleA,deleteA,placeOrder,toggleFavori,isAdmin,
     myA,myO,myS,myDropsV,myDropsA,myDropCr,myDropMsgs,clubs,wal,dtab,setDtab,
     ann:fil,allAnn:ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,sel,
-    lang,setLang,favs,setFavs,pendingV,pendingA,onDropRefresh,
-    showMsg,setShowMsg,msgOpenConvId,setMsgOpenConvId,totalUnreadMsg};
+    lang,setLang,favs,setFavs,pendingV,pendingA,onDropRefresh};
 
   return(
     <div>
       {toast&&<Toast {...toast}/>}
-      {showMsg&&user&&<MessagerieModal user={user} onClose={()=>{setShowMsg(false);setMsgOpenConvId(null);}} openConvId={msgOpenConvId} allAnn={ann} go={go}/>}
       {sc==="reset"&&<ResetPassword go={go}/>}{sc==="pro"&&<ProPage user={user} prof={prof} go={go} tw={tw}/>}{sc==="profil"&&<ProfilPublic userId={profileId} go={go} user={user} tw={tw}/>}
       {sc==="legal"&&<LegalPage page={legalPage} go={go}/>}{sc==="home"&&<Home {...p}/>}
-      {sc==="auth"&&<Auth {...p}/>}
+      {sc==="auth"&&<Auth {...p} initMode={authInitMode}/>}
       {sc==="sell"&&<Sell {...p}/>}
       {sc==="article"&&<Article {...p}/>}
       {sc==="dashboard"&&<Dash {...p}/>}
       {sc==="admin"&&isAdmin&&<AdminPanel user={user} prof={prof} go={go} tw={tw} api={api}/>}
-      <BottomNav sc={sc} setSc={setSc} go={go} user={user} myDropsV={myDropsV} myDropsA={myDropsA} dtab={dtab} setDtab={setDtab} prof={prof} totalUnreadMsg={totalUnreadMsg} onOpenMsg={()=>{setShowMsg(true);setMsgOpenConvId(null);}}/>
+      <BottomNav sc={sc} setSc={setSc} go={go} user={user} myDropsV={myDropsV} myDropsA={myDropsA} dtab={dtab} setDtab={setDtab} prof={prof}/>
     </div>
   );
 }
@@ -1726,33 +1719,51 @@ function ProPage({user, prof, go, tw}){
 
 
 // ═══ BOTTOM NAV MOBILE ═══
-function BottomNav({sc, setSc, go, user, myDropsV, myDropsA, dtab, setDtab, prof, totalUnreadMsg, onOpenMsg}){
+function BottomNav({sc, setSc, go, user, myDropsV, myDropsA, dtab, setDtab, prof}){
   const pendingV=(myDropsV||[]).filter(d=>d.status==="mode_choisi").length;
   const pendingA=(myDropsA||[]).filter(d=>d.status==="creneaux_proposes").length;
   const totalPending=pendingV+pendingA;
 
   const items=[
     {
-      id:"home",label:"Accueil",active:sc==="home",onClick:()=>go("home"),
+      id:"home",
+      label:"Accueil",
+      active:sc==="home",
+      onClick:()=>go("home"),
       icon:<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>
     },
     {
-      id:"msg",label:"Messages",active:false,badge:(totalUnreadMsg||0)>0,
-      onClick:()=>{if(!user){go("auth");return;}onOpenMsg&&onOpenMsg();},
-      icon:<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      id:"achats",
+      label:"Achats",
+      active:sc==="dashboard"&&dtab==="drop-acheteur",
+      badge:pendingA>0,
+      onClick:()=>{if(!user){go("auth");return;}setSc("dashboard");setDtab("drop-acheteur");},
+      icon:<><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></>
     },
     {
-      id:"sell",label:"Vendre",active:sc==="sell",isSell:true,onClick:()=>{if(!user){go("auth");return;}go("sell");},
+      id:"sell",
+      label:"Vendre",
+      active:sc==="sell",
+      isSell:true,
+      onClick:()=>{if(!user){go("auth");return;}go("sell");},
       icon:<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>
     },
     {
-      id:"ventes",label:"Ventes",active:sc==="dashboard"&&dtab==="drop-vendeur",badge:pendingV>0,
+      id:"ventes",
+      label:"Ventes",
+      active:sc==="dashboard"&&dtab==="drop-vendeur",
+      badge:pendingV>0,
       onClick:()=>{if(!user){go("auth");return;}setSc("dashboard");setDtab("drop-vendeur");},
       icon:<><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></>
     },
     {
-      id:"profil",label:"Profil",active:(sc==="dashboard"&&dtab==="overview")||sc==="profil",
-      onClick:()=>{if(!user){go("auth");return;}setSc("dashboard");setDtab("overview");},
+      id:"profil",
+      label:"Profil",
+      active:sc==="dashboard"&&dtab==="overview"||sc==="profil",
+      onClick:()=>{
+        if(!user){go("auth");return;}
+        setSc("dashboard");setDtab("overview");
+      },
       icon:<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>
     },
   ];
@@ -1978,238 +1989,6 @@ function StatsPanel({myA, user, isPro, go}){
   );
 }
 
-
-
-
-// ═══ MESSAGERIE MODAL ═══
-function MessagerieModal({user,onClose,openConvId,allAnn,go}){
-  const[convs,setConvs]=useState([]);
-  const[msgs,setMsgs]=useState([]);
-  const[selConv,setSelConv]=useState(null);
-  const[profiles,setProfiles]=useState({});
-  const[loading,setLoading]=useState(true);
-  const[sending,setSending]=useState(false);
-  const[val,setVal]=useState("");
-  const[mobileChat,setMobileChat]=useState(false);
-  const bottomRef=useRef();
-
-  const loadConvs=async()=>{
-    if(!user?.id)return[];
-    try{
-      const data=await api(`conversations?or=(acheteur_id.eq.${user.id},vendeur_id.eq.${user.id})&order=last_message_at.desc`);
-      setConvs(data||[]);
-      const ids=[...new Set((data||[]).flatMap(c=>[c.acheteur_id,c.vendeur_id]).filter(id=>id&&id!==user.id))];
-      if(ids.length>0){
-        const profs=await api(`profiles?id=in.(${ids.join(",")})`);
-        const map={};profs.forEach(p=>{map[p.id]=p;});
-        setProfiles(map);
-      }
-      return data||[];
-    }catch(e){return[];}
-  };
-
-  const loadMsgs=async(conv)=>{
-    if(!conv?.id)return;
-    try{
-      const data=await api(`conv_messages?conversation_id=eq.${conv.id}&order=created_at`);
-      setMsgs(data||[]);
-      const unreadField=conv.acheteur_id===user.id?"unread_acheteur":"unread_vendeur";
-      if(conv[unreadField]>0){
-        await api(`conversations?id=eq.${conv.id}`,{method:"PATCH",body:JSON.stringify({[unreadField]:0}),prefer:"return=minimal"});
-        setConvs(cs=>cs.map(c=>c.id===conv.id?{...c,[unreadField]:0}:c));
-      }
-    }catch(e){}
-  };
-
-  useEffect(()=>{
-    setLoading(true);
-    loadConvs().then(data=>{
-      setLoading(false);
-      if(openConvId&&data.length>0){
-        const t=data.find(c=>c.id===openConvId);
-        if(t){setSelConv(t);setMobileChat(true);}
-      } else if(data.length>0&&window.innerWidth>640){
-        setSelConv(data[0]);
-      }
-    });
-  },[]);
-
-  useEffect(()=>{
-    if(!selConv)return;
-    loadMsgs(selConv);
-    const iv=setInterval(()=>loadMsgs(selConv),5000);
-    return()=>clearInterval(iv);
-  },[selConv?.id]);
-
-  useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:"smooth"});},[msgs.length]);
-
-  const sendMsg=async()=>{
-    const content=filterMsg(val.trim());
-    if(!content||!selConv)return;
-    setSending(true);
-    try{
-      await api("conv_messages",{method:"POST",body:JSON.stringify({conversation_id:selConv.id,sender_id:user.id,content})});
-      const otherField=selConv.acheteur_id===user.id?"unread_vendeur":"unread_acheteur";
-      await api(`conversations?id=eq.${selConv.id}`,{method:"PATCH",body:JSON.stringify({last_message_at:new Date().toISOString(),[otherField]:(selConv[otherField]||0)+1}),prefer:"return=minimal"});
-      setVal("");
-      await loadMsgs(selConv);
-    }catch(e){}
-    finally{setSending(false);}
-  };
-
-  const getInter=(conv)=>{const id=conv.acheteur_id===user.id?conv.vendeur_id:conv.acheteur_id;return profiles[id]||{name:"Utilisateur"};};
-  const getUnread=(conv)=>conv.acheteur_id===user.id?conv.unread_acheteur:conv.unread_vendeur;
-  const getAnn=(conv)=>allAnn?.find(a=>a.id===conv.annonce_id);
-  const totalUnread=convs.reduce((s,c)=>s+(getUnread(c)||0),0);
-  const isDesktop=window.innerWidth>640;
-  const showSidebar=!mobileChat||isDesktop;
-  const showChat=selConv&&(mobileChat||isDesktop);
-
-  return(
-    <div className="msg-overlay" onClick={e=>{if(e.target===e.currentTarget)onClose()}}>
-      <div className="msg-modal">
-        {/* Header */}
-        <div style={{background:C.g,borderRadius:"20px 20px 0 0",padding:"14px 20px",display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-          {mobileChat&&!isDesktop&&<button onClick={()=>{setMobileChat(false);}} style={{background:"rgba(255,255,255,.15)",border:"none",borderRadius:"50%",width:30,height:30,cursor:"pointer",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center"}}><Ico.chL/></button>}
-          <div style={{flex:1}}>
-            <div style={{fontSize:16,fontWeight:900,color:"#fff",letterSpacing:"-0.5px"}}>{mobileChat&&!isDesktop&&selConv?getInter(selConv).name||"Conversation":"Messages"}</div>
-            {!(mobileChat&&!isDesktop)&&<div style={{fontSize:12,color:"rgba(255,255,255,.5)",marginTop:1}}>{convs.length} conversation{convs.length!==1?"s":""}{totalUnread>0?` · ${totalUnread} non lu${totalUnread>1?"s":""}`:""}</div>}
-          </div>
-          <button onClick={onClose} style={{background:"rgba(255,255,255,.1)",border:"none",borderRadius:"50%",width:30,height:30,cursor:"pointer",color:"rgba(255,255,255,.7)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>✕</button>
-        </div>
-
-        <div className="msg-modal-inner">
-          {/* Sidebar */}
-          {showSidebar&&(
-            <div className="msg-sidebar">
-              {loading?<div style={{padding:32,textAlign:"center",color:C.f400}}>Chargement…</div>
-              :convs.length===0?<div style={{padding:"40px 16px",textAlign:"center",color:C.f400}}><div style={{fontSize:32,marginBottom:10}}>💬</div><div style={{fontSize:13,fontWeight:600,marginBottom:6}}>Aucun message</div><div style={{fontSize:12,lineHeight:1.6}}>Contactez un vendeur depuis une annonce pour démarrer.</div></div>
-              :<div style={{overflowY:"auto",flex:1}}>
-                {convs.map(conv=>{
-                  const inter=getInter(conv);const ann=getAnn(conv);const unread=getUnread(conv)||0;const active=selConv?.id===conv.id;
-                  return(
-                    <div key={conv.id} className={`msg-conv-item${active?" active":""}`} onClick={()=>{setSelConv(conv);setMobileChat(true);}}>
-                      <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
-                        <div style={{width:40,height:40,borderRadius:"50%",background:C.g,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:700,flexShrink:0,overflow:"hidden"}}>
-                          {inter.avatar_url?<img src={inter.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(inter.name||"?").charAt(0).toUpperCase()}
-                        </div>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:2}}>
-                            <div style={{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{inter.name||"Utilisateur"}</div>
-                            {unread>0&&<span style={{background:C.o,color:"#fff",borderRadius:"50%",minWidth:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,padding:"0 3px",flexShrink:0}}>{unread}</span>}
-                          </div>
-                          {ann&&<div style={{fontSize:11,color:C.f400,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📦 {ann.title}</div>}
-                          <div style={{fontSize:10,color:C.f300,marginTop:1}}>{new Date(conv.last_message_at).toLocaleDateString("fr-FR")}</div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>}
-            </div>
-          )}
-
-          {/* Chat */}
-          {showChat?(
-            <div className="msg-chat">
-              <div style={{padding:"10px 14px",borderBottom:`1px solid ${C.f200}`,display:"flex",gap:10,alignItems:"center",flexShrink:0,background:C.w}}>
-                {(()=>{const inter=getInter(selConv);const ann=getAnn(selConv);return(<>
-                  <div style={{width:34,height:34,borderRadius:"50%",background:C.g,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,overflow:"hidden",flexShrink:0}}>
-                    {inter.avatar_url?<img src={inter.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(inter.name||"?").charAt(0).toUpperCase()}
-                  </div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:13,fontWeight:700}}>{inter.name||"Utilisateur"}</div>
-                    {ann&&<div style={{fontSize:11,color:C.f400,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>📦 {ann.title} — {ann.price} €</div>}
-                  </div>
-                  {ann&&<button onClick={()=>{go("article",ann);onClose();}} style={{background:C.f100,border:"none",borderRadius:100,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer",color:C.k,flexShrink:0}}>Voir →</button>}
-                </>)})()}
-              </div>
-              <div className="msg-messages">
-                {msgs.length===0&&<div style={{textAlign:"center",padding:"32px 16px",color:C.f400}}><div style={{fontSize:24,marginBottom:8}}>👋</div><div style={{fontSize:13,lineHeight:1.6}}>Démarrez la conversation ! Posez vos questions sur l'article.</div><div style={{fontSize:11,color:C.f300,marginTop:6}}>Coordonnées masquées automatiquement.</div></div>}
-                {msgs.map((m,i)=>{
-                  const isMe=m.sender_id===user.id;
-                  const showDate=i===0||new Date(m.created_at).toDateString()!==new Date(msgs[i-1].created_at).toDateString();
-                  return(
-                    <React.Fragment key={m.id}>
-                      {showDate&&<div style={{textAlign:"center",fontSize:11,color:C.f400,margin:"4px 0"}}>{new Date(m.created_at).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</div>}
-                      <div style={{display:"flex",flexDirection:"column",alignItems:isMe?"flex-end":"flex-start"}}>
-                        <div style={{maxWidth:"75%",background:isMe?C.g:C.f100,color:isMe?"#fff":C.k,borderRadius:isMe?"14px 14px 4px 14px":"14px 14px 14px 4px",padding:"9px 13px",fontSize:14,lineHeight:1.5}}>{m.content}</div>
-                        <div style={{fontSize:10,color:C.f400,marginTop:2,paddingLeft:4,paddingRight:4}}>{new Date(m.created_at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</div>
-                      </div>
-                    </React.Fragment>
-                  );
-                })}
-                <div ref={bottomRef}/>
-              </div>
-              <div style={{padding:"5px 12px",background:"#FFFBF0",borderTop:`1px solid #F5E8B0`,fontSize:11,color:"#8a6a00",flexShrink:0}}>🔒 Coordonnées masquées automatiquement</div>
-              <div style={{padding:"10px 12px",borderTop:`1px solid ${C.f200}`,display:"flex",gap:8,flexShrink:0,background:C.w}}>
-                <input value={val} onChange={e=>setVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey&&val.trim()){e.preventDefault();sendMsg();}}} placeholder="Votre message…" style={{flex:1,padding:"10px 14px",borderRadius:100,border:`1.5px solid ${C.f200}`,fontSize:14,outline:"none",fontFamily:"'Inter',sans-serif"}}/>
-                <button onClick={sendMsg} disabled={sending||!val.trim()} style={{background:val.trim()?C.g:"#ccc",color:"#fff",border:"none",borderRadius:100,padding:"10px 18px",fontSize:13,fontWeight:700,cursor:val.trim()?"pointer":"not-allowed",transition:"background .15s",flexShrink:0}}>{sending?"…":"Envoyer"}</button>
-              </div>
-            </div>
-          ):isDesktop&&convs.length>0?(
-            <div className="msg-chat" style={{alignItems:"center",justifyContent:"center"}}>
-              <div style={{textAlign:"center",color:C.f400}}><div style={{fontSize:40,marginBottom:12}}>💬</div><div style={{fontSize:14,fontWeight:600}}>Sélectionnez une conversation</div></div>
-            </div>
-          ):null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-async function initConversation(annonce,userId,tw){
-  if(!userId||!annonce?.user_id||userId===annonce.user_id)return null;
-  try{
-    const existing=await api(`conversations?annonce_id=eq.${annonce.id}&acheteur_id=eq.${userId}`);
-    if(existing&&existing.length>0)return existing[0].id;
-    const created=await api("conversations",{method:"POST",body:JSON.stringify({annonce_id:annonce.id,acheteur_id:userId,vendeur_id:annonce.user_id,unread_acheteur:0,unread_vendeur:0})});
-    return created[0]?.id||null;
-  }catch(e){tw&&tw("Erreur messagerie","error");return null;}
-}
-
-// ═══ SETTINGS PANEL ═══
-function SettingsPanel({user,prof,tw,logout,go}){
-  const[section,setSection]=useState(null);
-  const[form,setForm]=useState({name:prof?.name||"",phone:prof?.phone||"",ville:prof?.ville||""});
-  const[savingInfo,setSavingInfo]=useState(false);
-  const[pwdForm,setPwdForm]=useState({current:"",newPwd:"",confirm:""});
-  const[savingPwd,setSavingPwd]=useState(false);
-  const[showCur,setShowCur]=useState(false);const[showNew,setShowNew]=useState(false);
-  const[notifs,setNotifs]=useState({email_vente:prof?.notif_email_vente!==false,email_achat:prof?.notif_email_achat!==false,email_drop:prof?.notif_email_drop!==false,email_promo:prof?.notif_email_promo===true});
-  const[savingNotif,setSavingNotif]=useState(false);
-  const[delConfirm,setDelConfirm]=useState("");const[delBusy,setDelBusy]=useState(false);
-  const saveInfo=async()=>{if(!form.name.trim()){tw("Le nom est obligatoire","error");return;}setSavingInfo(true);try{await api(`profiles?id=eq.${user.id}`,{method:"PATCH",body:JSON.stringify({name:form.name.trim(),phone:form.phone.trim()||null,ville:form.ville.trim()||null})});tw("✅ Informations mises à jour !");setSection(null);}catch(e){tw("Erreur","error")}finally{setSavingInfo(false)}};
-  const savePwd=async()=>{if(!pwdForm.newPwd||pwdForm.newPwd.length<8){tw("Minimum 8 caractères","error");return;}if(pwdForm.newPwd!==pwdForm.confirm){tw("Les mots de passe ne correspondent pas","error");return;}setSavingPwd(true);try{await authApi("token?grant_type=password",{email:user.email,password:pwdForm.current});const r=await fetch(`${SB}/auth/v1/user`,{method:"PUT",headers:{"apikey":KEY,"Authorization":"Bearer "+gt(),"Content-Type":"application/json"},body:JSON.stringify({password:pwdForm.newPwd})});if(!r.ok){const e=await r.json();throw new Error(e.message||"Erreur");}tw("✅ Mot de passe mis à jour !");setPwdForm({current:"",newPwd:"",confirm:""});setSection(null);}catch(e){if(e.message&&e.message.toLowerCase().includes("invalid")){tw("Mot de passe actuel incorrect","error");}else{tw("Erreur : "+e.message,"error");}}finally{setSavingPwd(false)}};
-  const saveNotifs=async()=>{setSavingNotif(true);try{await api(`profiles?id=eq.${user.id}`,{method:"PATCH",body:JSON.stringify({notif_email_vente:notifs.email_vente,notif_email_achat:notifs.email_achat,notif_email_drop:notifs.email_drop,notif_email_promo:notifs.email_promo})});tw("✅ Notifications enregistrées !");setSection(null);}catch(e){tw("Erreur","error")}finally{setSavingNotif(false)}};
-  const deleteAccount=async()=>{if(delConfirm!=="SUPPRIMER"){tw("Tapez SUPPRIMER pour confirmer","error");return;}setDelBusy(true);try{await api(`profiles?id=eq.${user.id}`,{method:"PATCH",body:JSON.stringify({name:"Compte supprimé",email:null,phone:null,ville:null,bio:null,avatar_url:null})});tw("Compte supprimé. Au revoir !");setTimeout(()=>logout(),1500);}catch(e){tw("Erreur","error")}finally{setDelBusy(false)}};
-  const SH=({title,onBack})=>(<div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}><button onClick={onBack} style={{background:C.f100,border:"none",borderRadius:"50%",width:32,height:32,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.f600,flexShrink:0}}><Ico.chL/></button><h2 style={{fontSize:19,fontWeight:900,letterSpacing:"-0.5px",margin:0}}>{title}</h2></div>);
-  const Toggle=({checked,onChange,label,sub})=>(<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"13px 0",borderBottom:`1px solid ${C.f100}`}}><div><div style={{fontSize:14,fontWeight:600,color:C.k}}>{label}</div>{sub&&<div style={{fontSize:12,color:C.f400,marginTop:2}}>{sub}</div>}</div><div onClick={()=>onChange(!checked)} style={{width:44,height:24,borderRadius:100,background:checked?C.g:C.f200,cursor:"pointer",position:"relative",transition:"background .2s",flexShrink:0}}><div style={{position:"absolute",top:3,left:checked?22:3,width:18,height:18,borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.15)"}}/></div></div>);
-  const inp={width:"100%",padding:"11px 13px",borderRadius:11,border:`1.5px solid ${C.f200}`,fontSize:14,fontFamily:"'Inter',sans-serif",outline:"none",boxSizing:"border-box",marginBottom:12,transition:"border .15s"};
-  const lbl={fontSize:11,fontWeight:700,color:C.f400,textTransform:"uppercase",letterSpacing:"1px",display:"block",marginBottom:6};
-  const btn=(col="#0A2A1E",txt="#fff")=>({background:col,color:txt,border:"none",borderRadius:100,padding:"12px 22px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'Inter',sans-serif",transition:"all .15s"});
-  if(!section){
-    const MENU=[{id:"infos",icon:"👤",title:"Informations personnelles",sub:`${prof?.name||"—"} · ${prof?.ville||"Ville non renseignée"}`},{id:"pwd",icon:"🔐",title:"Mot de passe",sub:"Modifier votre mot de passe"},{id:"notifs",icon:"🔔",title:"Notifications",sub:"Emails de ventes, achats, Drop"},{id:"del",icon:"🗑️",title:"Supprimer mon compte",sub:"Action irréversible",danger:true}];
-    return(<div>
-      <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:6}}>Paramètres</h2>
-      <p style={{fontSize:14,color:C.f400,marginBottom:20}}>{user?.email}</p>
-      <div style={{background:C.g,borderRadius:16,padding:"18px 20px",marginBottom:18,display:"flex",gap:14,alignItems:"center",color:"#fff",cursor:"pointer"}} onClick={()=>go("profil",null,user?.id)}>
-        <div style={{width:48,height:48,borderRadius:"50%",background:"rgba(255,255,255,.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:900,overflow:"hidden",flexShrink:0}}>{prof?.avatar_url?<img src={prof.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:(prof?.name||"?").charAt(0).toUpperCase()}</div>
-        <div style={{flex:1,minWidth:0}}><div style={{fontSize:15,fontWeight:700}}>{prof?.name||"Mon compte"}</div><div style={{fontSize:12,color:"rgba(255,255,255,.6)",marginTop:2}}>Voir mon profil public →</div></div>
-        {prof?.user_type==="pro"&&<span style={{background:"rgba(255,255,255,.15)",borderRadius:6,padding:"2px 9px",fontSize:11,fontWeight:700}}>PRO</span>}
-      </div>
-      <div style={{display:"flex",flexDirection:"column",gap:8}}>
-        {MENU.map(m=>(<div key={m.id} onClick={()=>setSection(m.id)} style={{background:C.w,border:`1px solid ${m.danger?C.r+"33":C.f200}`,borderRadius:12,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.06)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}><span style={{fontSize:22,width:32,textAlign:"center",flexShrink:0}}>{m.icon}</span><div style={{flex:1}}><div style={{fontSize:14,fontWeight:600,color:m.danger?C.r:C.k}}>{m.title}</div><div style={{fontSize:12,color:C.f400,marginTop:2}}>{m.sub}</div></div><Ico.chR/></div>))}
-        <div onClick={logout} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:12,padding:"14px 16px",display:"flex",alignItems:"center",gap:12,cursor:"pointer"}} onMouseEnter={e=>e.currentTarget.style.boxShadow="0 4px 16px rgba(0,0,0,.06)"} onMouseLeave={e=>e.currentTarget.style.boxShadow="none"}><span style={{fontSize:22,width:32,textAlign:"center",flexShrink:0}}>🚪</span><div style={{flex:1}}><div style={{fontSize:14,fontWeight:600,color:C.r}}>Déconnexion</div><div style={{fontSize:12,color:C.f400,marginTop:2}}>Se déconnecter de SMASHD</div></div><Ico.chR/></div>
-      </div>
-    </div>);
-  }
-  if(section==="infos")return(<div><SH title="Informations personnelles" onBack={()=>setSection(null)}/><div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:16,padding:"22px"}}><label style={lbl}>Nom complet *</label><input style={inp} value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Prénom Nom" onFocus={e=>e.target.style.borderColor=C.g} onBlur={e=>e.target.style.borderColor=C.f200}/><label style={lbl}>Email</label><input style={{...inp,background:C.f50,color:C.f400,cursor:"not-allowed"}} value={user?.email||""} disabled/><div style={{fontSize:11,color:C.f400,marginTop:-8,marginBottom:12}}>L'email ne peut pas être modifié ici.</div><label style={lbl}>Téléphone</label><input style={inp} value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} placeholder="06 12 34 56 78" type="tel" onFocus={e=>e.target.style.borderColor=C.g} onBlur={e=>e.target.style.borderColor=C.f200}/><label style={lbl}>Ville</label><input style={inp} value={form.ville} onChange={e=>setForm(f=>({...f,ville:e.target.value}))} placeholder="Paris, Lyon…" onFocus={e=>e.target.style.borderColor=C.g} onBlur={e=>e.target.style.borderColor=C.f200}/><div style={{display:"flex",gap:8,marginTop:4}}><button onClick={saveInfo} disabled={savingInfo} style={btn()}>{savingInfo?"Enregistrement…":"✓ Enregistrer"}</button><button onClick={()=>setSection(null)} style={btn(C.f100,C.k)}>Annuler</button></div></div></div>);
-  if(section==="pwd")return(<div><SH title="Modifier le mot de passe" onBack={()=>setSection(null)}/><div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:16,padding:"22px"}}><label style={lbl}>Mot de passe actuel *</label><div style={{position:"relative",marginBottom:12}}><input style={{...inp,marginBottom:0,paddingRight:44}} type={showCur?"text":"password"} value={pwdForm.current} onChange={e=>setPwdForm(f=>({...f,current:e.target.value}))} placeholder="••••••••" onFocus={e=>e.target.style.borderColor=C.g} onBlur={e=>e.target.style.borderColor=C.f200}/><button onClick={()=>setShowCur(v=>!v)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:C.f400,fontSize:14,padding:4}}>{showCur?"🙈":"👁️"}</button></div><label style={lbl}>Nouveau mot de passe *</label><div style={{position:"relative",marginBottom:4}}><input style={{...inp,marginBottom:0,paddingRight:44}} type={showNew?"text":"password"} value={pwdForm.newPwd} onChange={e=>setPwdForm(f=>({...f,newPwd:e.target.value}))} placeholder="••••••••" onFocus={e=>e.target.style.borderColor=C.g} onBlur={e=>e.target.style.borderColor=C.f200}/><button onClick={()=>setShowNew(v=>!v)} style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",color:C.f400,fontSize:14,padding:4}}>{showNew?"🙈":"👁️"}</button></div>{pwdForm.newPwd&&(()=>{const s=pwdForm.newPwd.length>=12&&/[A-Z]/.test(pwdForm.newPwd)&&/[0-9]/.test(pwdForm.newPwd)?3:pwdForm.newPwd.length>=8?2:1;const cols=["#E8290A","#F5A623","#00C46A"];const labs=["Faible","Moyen","Fort"];return<div style={{marginBottom:12}}><div style={{display:"flex",gap:4,marginBottom:4}}>{[1,2,3].map(i=><div key={i} style={{flex:1,height:4,borderRadius:2,background:i<=s?cols[s-1]:C.f200,transition:"background .3s"}}/>)}</div><div style={{fontSize:11,color:cols[s-1],fontWeight:700}}>{labs[s-1]}</div></div>;})()} <label style={lbl}>Confirmer *</label><input style={{...inp,borderColor:pwdForm.confirm&&pwdForm.confirm!==pwdForm.newPwd?C.r:C.f200}} type="password" value={pwdForm.confirm} onChange={e=>setPwdForm(f=>({...f,confirm:e.target.value}))} placeholder="••••••••"/>{pwdForm.confirm&&pwdForm.confirm!==pwdForm.newPwd&&<div style={{fontSize:12,color:C.r,marginTop:-8,marginBottom:12}}>Les mots de passe ne correspondent pas</div>}<div style={{display:"flex",gap:8,marginTop:4}}><button onClick={savePwd} disabled={savingPwd||!pwdForm.current||!pwdForm.newPwd||pwdForm.newPwd!==pwdForm.confirm} style={{...btn(),opacity:savingPwd||!pwdForm.current||!pwdForm.newPwd||pwdForm.newPwd!==pwdForm.confirm?.5:1}}>{savingPwd?"Mise à jour…":"✓ Changer"}</button><button onClick={()=>setSection(null)} style={btn(C.f100,C.k)}>Annuler</button></div></div></div>);
-  if(section==="notifs")return(<div><SH title="Notifications" onBack={()=>setSection(null)}/><div style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:16,padding:"22px"}}><Toggle checked={notifs.email_vente} onChange={v=>setNotifs(n=>({...n,email_vente:v}))} label="Nouvelle vente confirmée" sub="Reçu quand un acheteur paie votre article"/><Toggle checked={notifs.email_achat} onChange={v=>setNotifs(n=>({...n,email_achat:v}))} label="Confirmation d'achat" sub="Reçu après votre paiement"/><Toggle checked={notifs.email_drop} onChange={v=>setNotifs(n=>({...n,email_drop:v}))} label="Alertes SMASHD Drop" sub="Créneaux, code Drop, confirmations"/><div style={{fontSize:13,fontWeight:700,color:C.f400,textTransform:"uppercase",letterSpacing:"1px",marginTop:16,marginBottom:4}}>Marketing</div><Toggle checked={notifs.email_promo} onChange={v=>setNotifs(n=>({...n,email_promo:v}))} label="Offres et nouveautés SMASHD" sub="Promos partenaires, nouvelles fonctionnalités"/><div style={{background:C.f50,borderRadius:10,padding:"11px 14px",margin:"16px 0",fontSize:12,color:C.f400,lineHeight:1.6}}>Les emails transactionnels ne peuvent pas être désactivés.</div><div style={{display:"flex",gap:8}}><button onClick={saveNotifs} disabled={savingNotif} style={btn()}>{savingNotif?"Enregistrement…":"✓ Enregistrer"}</button><button onClick={()=>setSection(null)} style={btn(C.f100,C.k)}>Annuler</button></div></div></div>);
-  if(section==="del")return(<div><SH title="Supprimer mon compte" onBack={()=>setSection(null)}/><div style={{background:"#FFF0EE",border:`1.5px solid ${C.r}`,borderRadius:16,padding:"22px"}}><div style={{fontSize:32,marginBottom:12,textAlign:"center"}}>⚠️</div><h3 style={{fontSize:16,fontWeight:800,color:C.r,marginBottom:12,textAlign:"center"}}>Cette action est irréversible</h3><div style={{fontSize:13,color:C.f600,lineHeight:1.8,marginBottom:16}}>La suppression entraîne l'anonymisation de vos données personnelles. Les données de transactions sont conservées 10 ans (obligation légale).</div><div style={{background:"#fff",borderRadius:10,padding:"14px",marginBottom:16}}><div style={{fontSize:13,fontWeight:600,marginBottom:8}}>Tapez <strong>SUPPRIMER</strong> pour confirmer :</div><input style={{...inp,marginBottom:0,borderColor:C.r}} value={delConfirm} onChange={e=>setDelConfirm(e.target.value)} placeholder="SUPPRIMER"/></div><button onClick={deleteAccount} disabled={delBusy||delConfirm!=="SUPPRIMER"} style={{...btn(C.r),width:"100%",opacity:delBusy||delConfirm!=="SUPPRIMER"?.4:1,cursor:delBusy||delConfirm!=="SUPPRIMER"?"not-allowed":"pointer"}}>{delBusy?"Suppression…":"Supprimer définitivement"}</button><button onClick={()=>setSection(null)} style={{...btn(C.f100,C.k),width:"100%",marginTop:8}}>Annuler</button></div></div>);
-  return null;
-}
 
 // ═══ ADMIN PANEL ═══
 function AdminPanel({user, prof, go, tw, api}){
@@ -2521,7 +2300,7 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
             ):(
               <>
                 <button onClick={()=>go("auth")} className="btn hm" style={{background:"transparent",color:C.k,border:`1.5px solid ${C.f200}`,borderRadius:100,padding:"8px 18px",fontSize:13,fontWeight:600,cursor:"pointer"}}>Connexion</button>
-                <button onClick={()=>go("auth")} className="btn" style={{background:C.g,color:C.w,border:"none",borderRadius:100,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer"}}>S'inscrire</button>
+                <button onClick={()=>go("auth",null,null,null,"register")} className="btn" style={{background:C.g,color:C.w,border:"none",borderRadius:100,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer"}}>S'inscrire</button>
               </>
             )}
             
@@ -2547,7 +2326,7 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
             </p>
             <div className="fu" style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:32}}>
               <button onClick={()=>{window.scrollTo({top:700,behavior:"smooth"})}} className="btn" style={{background:C.w,color:C.k,border:"none",borderRadius:100,padding:"14px 30px",fontSize:15,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:7}}>Voir les annonces <Ico.arr/></button>
-              {!user&&<button onClick={()=>go("auth")} className="btn" style={{background:"transparent",color:C.w,border:"1.5px solid rgba(255,255,255,.3)",borderRadius:100,padding:"14px 30px",fontSize:15,fontWeight:600,cursor:"pointer"}}>S'inscrire gratuitement</button>}
+              {!user&&<button onClick={()=>go("auth",null,null,null,"register")} className="btn" style={{background:"transparent",color:C.w,border:"1.5px solid rgba(255,255,255,.3)",borderRadius:100,padding:"14px 30px",fontSize:15,fontWeight:600,cursor:"pointer"}}>S'inscrire gratuitement</button>}
             </div>
             <div className="fu" style={{display:"inline-flex",alignItems:"center",gap:8,background:"rgba(0,196,106,.1)",border:"1px solid rgba(0,196,106,.2)",borderRadius:100,padding:"8px 18px"}}>
               <Ico.drop/><span style={{fontSize:13,color:C.ga,fontWeight:700}}>SMASHD Drop — Livraison gratuite & sécurisée</span>
@@ -2662,8 +2441,8 @@ function Field({label,children,error}){
   );
 }
 
-function Auth({login,register,load,go}){
-  const[mode,setMode]=useState("login");
+function Auth({login,register,load,go,initMode="login"}){
+  const[mode,setMode]=useState(initMode);
   const[step,setStep]=useState(0);
   const[ut,setUt]=useState("particulier");
   const[email,setEmail]=useState("");
@@ -2678,6 +2457,7 @@ function Auth({login,register,load,go}){
   const[forgotEmail,setForgotEmail]=useState("");
   const[forgotSent,setForgotSent]=useState(false);
   const[forgotLoad,setForgotLoad]=useState(false);
+  const[remember,setRemember]=useState(false);
 
   const doForgot=async()=>{
     if(!forgotEmail||!/\S+@\S+\.\S+/.test(forgotEmail)){setErr({forgotEmail:"Email invalide"});return;}
@@ -2696,7 +2476,7 @@ function Auth({login,register,load,go}){
   const inp={width:"100%",padding:"12px 14px",borderRadius:12,border:`1.5px solid ${C.f200}`,fontSize:14,outline:"none",boxSizing:"border-box"};
   const v0=()=>{const e={};if(!email||!/\S+@\S+\.\S+/.test(email))e.email="Email invalide";if(!pwd||pwd.length<6)e.pwd="6 min";if(mode==="register"&&pwd!==pwd2)e.pwd2="Différents";setErr(e);return!Object.keys(e).length};
   const v1=()=>{const e={};if(!name)e.name="Requis";if(ut==="pro"&&!siret)e.siret="Requis";if(!cgv)e.cgv="Requis";setErr(e);return!Object.keys(e).length};
-  const doLogin=async()=>{if(!v0())return;try{await login(email,pwd)}catch(e){setErr({email:"Email ou mot de passe incorrect"})}};
+  const doLogin=async()=>{if(!v0())return;try{await login(email,pwd,remember)}catch(e){setErr({email:"Email ou mot de passe incorrect"})}};
   const doReg=async()=>{if(!v1())return;try{await register(email,pwd,name,ut,siret,company)}catch(e){setErr({email:e.message})}};
 
 
@@ -2718,6 +2498,10 @@ function Auth({login,register,load,go}){
               <p style={{fontSize:13,color:C.f400,marginBottom:22}}>Connectez-vous à votre compte SMASHD</p>
               <Field label="Email" error={err.email}><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="vous@exemple.com" style={{...inp,border:`1.5px solid ${err.email?C.r:C.f200}`}}/></Field>
               <Field label="Mot de passe"><input type="password" value={pwd} onChange={e=>setPwd(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&doLogin()} style={inp}/></Field>
+              <label style={{display:"flex",alignItems:"center",gap:9,cursor:"pointer",fontSize:13,color:C.f600,marginBottom:16,userSelect:"none"}}>
+                <input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)} style={{width:16,height:16,accentColor:C.g,cursor:"pointer"}}/>
+                <span>Se souvenir de moi</span>
+              </label>
               <button onClick={doLogin} disabled={load} className="btn" style={{width:"100%",background:load?"#9FE1CB":C.g,color:C.w,border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer",marginTop:8}}>{load?"Connexion…":"Se connecter"}</button>
               <button onClick={()=>setForgot(true)} style={{width:"100%",background:"none",border:"none",color:C.f400,fontSize:13,cursor:"pointer",marginTop:12,textDecoration:"underline"}}>Mot de passe oublié ?</button>
             </div>
@@ -3054,7 +2838,7 @@ function Sell({publish,load,go,clubs}){
 }
 
 // ═══ ARTICLE ═══
-function Article({sel,go,user,placeOrder,load,favs,setFavs,tw,toggleFavori,setShowMsg,setMsgOpenConvId}){
+function Article({sel,go,user,placeOrder,load,favs,setFavs,tw,toggleFavori}){
   const a=sel;
   const[tab,setTab]=useState("desc");
 
@@ -3167,11 +2951,6 @@ function Article({sel,go,user,placeOrder,load,favs,setFavs,tw,toggleFavori,setSh
               <button onClick={()=>ofr&&setOfrSent(true)} className="btn" style={{background:C.w,color:C.k,border:`1.5px solid ${C.k}`,borderRadius:100,padding:"12px 16px",fontSize:14,fontWeight:700,cursor:"pointer"}}>Offrir</button>
             </div>
             <button onClick={()=>toggleFavori(a.id)} style={{background:"none",border:`1.5px solid ${favs[a.id]?C.o:C.f200}`,borderRadius:100,padding:"11px",fontSize:14,fontWeight:600,cursor:"pointer",color:favs[a.id]?C.o:C.f400,display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>{Ico.heart(favs[a.id])} {favs[a.id]?"Sauvegardé":"Sauvegarder"}</button>
-          {user&&user.id!==a.user_id&&(
-            <button onClick={async()=>{if(!user){go("auth");return;}const convId=await initConversation(a,user.id,tw);if(convId){setMsgOpenConvId(convId);setShowMsg(true);}}} style={{background:C.f50,border:`1.5px solid ${C.f200}`,borderRadius:100,padding:"11px",fontSize:13,fontWeight:600,cursor:"pointer",color:C.k,display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>
-              <Ico.msg/> Contacter le vendeur
-            </button>
-          )}
           <button onClick={()=>go("profil",null,a.user_id)} style={{background:"none",border:`1.5px solid ${C.f200}`,borderRadius:100,padding:"11px",fontSize:13,fontWeight:600,cursor:"pointer",color:C.f600,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>👤 Voir le profil vendeur</button>
           </div>
           <div style={{borderTop:`1px solid ${C.f200}`,paddingTop:16}}>
@@ -3186,7 +2965,7 @@ function Article({sel,go,user,placeOrder,load,favs,setFavs,tw,toggleFavori,setSh
 }
 
 // ═══ DASHBOARD ═══
-function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDropMsgs,wal,dtab,setDtab,toggleA,deleteA,tw,pendingV,pendingA,onDropRefresh,isAdmin,showMsg,setShowMsg,setMsgOpenConvId,totalUnreadMsg}){
+function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDropMsgs,wal,dtab,setDtab,toggleA,deleteA,tw,pendingV,pendingA,onDropRefresh,isAdmin}){
   const isPro=prof?.user_type==="pro";
   const rev=myS.filter(s=>myDropsV.find(d=>d.commande_id===s.id&&d.status==="confirme")).reduce((acc,s)=>acc+(s.gain||0),0);
   const fn=(prof?.name&&!prof.name.includes("@"))?prof.name.split(" ")[0]:"Mon compte";
@@ -3226,11 +3005,6 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
             {DTABS.map(t=>(
               <button key={t.id} onClick={()=>setDtab(t.id)} style={{width:"100%",display:"block",padding:"9px 12px",borderRadius:10,border:"none",background:dtab===t.id?C.k:"transparent",color:dtab===t.id?C.w:t.id.includes("drop")&&(pendingV+pendingA)>0?C.o:C.f600,fontWeight:dtab===t.id?700:500,fontSize:13,cursor:"pointer",marginBottom:2,textAlign:"left"}}>{t.l}</button>
             ))}
-            {/* Messages */}
-            <button onClick={()=>{setShowMsg(true);setMsgOpenConvId(null);}} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 12px",borderRadius:10,border:"none",background:"transparent",color:totalUnreadMsg>0?C.o:C.f600,fontWeight:totalUnreadMsg>0?700:500,fontSize:13,cursor:"pointer",marginBottom:2,textAlign:"left"}}>
-              <span>💬 Messages{totalUnreadMsg>0?` (${totalUnreadMsg})`:""}</span>
-              {totalUnreadMsg>0&&<span style={{background:C.o,color:"#fff",borderRadius:"50%",minWidth:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800}}>{totalUnreadMsg}</span>}
-            </button>
             <div style={{borderTop:`1px solid ${C.f200}`,marginTop:7,paddingTop:7}}>
               <button onClick={()=>go("pro")} style={{width:"100%",display:"block",padding:"9px 12px",borderRadius:10,border:"none",background:prof?.user_type==="pro"?"rgba(0,196,106,.1)":"transparent",color:prof?.user_type==="pro"?"#00C46A":C.f600,fontWeight:600,fontSize:13,cursor:"pointer",textAlign:"left",marginBottom:2}}>
                 {prof?.user_type==="pro"?"✦ Mon abonnement Pro":"🚀 Passer Pro — 99€/an"}</button>
@@ -3423,7 +3197,21 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
           )}
 
           {dtab==="settings"&&(
-            <SettingsPanel user={user} prof={prof} tw={tw} logout={logout} go={go}/>
+            <div>
+              <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>Paramètres</h2>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {[["Informations personnelles","Nom, email, téléphone"],["Sécurité","Mot de passe, 2FA"],["Moyens de paiement","Carte, IBAN"],["Notifications","Email, push, SMS"],["Langue","Français / English"],["Supprimer mon compte","Irréversible"]].map(([t,s],i)=>(
+                  <div key={t} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:12,padding:"13px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+                    <div><div style={{fontSize:14,fontWeight:600,color:i===5?C.r:C.k}}>{t}</div><div style={{fontSize:12,color:C.f400,marginTop:2}}>{s}</div></div>
+                    <Ico.chR/>
+                  </div>
+                ))}
+                <div onClick={logout} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:12,padding:"13px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}}>
+                  <div><div style={{fontSize:14,fontWeight:600,color:C.r}}>Déconnexion</div><div style={{fontSize:12,color:C.f400,marginTop:2}}>Se déconnecter de SMASHD</div></div>
+                  <Ico.chR/>
+                </div>
+              </div>
+            </div>
           )}
 
         </div>
