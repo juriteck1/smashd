@@ -1369,7 +1369,8 @@ function App(){
     if(!user){go("auth");return}
     setLoad(true);
     try{
-      await api("annonces",{method:"POST",body:JSON.stringify({user_id:user.id,...f,status:"active"})});
+      const isPro=prof?.user_type==="pro"&&prof?.pro_expires_at&&new Date(prof.pro_expires_at)>new Date();
+      await api("annonces",{method:"POST",body:JSON.stringify({user_id:user.id,...f,status:"active",is_pro_seller:isPro||false})});
       tw("Annonce publiée !");await loadA();await loadMy(user.id);go("dashboard");setDtab("annonces");
     }catch(e){tw("Erreur : "+e.message,"error")}
     finally{setLoad(false)}
@@ -1430,7 +1431,14 @@ function App(){
     .filter(a=>fst==="Tous"||a.state===fst)
     .filter(a=>!fpr.min||a.price>=parseFloat(fpr.min))
     .filter(a=>!fpr.max||a.price<=parseFloat(fpr.max))
-    .filter(a=>!srch||a.title?.toLowerCase().includes(srch.toLowerCase())||a.brand?.toLowerCase().includes(srch.toLowerCase()));
+    .filter(a=>!srch||a.title?.toLowerCase().includes(srch.toLowerCase())||a.brand?.toLowerCase().includes(srch.toLowerCase()))
+    // Annonces Pro en tête de liste
+    .sort((a,b)=>{
+      const aP=a.is_pro_seller?1:0;
+      const bP=b.is_pro_seller?1:0;
+      if(bP!==aP) return bP-aP;
+      return new Date(b.created_at)-new Date(a.created_at);
+    });
 
   const pendingV=myDropsV.filter(d=>d.status==="mode_choisi").length;
   const pendingA=myDropsA.filter(d=>d.status==="creneaux_proposes").length;
@@ -2145,7 +2153,8 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
                   {a.photo_url?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{width:44,height:44,background:CBG[a.category]||C.g,borderRadius:12,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>{CAT_TREE[a.category]?.icon||"🏅"}</div>}
                   <button onClick={e=>{e.stopPropagation();toggleFavori(a.id)}} style={{position:"absolute",top:10,right:10,width:30,height:30,borderRadius:"50%",background:C.w,border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:favs[a.id]?C.o:C.f400}}>{Ico.heart(favs[a.id])}</button>
                   {a.brand&&<div style={{position:"absolute",bottom:8,left:8,background:"rgba(0,0,0,.65)",color:C.w,fontSize:11,fontWeight:700,borderRadius:6,padding:"3px 8px"}}>{a.brand}</div>}
-                  <div style={{position:"absolute",top:8,left:8,background:"rgba(10,42,30,.85)",color:C.ga,fontSize:9,fontWeight:700,borderRadius:6,padding:"2px 7px",display:"flex",alignItems:"center",gap:3}}><Ico.drop/><span>Drop</span></div>
+                  {a.is_pro_seller&&<div style={{position:"absolute",top:8,left:8,background:"#FFD700",color:"#5A4000",fontSize:9,fontWeight:800,borderRadius:6,padding:"2px 8px",letterSpacing:"0.5px"}}>★ EN AVANT</div>}
+                {a.drop_modes&&a.drop_modes.length>0&&<div style={{position:"absolute",top:a.is_pro_seller?28:8,left:8,background:"rgba(10,42,30,.85)",color:C.ga,fontSize:9,fontWeight:700,borderRadius:6,padding:"2px 7px",display:"flex",alignItems:"center",gap:3}}><Ico.drop/><span>Drop</span></div>}
                 </div>
                 <div style={{padding:"12px 14px"}}>
                   <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:5}}><Tag state={a.state}/>{a.sub_category&&<span style={{fontSize:10,fontWeight:600,color:C.f400}}>· {a.sub_category}</span>}</div>
