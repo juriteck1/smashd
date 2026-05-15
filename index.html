@@ -1199,6 +1199,7 @@ function App(){
   const[sc,setSc]=useState(isReset?"reset":isPro_return?"dashboard":"home");
   const[profileId,setProfileId]=useState(null);
   const[legalPage,setLegalPage]=useState("cgu");
+  const[isAdmin,setIsAdmin]=useState(false);
   const[user,setUser]=useState(null);
   const[prof,setProf]=useState(null);
   const[ann,setAnn]=useState([]);
@@ -1445,7 +1446,7 @@ function App(){
   const newSales=myDropsV.filter(d=>d.status==="mode_choisi");
   const wal=myS.filter(s=>myDropsV.find(d=>d.commande_id===s.id&&d.status==="confirme")).reduce((acc,s)=>acc+(s.gain||0),0);
 
-  const p={user,prof,load,tw,go,login,register,logout,publish,toggleA,deleteA,placeOrder,toggleFavori,
+  const p={user,prof,load,tw,go,login,register,logout,publish,toggleA,deleteA,placeOrder,toggleFavori,isAdmin,
     myA,myO,myS,myDropsV,myDropsA,myDropCr,myDropMsgs,clubs,wal,dtab,setDtab,
     ann:fil,allAnn:ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,sel,
     lang,setLang,favs,setFavs,pendingV,pendingA,onDropRefresh};
@@ -1459,6 +1460,7 @@ function App(){
       {sc==="sell"&&<Sell {...p}/>}
       {sc==="article"&&<Article {...p}/>}
       {sc==="dashboard"&&<Dash {...p}/>}
+      {sc==="admin"&&isAdmin&&<AdminPanel user={user} prof={prof} go={go} tw={tw} api={api}/>}
       <BottomNav sc={sc} setSc={setSc} go={go} user={user} myDropsV={myDropsV} myDropsA={myDropsA} dtab={dtab} setDtab={setDtab} prof={prof}/>
     </div>
   );
@@ -1953,6 +1955,209 @@ function StatsPanel({myA, user, isPro, go}){
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+
+// ═══ ADMIN PANEL ═══
+function AdminPanel({user, prof, go, tw, api}){
+  const[tab,setTab]=useState("litiges");
+  const[litiges,setLitiges]=useState([]);
+  const[sel,setSel]=useState(null);
+  const[note,setNote]=useState("");
+  const[loading,setLoading]=useState(true);
+  const[stats,setStats]=useState({total:0,ouverts:0,resolus:0,rejetes:0});
+
+  const loadLitiges=async()=>{
+    setLoading(true);
+    try{
+      const data=await api("drop_litiges?order=created_at.desc&limit=100");
+      setLitiges(data||[]);
+      setStats({
+        total:data.length,
+        ouverts:data.filter(l=>l.statut==="ouvert").length,
+        resolus:data.filter(l=>l.statut==="resolu").length,
+        rejetes:data.filter(l=>l.statut==="rejete").length,
+      });
+    }catch(e){tw("Erreur chargement","error")}
+    setLoading(false);
+  };
+
+  useEffect(()=>{loadLitiges();},[]);
+
+  const decider=async(litige,decision)=>{
+    try{
+      await api(`drop_litiges?id=eq.${litige.id}`,{
+        method:"PATCH",
+        body:JSON.stringify({
+          statut:decision==="rembourser"?"resolu":"rejete",
+          decision,
+          note_admin:note,
+          updated_at:new Date().toISOString()
+        }),
+        prefer:"return=minimal"
+      });
+      // Si remboursement : débloquer l'escrow côté acheteur
+      if(decision==="rembourser"&&litige.commande_id){
+        await api(`commandes?id=eq.${litige.commande_id}`,{
+          method:"PATCH",
+          body:JSON.stringify({escrow_status:"rembourse",drop_status:"litige_resolu"}),
+          prefer:"return=minimal"
+        });
+      }
+      // Si libérer les fonds : créditer le vendeur
+      if(decision==="liberer_fonds"&&litige.commande_id){
+        await api(`commandes?id=eq.${litige.commande_id}`,{
+          method:"PATCH",
+          body:JSON.stringify({escrow_status:"libere",drop_status:"litige_resolu"}),
+          prefer:"return=minimal"
+        });
+      }
+      tw(decision==="rembourser"?"Remboursement déclenché":"Décision enregistrée");
+      setSel(null);setNote("");
+      loadLitiges();
+    }catch(e){tw("Erreur","error")}
+  };
+
+  const MOTIFS={
+    "article_non_conforme":"Article non conforme",
+    "article_endommage":"Article endommagé",
+    "vendeur_absent":"Vendeur absent au RDV",
+    "acheteur_absent":"Acheteur absent au RDV",
+    "code_refuse":"Code refusé",
+    "autre":"Autre"
+  };
+
+  const STATUS_COLOR={
+    ouvert:{bg:"#FFF3E0",color:"#E65100"},
+    resolu:{bg:"#E8F5E9",color:"#2E7D32"},
+    rejete:{bg:"#FFEBEE",color:"#C62828"},
+  };
+
+  return(
+    <div style={{minHeight:"100vh",background:C.f50}}>
+      {/* Nav admin */}
+      <nav style={{background:C.k,padding:"0 24px",height:54,display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
+        <div style={{display:"flex",alignItems:"center",gap:16}}>
+          <button onClick={()=>go("home")} style={{background:"none",border:"none",cursor:"pointer",color:"rgba(255,255,255,.5)",display:"flex",alignItems:"center",gap:5,fontSize:13}}><Ico.chL/> Retour</button>
+          <div style={{width:1,height:20,background:"rgba(255,255,255,.1)"}}/>
+          <Logo s={18}/>
+          <div style={{background:"#E8470A",color:"#fff",fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:4,letterSpacing:"1px"}}>ADMIN</div>
+        </div>
+        <div style={{fontSize:13,color:"rgba(255,255,255,.5)"}}>Connecté : {prof?.name||user?.email}</div>
+      </nav>
+
+      <div style={{maxWidth:1100,margin:"0 auto",padding:"24px 20px"}}>
+
+        {/* KPIs */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}}>
+          {[
+            {v:stats.total,l:"Total litiges",color:C.k},
+            {v:stats.ouverts,l:"En cours",color:"#E65100"},
+            {v:stats.resolus,l:"Résolus",color:"#2E7D32"},
+            {v:stats.rejetes,l:"Rejetés",color:"#C62828"},
+          ].map((s,i)=>(
+            <div key={i} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:14,padding:"16px 20px"}}>
+              <div style={{fontSize:28,fontWeight:900,color:s.color,letterSpacing:"-1px"}}>{s.v}</div>
+              <div style={{fontSize:12,color:C.f400,marginTop:4}}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Onglets */}
+        <div style={{display:"flex",gap:8,marginBottom:20}}>
+          {[["litiges","Litiges Drop"],["all_litiges","Tous les litiges"]].map(([id,label])=>(
+            <button key={id} onClick={()=>setTab(id)} style={{padding:"8px 18px",borderRadius:100,border:`1.5px solid ${tab===id?C.k:C.f200}`,background:tab===id?C.k:"transparent",color:tab===id?C.w:C.f600,fontSize:13,fontWeight:600,cursor:"pointer"}}>
+              {label} {id==="litiges"&&stats.ouverts>0&&<span style={{background:"#E8470A",color:"#fff",borderRadius:"50%",width:18,height:18,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:10,marginLeft:4}}>{stats.ouverts}</span>}
+            </button>
+          ))}
+          <button onClick={loadLitiges} style={{marginLeft:"auto",padding:"8px 14px",borderRadius:100,border:`1px solid ${C.f200}`,background:"transparent",color:C.f600,fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+            <Ico.refresh/> Actualiser
+          </button>
+        </div>
+
+        {/* Liste litiges */}
+        <div style={{display:"grid",gap:10}}>
+          {loading?(
+            <div style={{textAlign:"center",padding:40,color:C.f400}}>Chargement...</div>
+          ):litiges.length===0?(
+            <div style={{textAlign:"center",padding:40,background:C.w,borderRadius:16,border:`1px solid ${C.f200}`}}>
+              <div style={{fontSize:32,marginBottom:12}}>🎉</div>
+              <div style={{fontSize:16,fontWeight:700}}>Aucun litige en cours</div>
+              <div style={{fontSize:13,color:C.f400,marginTop:4}}>La plateforme tourne bien !</div>
+            </div>
+          ):litiges
+            .filter(l=>tab==="litiges"?l.statut==="ouvert":true)
+            .map(l=>(
+              <div key={l.id} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:14,overflow:"hidden"}}>
+                {/* Header litige */}
+                <div style={{padding:"14px 18px",display:"flex",alignItems:"center",gap:12,cursor:"pointer",borderBottom:sel?.id===l.id?`1px solid ${C.f200}`:"none"}}
+                  onClick={()=>setSel(sel?.id===l.id?null:l)}>
+                  <div style={{flex:1}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                      <span style={{fontSize:12,fontWeight:700,background:STATUS_COLOR[l.statut]?.bg||C.f100,color:STATUS_COLOR[l.statut]?.color||C.f600,padding:"2px 8px",borderRadius:100}}>
+                        {l.statut.toUpperCase()}
+                      </span>
+                      <span style={{fontSize:12,color:C.f400}}>{MOTIFS[l.motif]||l.motif}</span>
+                      <span style={{fontSize:11,color:C.f300}}>#{l.id.slice(0,8)}</span>
+                    </div>
+                    <div style={{fontSize:13,color:C.f600,lineHeight:1.5}}>{l.description||"Pas de description"}</div>
+                  </div>
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    <div style={{fontSize:11,color:C.f400}}>{new Date(l.created_at).toLocaleDateString("fr-FR")}</div>
+                    <div style={{fontSize:20,color:C.f300,marginTop:4}}>{sel?.id===l.id?"▲":"▼"}</div>
+                  </div>
+                </div>
+
+                {/* Détail litige */}
+                {sel?.id===l.id&&(
+                  <div style={{padding:"18px"}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}} className="g1m">
+                      <div style={{background:C.f50,borderRadius:10,padding:"12px 14px"}}>
+                        <div style={{fontSize:11,color:C.f400,marginBottom:4,letterSpacing:"1px",fontWeight:600}}>ACHETEUR</div>
+                        <div style={{fontSize:13,fontWeight:600}}>{l.acheteur_id?.slice(0,8)}...</div>
+                      </div>
+                      <div style={{background:C.f50,borderRadius:10,padding:"12px 14px"}}>
+                        <div style={{fontSize:11,color:C.f400,marginBottom:4,letterSpacing:"1px",fontWeight:600}}>VENDEUR</div>
+                        <div style={{fontSize:13,fontWeight:600}}>{l.vendeur_id?.slice(0,8)}...</div>
+                      </div>
+                    </div>
+
+                    <div style={{marginBottom:16}}>
+                      <div style={{fontSize:12,fontWeight:700,color:C.f600,marginBottom:6}}>Note admin (optionnelle)</div>
+                      <textarea value={note} onChange={e=>setNote(e.target.value)} placeholder="Votre décision et justification..." rows={3}
+                        style={{width:"100%",padding:"10px 12px",borderRadius:8,border:`1px solid ${C.f200}`,fontSize:13,resize:"vertical",outline:"none",fontFamily:"inherit"}}/>
+                    </div>
+
+                    {l.statut==="ouvert"&&(
+                      <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                        <button onClick={()=>decider(l,"rembourser")} style={{background:"#2E7D32",color:"#fff",border:"none",borderRadius:100,padding:"10px 20px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
+                          Rembourser l'acheteur
+                        </button>
+                        <button onClick={()=>decider(l,"liberer_fonds")} style={{background:C.k,color:C.w,border:"none",borderRadius:100,padding:"10px 20px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+                          Libérer les fonds au vendeur
+                        </button>
+                        <button onClick={()=>decider(l,"rejete")} style={{background:"transparent",color:C.r,border:`1px solid ${C.r}`,borderRadius:100,padding:"10px 20px",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                          Rejeter le litige
+                        </button>
+                      </div>
+                    )}
+                    {l.statut!=="ouvert"&&(
+                      <div style={{background:C.f50,borderRadius:10,padding:"12px 14px"}}>
+                        <div style={{fontSize:12,fontWeight:700,color:C.f600,marginBottom:4}}>Décision prise</div>
+                        <div style={{fontSize:13,color:C.k}}>{l.decision}</div>
+                        {l.note_admin&&<div style={{fontSize:12,color:C.f400,marginTop:4}}>{l.note_admin}</div>}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))
+          }
+        </div>
+
       </div>
     </div>
   );
@@ -2769,6 +2974,9 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
             <div style={{borderTop:`1px solid ${C.f200}`,marginTop:7,paddingTop:7}}>
               <button onClick={()=>go("pro")} style={{width:"100%",display:"block",padding:"9px 12px",borderRadius:10,border:"none",background:prof?.user_type==="pro"?"rgba(0,196,106,.1)":"transparent",color:prof?.user_type==="pro"?"#00C46A":C.f600,fontWeight:600,fontSize:13,cursor:"pointer",textAlign:"left",marginBottom:2}}>
                 {prof?.user_type==="pro"?"✦ Mon abonnement Pro":"🚀 Passer Pro — 99€/an"}</button>
+              {isAdmin&&<button onClick={()=>go("admin")} style={{width:"100%",display:"block",padding:"9px 12px",borderRadius:10,border:"none",background:"rgba(232,71,10,.08)",color:"#E8470A",fontWeight:700,fontSize:13,cursor:"pointer",textAlign:"left",marginBottom:2}}>
+                Admin — Litiges
+              </button>}
               <button onClick={logout} style={{width:"100%",display:"block",padding:"9px 12px",borderRadius:10,border:"none",background:"transparent",color:C.r,fontWeight:600,fontSize:13,cursor:"pointer",textAlign:"left"}}>Déconnexion</button>
             </div>
           </div>
