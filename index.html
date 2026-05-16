@@ -3092,13 +3092,7 @@ function Auth({login,register,load,go,initMode="login"}){
   const[remember,setRemember]=useState(false);
 
   const doOAuth=async(provider)=>{
-    try{
-      const r=await fetch(`${SB}/auth/v1/authorize?provider=${provider}&redirect_to=${encodeURIComponent(window.location.href)}`,{
-        headers:{"apikey":KEY}
-      });
-      // Supabase OAuth : redirection directe
-      window.location.href=`${SB}/auth/v1/authorize?provider=${provider}&redirect_to=${encodeURIComponent(window.location.origin+window.location.pathname)}`;
-    }catch(e){setErr({email:"Erreur SSO, réessayez"});}
+    tw("Connexion "+provider+" bientôt disponible 🚀","error");
   };
 
   const SSOButtons=()=>(
@@ -3895,6 +3889,137 @@ function SettingsDelete({user,tw,logout,onBack}){
   );
 }
 
+// ═══ GESTION ANNONCES ═══
+function AnnoncesManager({myA,go,toggleA,deleteA,tw,user}){
+  const[editing,setEditing]=useState(null); // annonce en cours d'édition
+
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+        <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px"}}>Mes annonces</h2>
+        <button onClick={()=>go("sell")} className="btn" style={{background:C.k,color:C.w,border:"none",borderRadius:100,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><Ico.plus/> Nouvelle</button>
+      </div>
+
+      {/* Modale d'édition */}
+      {editing&&(
+        <EditAnnonceModal ann={editing} onClose={()=>setEditing(null)} tw={tw} onSaved={()=>setEditing(null)}/>
+      )}
+
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {myA.filter(a=>a.status!=="supprimé").map(a=>{
+          let di={};try{if(a.drop_info)di=JSON.parse(a.drop_info)}catch(e){}
+          const isActive=a.status==="active";
+          const isPause=a.status==="pause";
+          const isVendu=a.status==="vendu";
+          return(
+            <div key={a.id} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:14,overflow:"hidden"}}>
+              <div style={{display:"flex",alignItems:"center",gap:12,padding:"13px 16px"}}>
+                <div style={{width:56,height:56,borderRadius:10,overflow:"hidden",background:C.f100,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,cursor:"pointer"}} onClick={()=>go("article",a)}>
+                  {a.photo_url?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:CAT_TREE[a.category]?.icon||"🏅"}
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:14,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",cursor:"pointer"}} onClick={()=>go("article",a)}>{a.title}</div>
+                  <div style={{fontSize:12,color:C.f400,marginTop:2}}>{a.category}{a.sub_category?` · ${a.sub_category}`:""} · <strong style={{color:C.k}}>{a.price} €</strong></div>
+                  {di.modes&&<div style={{fontSize:11,color:C.ga,fontWeight:700,marginTop:3}}>{di.modes.map(m=>DROP_MODES[m]?.icon).join(" ")} Drop · Dép. {di.dept}</div>}
+                </div>
+                <div style={{flexShrink:0}}>
+                  <span style={{fontSize:11,fontWeight:700,color:isActive?C.g:isPause?C.o:C.f400,background:isActive?C.gl:isPause?"#FFF3E0":C.f100,padding:"4px 10px",borderRadius:100,textTransform:"uppercase"}}>
+                    {isActive?"● En ligne":isPause?"⏸ Pause":"✓ Vendu"}
+                  </span>
+                </div>
+              </div>
+              {!isVendu&&(
+                <div style={{borderTop:`1px solid ${C.f100}`,padding:"10px 16px",display:"flex",gap:8}}>
+                  <button onClick={()=>setEditing(a)} className="btn" style={{flex:1,background:C.f100,color:C.k,border:`1px solid ${C.f200}`,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                    ✏️ Modifier
+                  </button>
+                  <button onClick={()=>toggleA(a.id,isPause?"active":"pause")} className="btn" style={{flex:1,background:isPause?C.gl:C.f100,color:isPause?C.g:C.k,border:`1px solid ${isPause?C.ga:C.f200}`,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                    {isPause?"▶ Activer":"⏸ Pause"}
+                  </button>
+                  <button onClick={()=>{if(window.confirm(`Supprimer "${a.title}" ?`))deleteA(a.id);}} className="btn" style={{background:C.rl,color:C.r,border:`1px solid ${C.r}`,borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                    🗑️
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        {myA.filter(a=>a.status!=="supprimé").length===0&&(
+          <div style={{textAlign:"center",padding:"44px",color:C.f400,background:C.w,borderRadius:13,border:`1px solid ${C.f200}`}}>
+            Aucune annonce. <span style={{color:C.g,cursor:"pointer",fontWeight:600}} onClick={()=>go("sell")}>Publier ma première annonce →</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EditAnnonceModal({ann,onClose,tw,onSaved}){
+  const[title,setTitle]=useState(ann.title||"");
+  const[price,setPrice]=useState(ann.price||"");
+  const[state,setState]=useState(ann.state||"");
+  const[desc,setDesc]=useState(ann.description||"");
+  const[brand,setBrand]=useState(ann.brand||"");
+  const[saving,setSaving]=useState(false);
+
+  const save=async()=>{
+    if(!title.trim()||!price){tw("Titre et prix requis","error");return;}
+    setSaving(true);
+    try{
+      await api(`annonces?id=eq.${ann.id}`,{method:"PATCH",body:JSON.stringify({
+        title:title.trim(),
+        price:parseFloat(price),
+        state,
+        description:desc.trim()||null,
+        brand:brand.trim()||null,
+      })});
+      tw("✅ Annonce modifiée !");
+      onSaved();
+    }catch(e){tw("Erreur","error");}
+    finally{setSaving(false);}
+  };
+
+  const inp={width:"100%",padding:"10px 13px",borderRadius:10,border:`1.5px solid ${C.f200}`,fontSize:14,outline:"none",boxSizing:"border-box",background:C.w,fontFamily:"inherit"};
+  const lbl={fontSize:11,fontWeight:700,color:C.f400,textTransform:"uppercase",letterSpacing:".8px",marginBottom:6,display:"block"};
+
+  return(
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.55)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:500,padding:20}} onClick={onClose}>
+      <div style={{background:C.w,borderRadius:20,width:"100%",maxWidth:520,maxHeight:"90vh",overflowY:"auto",padding:"28px 28px 24px",boxShadow:"0 24px 80px rgba(0,0,0,.25)"}} onClick={e=>e.stopPropagation()}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:22}}>
+          <h3 style={{fontSize:18,fontWeight:900,letterSpacing:"-0.5px"}}>✏️ Modifier l'annonce</h3>
+          <button onClick={onClose} style={{background:C.f100,border:"none",borderRadius:"50%",width:32,height:32,cursor:"pointer",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+        </div>
+
+        {/* Aperçu photo */}
+        {ann.photo_url&&<div style={{width:"100%",height:160,borderRadius:12,overflow:"hidden",marginBottom:20,background:C.f100}}><img src={ann.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>}
+
+        <div style={{marginBottom:14}}><label style={lbl}>Titre *</label><input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Titre de l'annonce" style={inp}/></div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+          <div><label style={lbl}>Prix (€) *</label><input type="number" value={price} onChange={e=>setPrice(e.target.value)} placeholder="0" min="1" style={inp}/></div>
+          <div><label style={lbl}>Marque</label><input value={brand} onChange={e=>setBrand(e.target.value)} placeholder="Wilson, Babolat…" style={inp}/></div>
+        </div>
+        <div style={{marginBottom:14}}>
+          <label style={lbl}>État</label>
+          <select value={state} onChange={e=>setState(e.target.value)} style={inp}>
+            {STATES.map(s=><option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div style={{marginBottom:20}}>
+          <label style={lbl}>Description</label>
+          <textarea value={desc} onChange={e=>setDesc(e.target.value)} placeholder="Décrivez votre article…" rows={4} style={{...inp,resize:"vertical",lineHeight:1.6}}/>
+        </div>
+
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={onClose} className="btn" style={{flex:1,background:C.f100,color:C.k,border:"none",borderRadius:100,padding:"12px",fontSize:14,fontWeight:600,cursor:"pointer"}}>Annuler</button>
+          <button onClick={save} disabled={saving} className="btn" style={{flex:2,background:C.g,color:C.w,border:"none",borderRadius:100,padding:"12px",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+            {saving?"Sauvegarde…":"✅ Enregistrer les modifications"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ═══ DASHBOARD ═══
 function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDropMsgs,wal,dtab,setDtab,toggleA,deleteA,tw,pendingV,pendingA,onDropRefresh,isAdmin,myMsgs,loadMsgs,unreadMsgs,myAlerts,saveAlerts,favLists,saveFavLists,allAnn}){
   const isPro=prof?.user_type==="pro";
@@ -4030,37 +4155,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
           )}
 
           {dtab==="annonces"&&(
-            <div>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
-                <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px"}}>Mes annonces</h2>
-                <button onClick={()=>go("sell")} className="btn" style={{background:C.k,color:C.w,border:"none",borderRadius:100,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><Ico.plus/> Nouvelle</button>
-              </div>
-              <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                {myA.map(a=>{
-                  let di={};try{if(a.drop_info)di=JSON.parse(a.drop_info)}catch(e){}
-                  return(
-                    <div key={a.id} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:13,padding:"13px 16px",display:"flex",alignItems:"center",gap:12}}>
-                      <div style={{width:52,height:52,borderRadius:9,overflow:"hidden",background:C.f100,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>{a.photo_url?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:CAT_TREE[a.category]?.icon||"🏅"}</div>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:14,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
-                        <div style={{fontSize:12,color:C.f400,marginTop:1}}>{a.category} · {a.price} €</div>
-                        {di.modes&&<div style={{fontSize:11,color:C.ga,fontWeight:700,marginTop:2}}>{di.modes.map(m=>DROP_MODES[m]?.icon).join(" ")} Dép. {di.dept}</div>}
-                      </div>
-                      <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-                        <div style={{fontSize:10,fontWeight:700,color:a.status==="active"?C.g:a.status==="pause"?C.o:C.f400,textTransform:"uppercase",background:a.status==="active"?C.gl:a.status==="pause"?"#FFF3E0":C.f100,padding:"4px 9px",borderRadius:100}}>{a.status==="active"?"En ligne":a.status==="pause"?"Pause":"Vendu"}</div>
-                        {a.status!=="vendu"&&a.status!=="supprimé"&&(
-                          <>
-                            <button onClick={()=>toggleA(a.id,a.status==="pause"?"active":"pause")} style={{background:C.f100,color:C.k,border:"none",borderRadius:7,padding:"5px 9px",fontSize:11,cursor:"pointer",fontWeight:600}}>{a.status==="pause"?"Activer":"Pause"}</button>
-                            <button onClick={()=>deleteA(a.id)} style={{background:C.f100,color:C.f400,border:"none",borderRadius:7,padding:"5px 7px",fontSize:11,cursor:"pointer"}}>Suppr.</button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-                {myA.length===0&&<div style={{textAlign:"center",padding:"44px",color:C.f400,background:C.w,borderRadius:13,border:`1px solid ${C.f200}`}}>Aucune annonce. <span style={{color:C.g,cursor:"pointer",fontWeight:600}} onClick={()=>go("sell")}>Publier</span></div>}
-              </div>
-            </div>
+            <AnnoncesManager myA={myA} go={go} toggleA={toggleA} deleteA={deleteA} tw={tw} user={user}/>
           )}
 
           {dtab==="drop-vendeur"&&(
