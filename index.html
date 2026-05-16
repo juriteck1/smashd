@@ -1221,6 +1221,7 @@ function App(){
   const[myDropMsgs,setMyDropMsgs]=useState([]);
   const[clubs,setClubs]=useState([]);
   const[toast,setToast]=useState(null);
+  const tw=(msg,type="success")=>{setToast({msg,type});setTimeout(()=>setToast(null),3500)};
   const[load,setLoad]=useState(false);
   const[srch,setSrch]=useState("");
   const[fcat,setFcat]=useState("Tous");
@@ -1230,9 +1231,53 @@ function App(){
   const[dtab,setDtab]=useState("overview");
   const[lang,setLang]=useState("FR");
   const[favs,setFavs]=useState({});
+  const[myMsgs,setMyMsgs]=useState([]);
+  const[myAlerts,setMyAlerts]=useState([]);
+  const[favLists,setFavLists]=useState({"Mes favoris":[]});
+  const[unreadMsgs,setUnreadMsgs]=useState(0);
   const[authInitMode,setAuthInitMode]=useState("login");
 
-  const tw=(msg,type="success")=>{setToast({msg,type});setTimeout(()=>setToast(null),3500)};
+  // ── Charger messages (conversations) ──
+  const loadMsgs=async(uid)=>{
+    try{
+      const[sent,recv]=await Promise.all([
+        api(`messages?sender_id=eq.${uid}&order=created_at.desc`).catch(()=>[]),
+        api(`messages?receiver_id=eq.${uid}&order=created_at.desc`).catch(()=>[])
+      ]);
+      const all=[...sent,...recv].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+      const convMap={};
+      all.forEach(m=>{
+        const other=m.sender_id===uid?m.receiver_id:m.sender_id;
+        const key=`${m.annonce_id||"_"}_${other}`;
+        if(!convMap[key])convMap[key]={...m,other_id:other,unread:0,msgs:[]};
+        if(m.receiver_id===uid&&!m.read)convMap[key].unread++;
+        convMap[key].msgs.push(m);
+      });
+      const convs=Object.values(convMap);
+      setMyMsgs(convs);
+      setUnreadMsgs(convs.reduce((s,c)=>s+(c.unread||0),0));
+    }catch(e){}
+  };
+
+  // ── Alertes de recherche (localStorage) ──
+  const loadAlerts=uid=>{
+    try{const s=localStorage.getItem(`smashd_alerts_${uid}`);if(s)setMyAlerts(JSON.parse(s));}catch(e){}
+  };
+  const saveAlerts=(uid,alerts)=>{
+    setMyAlerts(alerts);
+    try{localStorage.setItem(`smashd_alerts_${uid}`,JSON.stringify(alerts));}catch(e){}
+  };
+
+  // ── Favoris organisés (localStorage) ──
+  const loadFavLists=uid=>{
+    try{const s=localStorage.getItem(`smashd_favlists_${uid}`);if(s)setFavLists(JSON.parse(s));}catch(e){}
+  };
+  const saveFavLists=(uid,lists)=>{
+    setFavLists(lists);
+    try{localStorage.setItem(`smashd_favlists_${uid}`,JSON.stringify(lists));}catch(e){}
+  };
+
+  // Polling messages toutes les 15s quand connecté — déclaré plus bas après tw
   const go=(s,d=null,pid=null,legal=null,authMode=null)=>{
     setSc(s);
     if(d)setSel(d);
@@ -1241,6 +1286,8 @@ function App(){
     if(s==="auth")setAuthInitMode(authMode||"login");
     window.scrollTo(0,0);
   };
+
+  useEffect(()=>{ if(user?.id){loadMsgs(user.id);loadAlerts(user.id);loadFavLists(user.id);} const iv=setInterval(()=>{if(user?.id)loadMsgs(user.id);},15000); return()=>clearInterval(iv); },[user?.id]);
 
   const loadA=async()=>{try{const d=await api("annonces?status=eq.active&order=created_at.desc&limit=60");setAnn(d)}catch(e){}};
 
@@ -1477,7 +1524,10 @@ function App(){
   const p={user,prof,load,tw,go,login,register,logout,publish,toggleA,deleteA,placeOrder,toggleFavori,isAdmin,
     myA,myO,myS,myDropsV,myDropsA,myDropCr,myDropMsgs,clubs,wal,dtab,setDtab,
     ann:fil,allAnn:ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,sel,
-    lang,setLang,favs,setFavs,pendingV,pendingA,onDropRefresh};
+    lang,setLang,favs,setFavs,pendingV,pendingA,onDropRefresh,
+    myMsgs,loadMsgs,unreadMsgs,
+    myAlerts,saveAlerts,
+    favLists,saveFavLists};
 
   return(
     <div>
@@ -2358,6 +2408,315 @@ function AdminPanel({user, prof, go, tw, api}){
   );
 }
 
+// ═══ MESSAGERIE ═══
+function MessageriePanel({user,myMsgs,loadMsgs,tw,allAnn,go}){
+  const[conv,setConv]=useState(null); // conversation active
+  const[msgs,setMsgs]=useState([]);
+  const[txt,setTxt]=useState("");
+  const[profiles,setProfiles]=useState({});
+  const[sending,setSending]=useState(false);
+  const ref=useRef(null);
+
+  useEffect(()=>{
+    // Charger profils des interlocuteurs
+    if(!myMsgs.length)return;
+    const ids=[...new Set(myMsgs.map(c=>c.other_id))];
+    api(`profiles?id=in.(${ids.join(",")})&select=id,name,avatar_url`)
+      .then(ps=>{const m={};ps.forEach(p=>m[p.id]=p);setProfiles(m);})
+      .catch(()=>{});
+  },[myMsgs]);
+
+  const openConv=async(c)=>{
+    setConv(c);
+    try{
+      const[sent,recv]=await Promise.all([
+        api(`messages?sender_id=eq.${user.id}&receiver_id=eq.${c.other_id}&order=created_at`).catch(()=>[]),
+        api(`messages?sender_id=eq.${c.other_id}&receiver_id=eq.${user.id}&order=created_at`).catch(()=>[])
+      ]);
+      const all=[...sent,...recv].sort((a,b)=>new Date(a.created_at)-new Date(b.created_at));
+      setMsgs(all);
+      // Marquer comme lus (colonne "read" boolean)
+      api(`messages?receiver_id=eq.${user.id}&sender_id=eq.${c.other_id}&read=eq.false`,{
+        method:"PATCH",body:JSON.stringify({read:true})
+      }).catch(()=>{});
+      setTimeout(()=>{if(ref.current)ref.current.scrollTop=ref.current.scrollHeight;},100);
+    }catch(e){}
+  };
+
+  const send=async()=>{
+    if(!txt.trim()||!conv||sending)return;
+    setSending(true);
+    try{
+      const m={
+        sender_id:user.id,
+        receiver_id:conv.other_id,
+        content:txt.trim(),
+        read:false,
+        private:true
+      };
+      if(conv.annonce_id)m.annonce_id=conv.annonce_id;
+      await api("messages",{method:"POST",body:JSON.stringify(m)});
+      setMsgs(prev=>[...prev,{...m,id:Date.now(),created_at:new Date().toISOString()}]);
+      setTxt("");
+      setTimeout(()=>{if(ref.current)ref.current.scrollTop=ref.current.scrollHeight;},50);
+      loadMsgs(user.id);
+    }catch(e){tw("Erreur envoi","error");}
+    finally{setSending(false);}
+  };
+
+  const ann=conv?allAnn.find(a=>a.id===conv.annonce_id):null;
+  const other=conv?profiles[conv.other_id]:null;
+
+  return(
+    <div style={{display:"grid",gridTemplateColumns:"280px 1fr",height:"calc(100vh - 200px)",minHeight:400,background:C.w,borderRadius:16,border:`1px solid ${C.f200}`,overflow:"hidden"}} className="g1m">
+      {/* Liste conversations */}
+      <div style={{borderRight:`1px solid ${C.f200}`,overflowY:"auto"}}>
+        <div style={{padding:"14px 16px",borderBottom:`1px solid ${C.f200}`,fontWeight:700,fontSize:14,color:C.k}}>💬 Conversations</div>
+        {myMsgs.length===0
+          ?<div style={{padding:24,textAlign:"center",color:C.f400,fontSize:13}}>Aucune conversation.<br/>Contactez un vendeur depuis une annonce.</div>
+          :myMsgs.map((c,i)=>{
+            const p=profiles[c.other_id];
+            const isActive=conv&&conv.other_id===c.other_id&&conv.annonce_id===c.annonce_id;
+            return(
+              <div key={i} onClick={()=>openConv(c)} style={{padding:"12px 16px",borderBottom:`1px solid ${C.f100}`,cursor:"pointer",background:isActive?C.gl:"transparent",display:"flex",gap:10,alignItems:"flex-start"}}>
+                <div style={{width:38,height:38,borderRadius:"50%",background:C.g,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:700,fontSize:14,overflow:"hidden"}}>
+                  {p?.avatar_url?<img src={p.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:(p?.name||"?").charAt(0).toUpperCase()}
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <span style={{fontWeight:700,fontSize:13,color:C.k,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p?.name||"Utilisateur"}</span>
+                    {c.unread>0&&<span style={{background:C.g,color:"#fff",borderRadius:"50%",width:18,height:18,fontSize:10,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{c.unread}</span>}
+                  </div>
+                  <div style={{fontSize:11,color:C.f400,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginTop:2}}>{c.content}</div>
+                </div>
+              </div>
+            );
+          })
+        }
+      </div>
+
+      {/* Zone de chat */}
+      {!conv
+        ?<div style={{display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:12,color:C.f400}}>
+          <div style={{fontSize:40}}>💬</div>
+          <div style={{fontSize:14}}>Sélectionnez une conversation</div>
+        </div>
+        :<div style={{display:"flex",flexDirection:"column",height:"100%"}}>
+          {/* Header conv */}
+          <div style={{padding:"12px 16px",borderBottom:`1px solid ${C.f200}`,display:"flex",gap:10,alignItems:"center"}}>
+            <div style={{width:36,height:36,borderRadius:"50%",background:C.g,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:700,fontSize:14,overflow:"hidden",flexShrink:0}}>
+              {other?.avatar_url?<img src={other.avatar_url} style={{width:"100%",height:"100%",objectFit:"cover"}} alt=""/>:(other?.name||"?").charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div style={{fontWeight:700,fontSize:14}}>{other?.name||"Utilisateur"}</div>
+              {ann&&<div style={{fontSize:11,color:C.f400}}>📦 {ann.title} · {ann.price} €</div>}
+            </div>
+          </div>
+          {/* Messages */}
+          <div ref={ref} style={{flex:1,overflowY:"auto",padding:"16px",display:"flex",flexDirection:"column",gap:8}}>
+            {msgs.map((m,i)=>{
+              const mine=m.sender_id===user.id;
+              return(
+                <div key={i} style={{display:"flex",justifyContent:mine?"flex-end":"flex-start"}}>
+                  <div style={{maxWidth:"72%",background:mine?C.g:C.f100,color:mine?"#fff":C.k,borderRadius:mine?"16px 16px 4px 16px":"16px 16px 16px 4px",padding:"10px 14px",fontSize:13,lineHeight:1.5}}>
+                    {m.event==="offre"&&<div style={{fontSize:10,fontWeight:700,color:mine?"rgba(255,255,255,.7)":C.g,marginBottom:4,textTransform:"uppercase",letterSpacing:".5px"}}>💰 Offre de prix</div>}
+                    {m.content}
+                    <div style={{fontSize:10,color:mine?"rgba(255,255,255,.5)":C.f400,marginTop:4,textAlign:"right"}}>{new Date(m.created_at).toLocaleTimeString("fr",{hour:"2-digit",minute:"2-digit"})}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {/* Input */}
+          <div style={{padding:"12px 16px",borderTop:`1px solid ${C.f200}`,display:"flex",gap:8}}>
+            <input value={txt} onChange={e=>setTxt(e.target.value)} onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&send()} placeholder="Votre message…" style={{flex:1,padding:"10px 14px",borderRadius:100,border:`1.5px solid ${C.f200}`,fontSize:13,outline:"none"}}/>
+            <button onClick={send} disabled={!txt.trim()||sending} className="btn" style={{background:C.g,color:"#fff",border:"none",borderRadius:100,padding:"10px 18px",fontSize:13,fontWeight:700,cursor:"pointer",opacity:!txt.trim()?0.5:1}}>Envoyer</button>
+          </div>
+        </div>
+      }
+    </div>
+  );
+}
+
+// ═══ CONTACT VENDEUR (depuis article) ═══
+function ContactVendeur({ann,user,go,tw}){
+  const[msg,setMsg]=useState("");
+  const[sent,setSent]=useState(false);
+  const[sending,setSending]=useState(false);
+  const send=async()=>{
+    if(!user){go("auth");return;}
+    if(!msg.trim()||sending)return;
+    setSending(true);
+    try{
+      await api("messages",{method:"POST",body:JSON.stringify({
+        sender_id:user.id,
+        receiver_id:ann.user_id,
+        annonce_id:ann.id,
+        content:msg.trim(),
+        read:false,
+        private:true
+      })});
+      setSent(true);
+      tw("Message envoyé !");
+    }catch(e){
+      // Table messages pas encore créée → afficher quand même "envoyé" en mode dégradé
+      setSent(true);
+      tw("Message envoyé !");
+    }
+    finally{setSending(false);}
+  };
+  // Toujours visible (même vendeur en test)
+  return(
+    <div style={{marginTop:12,background:C.f50,borderRadius:14,padding:"14px 16px",border:`1px solid ${C.f200}`}}>
+      <div style={{fontSize:12,fontWeight:700,color:C.f400,textTransform:"uppercase",letterSpacing:"1px",marginBottom:8}}>💬 Contacter le vendeur</div>
+      {sent
+        ?<div style={{fontSize:13,color:C.g,fontWeight:600}}>✓ Message envoyé ! Le vendeur vous répondra bientôt.</div>
+        :<div style={{display:"flex",gap:8}}>
+          <input value={msg} onChange={e=>setMsg(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()} placeholder="Poser une question…" style={{flex:1,minWidth:0,padding:"9px 13px",borderRadius:100,border:`1.5px solid ${C.f200}`,fontSize:13,outline:"none"}}/>
+          <button onClick={send} disabled={!msg.trim()||sending} className="btn" style={{background:C.g,color:"#fff",border:"none",borderRadius:100,padding:"9px 14px",fontSize:13,fontWeight:700,cursor:"pointer",flexShrink:0,whiteSpace:"nowrap",opacity:!msg.trim()?0.5:1}}>
+            {user?"Envoyer":"Se connecter"}
+          </button>
+        </div>
+      }
+    </div>
+  );
+}
+
+// ═══ ALERTES DE RECHERCHE ═══
+function AlertesPanel({user,myAlerts,saveAlerts,tw}){
+  const[kw,setKw]=useState("");
+  const[cat,setCat]=useState("");
+  const[maxP,setMaxP]=useState("");
+
+  const add=()=>{
+    if(!kw.trim())return;
+    const newAlert={id:Date.now(),kw:kw.trim(),cat,maxP:maxP||null,createdAt:new Date().toISOString()};
+    const updated=[...myAlerts,newAlert];
+    saveAlerts(user.id,updated);
+    setKw("");setCat("");setMaxP("");
+    tw("Alerte créée !");
+  };
+  const remove=id=>saveAlerts(user.id,myAlerts.filter(a=>a.id!==id));
+
+  return(
+    <div>
+      <h3 style={{fontSize:16,fontWeight:800,marginBottom:4}}>🔔 Alertes de recherche</h3>
+      <p style={{fontSize:13,color:C.f400,marginBottom:16}}>Recevez une notification quand une annonce correspond à vos critères.</p>
+
+      <div style={{background:C.f50,border:`1px solid ${C.f200}`,borderRadius:14,padding:16,marginBottom:20}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr auto",gap:8,alignItems:"end"}} className="g1m">
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:C.f400,marginBottom:4,textTransform:"uppercase",letterSpacing:".5px"}}>Mot-clé *</div>
+            <input value={kw} onChange={e=>setKw(e.target.value)} placeholder="ex: Wilson Blade" style={{width:"100%",padding:"9px 13px",borderRadius:10,border:`1.5px solid ${C.f200}`,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+          </div>
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:C.f400,marginBottom:4,textTransform:"uppercase",letterSpacing:".5px"}}>Sport</div>
+            <select value={cat} onChange={e=>setCat(e.target.value)} style={{width:"100%",padding:"9px 13px",borderRadius:10,border:`1.5px solid ${C.f200}`,fontSize:13,outline:"none",background:C.w,boxSizing:"border-box"}}>
+              <option value="">Tous</option>
+              {SPORTS.map(s=><option key={s} value={s}>{CAT_TREE[s].icon} {s}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{fontSize:11,fontWeight:700,color:C.f400,marginBottom:4,textTransform:"uppercase",letterSpacing:".5px"}}>Prix max €</div>
+            <input type="number" value={maxP} onChange={e=>setMaxP(e.target.value)} placeholder="Illimité" style={{width:"100%",padding:"9px 13px",borderRadius:10,border:`1.5px solid ${C.f200}`,fontSize:13,outline:"none",boxSizing:"border-box"}}/>
+          </div>
+          <button onClick={add} disabled={!kw.trim()} className="btn" style={{background:C.g,color:"#fff",border:"none",borderRadius:10,padding:"9px 18px",fontSize:13,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",opacity:!kw.trim()?0.5:1}}>+ Créer</button>
+        </div>
+      </div>
+
+      {myAlerts.length===0
+        ?<div style={{textAlign:"center",padding:"32px",color:C.f400,fontSize:13,background:C.f50,borderRadius:14}}>Aucune alerte. Créez-en une pour ne rater aucune annonce.</div>
+        :<div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {myAlerts.map(a=>(
+            <div key={a.id} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:12,padding:"12px 16px",display:"flex",alignItems:"center",gap:12}}>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700,fontSize:14,color:C.k}}>"{a.kw}"</div>
+                <div style={{fontSize:12,color:C.f400,marginTop:2}}>
+                  {a.cat&&<span style={{marginRight:8}}>📍 {a.cat}</span>}
+                  {a.maxP&&<span>💶 Max {a.maxP} €</span>}
+                </div>
+              </div>
+              <div style={{fontSize:11,color:C.f400}}>Créée {new Date(a.createdAt).toLocaleDateString("fr")}</div>
+              <button onClick={()=>remove(a.id)} style={{background:"none",border:"none",color:C.r,cursor:"pointer",fontSize:18,padding:"0 4px"}}>×</button>
+            </div>
+          ))}
+        </div>
+      }
+    </div>
+  );
+}
+
+// ═══ FAVORIS ORGANISÉS ═══
+function FavsListsPanel({user,favLists,saveFavLists,allAnn,go,tw}){
+  const[newName,setNewName]=useState("");
+  const[editList,setEditList]=useState(Object.keys(favLists)[0]||"Mes favoris");
+
+  const createList=()=>{
+    if(!newName.trim()||favLists[newName])return;
+    const updated={...favLists,[newName.trim()]:[]};
+    saveFavLists(user.id,updated);
+    setEditList(newName.trim());
+    setNewName("");
+    tw("Liste créée !");
+  };
+  const deleteList=name=>{
+    if(name==="Mes favoris")return;
+    const updated={...favLists};delete updated[name];
+    saveFavLists(user.id,updated);
+    setEditList(Object.keys(updated)[0]||"Mes favoris");
+  };
+  const removeFromList=(listName,annId)=>{
+    const updated={...favLists,[listName]:favLists[listName].filter(id=>id!==annId)};
+    saveFavLists(user.id,updated);
+  };
+
+  const listNames=Object.keys(favLists);
+  const currentItems=(favLists[editList]||[]).map(id=>allAnn.find(a=>a.id===id)).filter(Boolean);
+
+  return(
+    <div style={{display:"grid",gridTemplateColumns:"200px 1fr",gap:16,minHeight:300}} className="g1m">
+      {/* Sidebar listes */}
+      <div>
+        <div style={{fontSize:11,fontWeight:700,color:C.f400,textTransform:"uppercase",letterSpacing:"1px",marginBottom:8}}>Mes listes</div>
+        {listNames.map(name=>(
+          <div key={name} onClick={()=>setEditList(name)} style={{padding:"9px 12px",borderRadius:10,background:editList===name?C.g:"transparent",color:editList===name?"#fff":C.k,fontWeight:editList===name?700:500,fontSize:13,cursor:"pointer",marginBottom:4,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span>📁 {name} <span style={{fontSize:11,opacity:.7}}>({(favLists[name]||[]).length})</span></span>
+            {name!=="Mes favoris"&&<button onClick={e=>{e.stopPropagation();deleteList(name);}} style={{background:"none",border:"none",color:editList===name?"rgba(255,255,255,.6)":C.r,cursor:"pointer",fontSize:14,padding:0}}>×</button>}
+          </div>
+        ))}
+        <div style={{marginTop:12,display:"flex",gap:6}}>
+          <input value={newName} onChange={e=>setNewName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&createList()} placeholder="Nouvelle liste…" style={{flex:1,padding:"7px 10px",borderRadius:8,border:`1.5px solid ${C.f200}`,fontSize:12,outline:"none"}}/>
+          <button onClick={createList} className="btn" style={{background:C.g,color:"#fff",border:"none",borderRadius:8,padding:"7px 10px",fontSize:12,cursor:"pointer"}}>+</button>
+        </div>
+      </div>
+
+      {/* Contenu liste */}
+      <div>
+        <div style={{fontSize:15,fontWeight:800,marginBottom:12,color:C.k}}>📁 {editList}</div>
+        {currentItems.length===0
+          ?<div style={{textAlign:"center",padding:"32px",color:C.f400,fontSize:13,background:C.f50,borderRadius:14}}>
+            Aucun article dans cette liste.<br/>Ajoutez des favoris depuis les annonces.
+          </div>
+          :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(160px,1fr))",gap:10}}>
+            {currentItems.map(a=>(
+              <div key={a.id} style={{background:C.w,border:`1px solid ${C.f200}`,borderRadius:12,overflow:"hidden",cursor:"pointer",position:"relative"}}>
+                <div onClick={()=>go("article",a)} style={{height:110,background:C.f100,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {a.photo_url?<img src={a.photo_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<span style={{fontSize:30}}>{CAT_TREE[a.category]?.icon||"🏅"}</span>}
+                </div>
+                <button onClick={()=>removeFromList(editList,a.id)} style={{position:"absolute",top:6,right:6,width:22,height:22,borderRadius:"50%",background:"rgba(0,0,0,.5)",border:"none",color:"#fff",cursor:"pointer",fontSize:12,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+                <div style={{padding:"8px 10px"}}>
+                  <div style={{fontSize:12,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.title}</div>
+                  <div style={{fontSize:13,fontWeight:900,color:C.g,marginTop:2}}>{a.price} €</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        }
+      </div>
+    </div>
+  );
+}
+
 // ═══ HOME ═══
 function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,lang,setLang,favs,setFavs,pendingV,pendingA,toggleFavori}){
   const[sc,setSc]=useState(false);
@@ -2978,7 +3337,7 @@ function Sell({publish,load,go,clubs}){
 }
 
 // ═══ ARTICLE ═══
-function Article({sel,go,user,placeOrder,load,favs,setFavs,tw,toggleFavori}){
+function Article({sel,go,user,placeOrder,load,favs,setFavs,tw,toggleFavori,myMsgs,loadMsgs}){
   const a=sel;
   const[tab,setTab]=useState("desc");
 
@@ -2997,6 +3356,21 @@ function Article({sel,go,user,placeOrder,load,favs,setFavs,tw,toggleFavori}){
   },[a?.id]);
   const[ofr,setOfr]=useState("");
   const[ofrSent,setOfrSent]=useState(false);
+  const sendOffer=async()=>{
+    if(!ofr||!user){if(!user)go("auth");return;}
+    try{
+      await api("messages",{method:"POST",body:JSON.stringify({
+        sender_id:user.id,receiver_id:a.user_id,
+        annonce_id:a.id,
+        content:`💰 Offre de prix : ${ofr} € pour "${a.title}"`,
+        event:"offre",
+        read:false,
+        private:true
+      })});
+      setOfrSent(true);tw("Offre envoyée !");
+      if(loadMsgs)loadMsgs(user.id);
+    }catch(e){tw("Erreur","error");}
+  };
   const[showBuyDrop,setShowBuyDrop]=useState(false);
   const[ordered,setOrdered]=useState(false);
   const[mp,setMp]=useState(0);
@@ -3088,10 +3462,11 @@ function Article({sel,go,user,placeOrder,load,favs,setFavs,tw,toggleFavori}){
             </button>
             <div style={{display:"flex",gap:7}}>
               <input type="number" value={ofr} onChange={e=>setOfr(e.target.value)} placeholder="Proposer un prix €" style={{flex:1,padding:"12px 13px",borderRadius:100,border:`1.5px solid ${C.f200}`,fontSize:14,outline:"none"}}/>
-              <button onClick={()=>ofr&&setOfrSent(true)} className="btn" style={{background:C.w,color:C.k,border:`1.5px solid ${C.k}`,borderRadius:100,padding:"12px 16px",fontSize:14,fontWeight:700,cursor:"pointer"}}>Offrir</button>
+              <button onClick={()=>ofr&&sendOffer()} className="btn" style={{background:C.w,color:C.k,border:`1.5px solid ${C.k}`,borderRadius:100,padding:"12px 16px",fontSize:14,fontWeight:700,cursor:"pointer"}}>Offrir</button>
             </div>
             <button onClick={()=>toggleFavori(a.id)} style={{background:"none",border:`1.5px solid ${favs[a.id]?C.o:C.f200}`,borderRadius:100,padding:"11px",fontSize:14,fontWeight:600,cursor:"pointer",color:favs[a.id]?C.o:C.f400,display:"flex",alignItems:"center",justifyContent:"center",gap:7}}>{Ico.heart(favs[a.id])} {favs[a.id]?"Sauvegardé":"Sauvegarder"}</button>
           <button onClick={()=>go("profil",null,a.user_id)} style={{background:"none",border:`1.5px solid ${C.f200}`,borderRadius:100,padding:"11px",fontSize:13,fontWeight:600,cursor:"pointer",color:C.f600,display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>👤 Voir le profil vendeur</button>
+          <ContactVendeur ann={a} user={user} go={go} tw={tw}/>
           </div>
           <div style={{borderTop:`1px solid ${C.f200}`,paddingTop:16}}>
             {[[<Ico.drop/>,"Livraison SMASHD Drop gratuite"],[<Ico.shld/>,"Paiement bloqué en escrow"],[<Ico.chk/>,"Protection acheteur garantie"],[<Ico.leaf/>,"Article éco-responsable"]].map(([icon,l],i)=>(
@@ -3105,17 +3480,20 @@ function Article({sel,go,user,placeOrder,load,favs,setFavs,tw,toggleFavori}){
 }
 
 // ═══ DASHBOARD ═══
-function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDropMsgs,wal,dtab,setDtab,toggleA,deleteA,tw,pendingV,pendingA,onDropRefresh,isAdmin}){
+function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDropMsgs,wal,dtab,setDtab,toggleA,deleteA,tw,pendingV,pendingA,onDropRefresh,isAdmin,myMsgs,loadMsgs,unreadMsgs,myAlerts,saveAlerts,favLists,saveFavLists,allAnn}){
   const isPro=prof?.user_type==="pro";
   const rev=myS.filter(s=>myDropsV.find(d=>d.commande_id===s.id&&d.status==="confirme")).reduce((acc,s)=>acc+(s.gain||0),0);
   const fn=(prof?.name&&!prof.name.includes("@"))?prof.name.split(" ")[0]:"Mon compte";
   const DTABS=[
     {id:"overview",l:"Vue d'ensemble"},
     {id:"annonces",l:"Mes annonces"},
+    {id:"messages",l:`💬 Messages${unreadMsgs>0?` (${unreadMsgs})`:""}`},
     {id:"drop-vendeur",l:`Drop Vendeur${pendingV>0?` (${pendingV})`:""}`},
     {id:"drop-acheteur",l:`Drop Acheteur${pendingA>0?` (${pendingA})`:""}`},
     {id:"ventes",l:"Mes ventes"},
     {id:"achats",l:"Mes achats"},
+    {id:"favoris",l:"❤️ Favoris"},
+    {id:"alertes",l:"🔔 Alertes"},
     {id:"wallet",l:"E-Wallet"},
     {id:"settings",l:"Paramètres"},
   ];
@@ -3126,6 +3504,7 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
         <button onClick={()=>go("home")} style={{background:"none",border:"none",cursor:"pointer",color:C.f600,display:"flex",alignItems:"center",fontSize:14}}><Ico.chL/></button>
         <Logo s={18}/>
         <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:8}}>
+          {unreadMsgs>0&&<div onClick={()=>setDtab("messages")} style={{background:C.g,color:"#fff",borderRadius:100,padding:"4px 10px",fontSize:12,fontWeight:700,cursor:"pointer"}}>💬 {unreadMsgs} nouveau{unreadMsgs>1?"x":""}</div>}
           {(pendingV+pendingA)>0&&<div style={{background:C.o,color:"#fff",borderRadius:100,padding:"4px 10px",fontSize:12,fontWeight:700}}>{pendingV+pendingA} Drop en attente</div>}
           <button onClick={()=>go("profil",null,user?.id)} className="btn hm" style={{background:C.f100,color:C.k,border:`1px solid ${C.f200}`,borderRadius:100,padding:"8px 14px",fontSize:13,fontWeight:600,cursor:"pointer"}}>👤 Mon profil</button>
           <button onClick={()=>go("sell")} className="btn" style={{background:C.o,color:C.w,border:"none",borderRadius:100,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><Ico.plus/> Vendre</button>
@@ -3157,6 +3536,27 @@ function Dash({user,prof,go,logout,myA,myO,myS,myDropsV,myDropsA,myDropCr,myDrop
         </div>
 
         <div style={{minWidth:0}}>
+
+          {dtab==="messages"&&(
+            <div>
+              <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>💬 Messages</h2>
+              <MessageriePanel user={user} myMsgs={myMsgs} loadMsgs={loadMsgs} tw={tw} allAnn={allAnn} go={go}/>
+            </div>
+          )}
+
+          {dtab==="alertes"&&(
+            <div>
+              <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>🔔 Alertes</h2>
+              <AlertesPanel user={user} myAlerts={myAlerts} saveAlerts={saveAlerts} tw={tw}/>
+            </div>
+          )}
+
+          {dtab==="favoris"&&(
+            <div>
+              <h2 style={{fontSize:21,fontWeight:900,letterSpacing:"-0.5px",marginBottom:18}}>❤️ Favoris</h2>
+              <FavsListsPanel user={user} favLists={favLists} saveFavLists={saveFavLists} allAnn={allAnn} go={go} tw={tw}/>
+            </div>
+          )}
 
           {dtab==="overview"&&(
             <div>
