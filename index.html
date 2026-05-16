@@ -112,8 +112,7 @@ input,textarea,select,button{font-family:inherit}
   .dash-ann-grid{grid-template-columns:repeat(2,1fr)!important;gap:8px!important}
   /* Inputs 16px pour éviter zoom iOS */
   input,textarea,select{font-size:16px!important}
-  /* Hero mobile */
-  #heroRubiks{display:none!important}
+
 }
 .bnav-item{
   flex:1;
@@ -166,7 +165,7 @@ input,textarea,select,button{font-family:inherit}
 /* Cacher scrollbar des tabs dashboard */
 .dash-tabs-scroll::-webkit-scrollbar{display:none}
 </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
 </head>
 <body><div id="root"></div>
 <script type="text/babel">
@@ -1496,6 +1495,173 @@ function App(){
 }
 
 
+// ═══ DROP EXPLAINER ═══
+function DropExplainer(){
+  const[cur,setCur]=useState(0);
+  const timerRef=useRef(null);
+  const progRef=useRef(null);
+  const curRef=useRef(0);
+  const total=3;
+
+  const startProg=()=>{
+    if(!progRef.current)return;
+    progRef.current.style.transition='none';
+    progRef.current.style.width='0%';
+    setTimeout(()=>{
+      if(!progRef.current)return;
+      progRef.current.style.transition='width 4s linear';
+      progRef.current.style.width='100%';
+    },50);
+  };
+
+  const stopAuto=()=>{
+    clearInterval(timerRef.current);
+    timerRef.current=null;
+    if(progRef.current){progRef.current.style.transition='none';progRef.current.style.width='100%';}
+  };
+
+  const goTo=(i,userClick=false)=>{
+    const next=((i%total)+total)%total;
+    curRef.current=next;
+    setCur(next);
+    if(userClick){stopAuto();}
+  };
+
+  useEffect(()=>{
+    startProg();
+    timerRef.current=setInterval(()=>{
+      const n=(curRef.current+1)%total;
+      curRef.current=n;
+      setCur(n);
+      startProg();
+    },4500);
+    return()=>clearInterval(timerRef.current);
+  },[]);
+
+  const RG={clay:"#C2440E",clayL:"#E8692A",clayP:"#F5E6DC",green:"#1A3A2A",greenM:"#2D5C3F",cream:"#FAF6F0"};
+  const cards=[
+    {
+      bg:RG.green,tag:"① Vendeur",tagBg:RG.clay,
+      title:"Tu choisis comment remettre l'article",
+      sub:"Sélectionne un ou plusieurs modes à la création de l'annonce. L'acheteur choisit celui qui lui convient.",
+      num:"01",
+      content:(
+        <div>
+          {[
+            {icon:"📍",label:"Point de rencontre",desc:"Un café, une gare, un terrain — où et quand vous voulez."},
+            {icon:"🏆",label:"Club partenaire",desc:"Dépose chez un club SMASHD de ton département."},
+            {icon:"📦",label:"Boîte / Consigne",desc:"Adresse partagée uniquement après paiement sécurisé."},
+          ].map((item,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 12px",borderRadius:8,background:"rgba(255,255,255,.08)",marginBottom:8,border:"0.5px solid rgba(255,255,255,.12)"}}>
+              <span style={{fontSize:18,flexShrink:0}}>{item.icon}</span>
+              <div><div style={{fontSize:13,fontWeight:700,color:"#fff",marginBottom:2}}>{item.label}</div><div style={{fontSize:12,color:"rgba(255,255,255,.6)",lineHeight:1.5}}>{item.desc}</div></div>
+            </div>
+          ))}
+          <div style={{marginTop:10,fontSize:12,color:"rgba(255,255,255,.4)"}}>
+            Fini : <span style={{textDecoration:"line-through"}}>Mondial Relay</span> · <span style={{textDecoration:"line-through"}}>Colissimo</span> · <span style={{textDecoration:"line-through"}}>frais de port</span> · <span style={{textDecoration:"line-through"}}>emballage</span>
+          </div>
+        </div>
+      )
+    },
+    {
+      bg:RG.clay,tag:"② Acheteur",tagBg:RG.green,
+      title:"Ton argent est blindé",
+      sub:"Dès que tu paies, l'argent est bloqué en escrow chez SMASHD. Personne ne peut y toucher avant la remise.",
+      num:"02",
+      content:(
+        <div>
+          {[
+            {icon:"💳",label:"Tu paies normalement",desc:"Paiement sécurisé par Stripe — carte bancaire."},
+            {icon:"🔒",label:"L'argent est bloqué",desc:"Ni le vendeur, ni SMASHD ne peut y toucher avant toi."},
+            {icon:"🔑",label:"Tu reçois un code secret",desc:"Un code unique, que toi seul connais. C'est ta clé de libération."},
+          ].map((item,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 12px",borderRadius:8,background:"rgba(26,58,42,.3)",marginBottom:8,border:"0.5px solid rgba(255,255,255,.12)"}}>
+              <span style={{fontSize:18,flexShrink:0}}>{item.icon}</span>
+              <div><div style={{fontSize:13,fontWeight:700,color:"#fff",marginBottom:2}}>{item.label}</div><div style={{fontSize:12,color:"rgba(255,255,255,.6)",lineHeight:1.5}}>{item.desc}</div></div>
+            </div>
+          ))}
+        </div>
+      )
+    },
+    {
+      bg:RG.greenM,tag:"③ L'échange",tagBg:RG.clay,
+      title:"Tu vérifies, tu valides, c'est plié",
+      sub:"Vous vous retrouvez. Tu inspectes l'article tranquillement. C'est toi qui décides.",
+      num:"03",
+      content:(
+        <div>
+          <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:12}}>
+            {[
+              {icon:"🤝",label:"Vous vous retrouvez"},
+              {icon:"🔍",label:"Tu vérifies"},
+              {icon:"⌨️",label:"Tu donnes le code"},
+              {icon:"✅",label:"Vendeur payé",ok:true},
+            ].map((s,i,arr)=>(
+              <React.Fragment key={i}>
+                <div style={{flex:1,minWidth:60,textAlign:"center",padding:"8px 6px",borderRadius:8,background:"rgba(255,255,255,.08)",border:"0.5px solid rgba(255,255,255,.12)"}}>
+                  <span style={{fontSize:18,display:"block",marginBottom:4}}>{s.icon}</span>
+                  <span style={{fontSize:11,color:s.ok?"#7DEBA0":"rgba(255,255,255,.7)",fontWeight:s.ok?700:400,lineHeight:1.3}}>{s.label}</span>
+                </div>
+                {i<arr.length-1&&<span style={{fontSize:14,color:"rgba(255,255,255,.3)",flexShrink:0}}>→</span>}
+              </React.Fragment>
+            ))}
+          </div>
+          <div style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 12px",borderRadius:8,background:"rgba(194,68,14,.25)",border:"0.5px solid rgba(194,68,14,.4)"}}>
+            <span style={{fontSize:18,flexShrink:0}}>🛡️</span>
+            <div><div style={{fontSize:13,fontWeight:700,color:"#fff",marginBottom:2}}>Article pas conforme ?</div><div style={{fontSize:12,color:"rgba(255,255,255,.6)",lineHeight:1.5}}>Tu ne donnes pas le code. Ton argent reste bloqué. Tu es protégé.</div></div>
+          </div>
+        </div>
+      )
+    }
+  ];
+
+  const c=cards[cur];
+
+  return(
+    <div style={{fontFamily:"'Inter',sans-serif"}}>
+      {/* Header */}
+      <div style={{marginBottom:"1.25rem",borderBottom:`2px solid ${RG.clay}`,paddingBottom:"1rem"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+          <div style={{width:20,height:2,borderRadius:2,background:RG.clay,flexShrink:0}}/>
+          <span style={{fontSize:11,fontWeight:500,letterSpacing:".1em",textTransform:"uppercase",color:RG.clay}}>Comment ça marche</span>
+        </div>
+        <div style={{fontSize:22,fontWeight:700,color:RG.green,margin:"0 0 3px",letterSpacing:"-0.5px"}}>SMASHD Drop</div>
+        <div style={{fontSize:13,color:"#5A4A30",margin:0}}>La remise en main propre réinventée — zéro frais, zéro galère</div>
+      </div>
+
+      {/* Card */}
+      <div style={{borderRadius:14,border:`1.5px solid ${RG.green}`,overflow:"hidden",background:c.bg,position:"relative",minHeight:320,transition:"background .4s"}}>
+        {/* Numéro watermark */}
+        <div style={{position:"absolute",right:-8,top:-16,fontSize:130,fontWeight:900,opacity:.07,lineHeight:1,color:"#fff",pointerEvents:"none",letterSpacing:-6,userSelect:"none"}}>{c.num}</div>
+
+        <div style={{padding:"1.25rem 1.25rem .75rem",position:"relative",zIndex:1}}>
+          <span style={{display:"inline-flex",alignItems:"center",fontSize:11,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",padding:"4px 12px",borderRadius:100,background:c.tagBg,color:"#fff",marginBottom:10}}>{c.tag}</span>
+          <div style={{fontSize:18,fontWeight:700,color:"#fff",marginBottom:6,lineHeight:1.2,letterSpacing:"-0.5px"}}>{c.title}</div>
+          <div style={{fontSize:13,color:"rgba(255,255,255,.65)",marginBottom:14,lineHeight:1.6}}>{c.sub}</div>
+        </div>
+
+        <div style={{padding:"0 1.25rem 1.25rem",position:"relative",zIndex:1}}>{c.content}</div>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{height:3,background:RG.clayP,borderRadius:2,margin:".75rem 0",overflow:"hidden"}}>
+        <div ref={progRef} style={{height:"100%",background:RG.clay,borderRadius:2,width:"0%"}}/>
+      </div>
+
+      {/* Nav */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <button onClick={()=>goTo(cur-1,true)} style={{width:36,height:36,borderRadius:"50%",border:`1.5px solid ${RG.green}`,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:RG.green,fontSize:16,fontWeight:700}}>‹</button>
+        <div style={{display:"flex",gap:6,alignItems:"center"}}>
+          {cards.map((_,i)=>(
+            <div key={i} onClick={()=>goTo(i,true)} style={{height:6,borderRadius:3,cursor:"pointer",transition:"all .3s",background:i===cur?RG.clay:"rgba(194,68,14,.2)",width:i===cur?20:6}}/>
+          ))}
+        </div>
+        <button onClick={()=>goTo(cur+1,true)} style={{width:36,height:36,borderRadius:"50%",border:`1.5px solid ${RG.green}`,background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:RG.green,fontSize:16,fontWeight:700}}>›</button>
+      </div>
+    </div>
+  );
+}
+
 // ═══ PUBLICITÉ ROTATIVE ═══
 const ADS=[
   {bg:"#1a1a2a",color:"#FFD700",logo:"🎾",brand:"Wilson",title:"Raquettes Wilson 2026",sub:"Découvrez la nouvelle collection Pro Staff",cta:"Voir l'offre",url:"https://wilson.com",badge:"PARTENAIRE"},
@@ -2197,76 +2363,6 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
   const[sc,setSc]=useState(false);
   const[mob,setMob]=useState(false);
 
-  // ── Rubik's cube Three.js ──
-  useEffect(()=>{
-    let renderer, animId;
-    function initCube(){
-      const canvas=document.getElementById('heroRubiks');
-      if(!canvas||!window.THREE)return;
-      renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-      renderer.setSize(380,380);
-      const scene=new THREE.Scene();
-      const camera=new THREE.PerspectiveCamera(38,1,0.1,100);
-      camera.position.set(5.8,4.8,6.8);camera.lookAt(0,0,0);
-      scene.add(new THREE.AmbientLight(0xffffff,0.55));
-      const dl=new THREE.DirectionalLight(0xffffff,1.1);dl.position.set(8,12,8);scene.add(dl);
-      const dl2=new THREE.DirectionalLight(0x00ff66,0.25);dl2.position.set(-5,-3,5);scene.add(dl2);
-      function makeTex(fn){const c=document.createElement('canvas');c.width=c.height=256;const ctx=c.getContext('2d');fn(ctx);return new THREE.CanvasTexture(c);}
-      function bg(ctx,col){ctx.fillStyle=col;ctx.fillRect(0,0,256,256);ctx.strokeStyle='rgba(0,196,106,0.22)';ctx.lineWidth=3;ctx.strokeRect(4,4,248,248);}
-      function ico(ctx,fn,col){ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=11;ctx.lineCap='round';ctx.lineJoin='round';fn(ctx,128,128);}
-      function dots(ctx,col){ctx.fillStyle=col;for(let x=24;x<256;x+=26)for(let y=24;y<256;y+=26){ctx.beginPath();ctx.arc(x,y,1.8,0,Math.PI*2);ctx.fill();}}
-      function lines(ctx,col){ctx.strokeStyle=col;ctx.lineWidth=1.5;for(let i=-256;i<512;i+=22){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i+256,256);ctx.stroke();}}
-      function grid(ctx,col){ctx.strokeStyle=col;ctx.lineWidth=1;for(let i=20;i<256;i+=28){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,256);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(256,i);ctx.stroke();}}
-      function circles(ctx,col){ctx.strokeStyle=col;ctx.lineWidth=1.2;for(let r=20;r<200;r+=28){ctx.beginPath();ctx.arc(128,128,r,0,Math.PI*2);ctx.stroke();}}
-      const icoFns={
-        racket:(ctx,cx,cy)=>{ctx.save();ctx.translate(cx,cy);ctx.rotate(-0.5);ctx.beginPath();ctx.ellipse(0,-20,38,48,0,0,Math.PI*2);ctx.lineWidth=10;ctx.stroke();for(let i=-3;i<=3;i++){ctx.beginPath();ctx.moveTo(-35,i*12-20);ctx.lineTo(35,i*12-20);ctx.lineWidth=3.5;ctx.globalAlpha=0.45;ctx.stroke();}ctx.globalAlpha=1;ctx.beginPath();ctx.moveTo(0,28);ctx.lineTo(0,80);ctx.lineWidth=12;ctx.stroke();ctx.restore();},
-        recycle:(ctx,cx,cy)=>{ctx.save();ctx.translate(cx,cy);const r=52;for(let i=0;i<3;i++){ctx.save();ctx.rotate((i*2*Math.PI)/3);ctx.beginPath();ctx.arc(0,-r,r*0.68,0.55,Math.PI*1.5);ctx.lineWidth=11;ctx.stroke();ctx.beginPath();ctx.moveTo(-r*0.52,-r*0.18);ctx.lineTo(-r*0.7,-r*0.52);ctx.lineTo(-r*0.28,-r*0.46);ctx.closePath();ctx.fill();ctx.restore();}ctx.restore();},
-        heart:(ctx,cx,cy)=>{ctx.save();ctx.translate(cx,cy+8);ctx.beginPath();ctx.moveTo(0,26);ctx.bezierCurveTo(-58,-8,-68,-68,0,-38);ctx.bezierCurveTo(68,-68,58,-8,0,26);ctx.closePath();ctx.fill();ctx.restore();},
-        shield:(ctx,cx,cy)=>{ctx.save();ctx.translate(cx,cy-4);ctx.beginPath();ctx.moveTo(0,-56);ctx.lineTo(50,-28);ctx.lineTo(50,12);ctx.quadraticCurveTo(50,58,0,70);ctx.quadraticCurveTo(-50,58,-50,12);ctx.lineTo(-50,-28);ctx.closePath();ctx.lineWidth=10;ctx.stroke();ctx.beginPath();ctx.moveTo(-20,8);ctx.lineTo(-5,26);ctx.lineTo(24,-14);ctx.lineWidth=11;ctx.stroke();ctx.restore();},
-        pin:(ctx,cx,cy)=>{ctx.save();ctx.translate(cx,cy-8);ctx.beginPath();ctx.arc(0,-28,36,0,Math.PI*2);ctx.lineWidth=10;ctx.stroke();ctx.beginPath();ctx.arc(0,-28,12,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.moveTo(-16,6);ctx.lineTo(0,56);ctx.lineTo(16,6);ctx.lineWidth=10;ctx.stroke();ctx.restore();},
-        leaf:(ctx,cx,cy)=>{ctx.save();ctx.translate(cx,cy);ctx.beginPath();ctx.moveTo(0,58);ctx.bezierCurveTo(-58,18,-68,-52,18,-60);ctx.bezierCurveTo(68,-60,68,8,0,58);ctx.closePath();ctx.lineWidth=9;ctx.stroke();ctx.beginPath();ctx.moveTo(0,58);ctx.quadraticCurveTo(-8,-18,16,-58);ctx.lineWidth=6;ctx.globalAlpha=0.55;ctx.stroke();ctx.globalAlpha=1;ctx.restore();},
-        euro:(ctx,cx,cy)=>{ctx.save();ctx.translate(cx,cy);ctx.beginPath();ctx.arc(0,0,52,0.65,Math.PI*2-0.65);ctx.lineWidth=11;ctx.stroke();ctx.beginPath();ctx.moveTo(-28,-9);ctx.lineTo(14,-9);ctx.moveTo(-28,9);ctx.lineTo(14,9);ctx.lineWidth=11;ctx.stroke();ctx.restore();},
-        star:(ctx,cx,cy)=>{ctx.save();ctx.translate(cx,cy);ctx.beginPath();for(let i=0;i<5;i++){const a=i*Math.PI*2/5-Math.PI/2,b=a+Math.PI/5;ctx.lineTo(Math.cos(a)*56,Math.sin(a)*56);ctx.lineTo(Math.cos(b)*23,Math.sin(b)*23);}ctx.closePath();ctx.fill();ctx.restore();},
-        lock:(ctx,cx,cy)=>{ctx.save();ctx.translate(cx,cy);ctx.beginPath();ctx.rect(-34,0,68,56);ctx.lineWidth=10;ctx.stroke();ctx.beginPath();ctx.arc(0,-12,28,Math.PI,0);ctx.lineWidth=10;ctx.stroke();ctx.beginPath();ctx.arc(0,28,9,0,Math.PI*2);ctx.fill();ctx.restore();},
-        trophy:(ctx,cx,cy)=>{ctx.save();ctx.translate(cx,cy);ctx.beginPath();ctx.moveTo(-34,-52);ctx.lineTo(-34,8);ctx.quadraticCurveTo(-34,46,0,52);ctx.quadraticCurveTo(34,46,34,8);ctx.lineTo(34,-52);ctx.closePath();ctx.lineWidth=10;ctx.stroke();ctx.restore();},
-        flash:(ctx,cx,cy)=>{ctx.save();ctx.translate(cx,cy);ctx.beginPath();ctx.moveTo(16,-62);ctx.lineTo(-18,4);ctx.lineTo(10,4);ctx.lineTo(-16,62);ctx.lineTo(24,-8);ctx.lineTo(0,-8);ctx.closePath();ctx.fill();ctx.restore();},
-        handshake:(ctx,cx,cy)=>{ctx.save();ctx.translate(cx,cy);ctx.beginPath();ctx.moveTo(-60,10);ctx.lineTo(-22,10);ctx.lineTo(0,-14);ctx.lineTo(22,10);ctx.lineTo(60,10);ctx.lineWidth=11;ctx.stroke();ctx.beginPath();ctx.moveTo(-22,10);ctx.lineTo(-22,50);ctx.moveTo(22,10);ctx.lineTo(22,50);ctx.lineWidth=9;ctx.stroke();ctx.restore();},
-      };
-      const faceData=[[1,1,1,4,'icon','racket','#0a1810','#00C46A'],[0,1,1,4,'icon','leaf','#0a1810','#00ff88'],[-1,1,1,4,'icon','star','#0c1808','#FFD700'],[1,0,1,4,'icon','recycle','#0a1810','#00C46A'],[0,0,1,4,'patD','','#0a1208','rgba(0,196,106,0.12)'],[-1,0,1,4,'icon','euro','#0a1810','#00C46A'],[1,-1,1,4,'icon','flash','#0a1810','#00ff88'],[0,-1,1,4,'patA','','#080f08','rgba(0,196,106,0.15)'],[-1,-1,1,4,'icon','lock','#0a1810','#00C46A'],[1,1,1,0,'icon','shield','#0a1810','#00C46A'],[1,0,1,0,'patB','','#080e08','rgba(0,196,106,0.1)'],[1,-1,1,0,'icon','heart','#0a1810','#ff6b8a'],[1,1,0,0,'icon','trophy','#0a1810','#FFD700'],[1,0,0,0,'patC','','#090f09','rgba(0,196,106,0.1)'],[1,-1,0,0,'icon','pin','#0a1810','#00ff88'],[1,1,-1,0,'icon','handshake','#0a1810','#00C46A'],[1,0,-1,0,'patA','','#080e08','rgba(0,196,106,0.12)'],[1,-1,-1,0,'icon','recycle','#0a1810','#00C46A'],[1,1,1,2,'patD','','#080e08','rgba(0,196,106,0.12)'],[0,1,1,2,'icon','racket','#0a1810','#00ff88'],[-1,1,1,2,'patB','','#090f09','rgba(0,196,106,0.1)'],[1,1,0,2,'icon','euro','#0a1810','#00C46A'],[0,1,0,2,'icon','leaf','#0a1810','#00C46A'],[-1,1,0,2,'patA','','#080e08','rgba(0,196,106,0.12)'],[1,1,-1,2,'icon','flash','#0a1810','#FFD700'],[0,1,-1,2,'patC','','#090f09','rgba(0,196,106,0.1)'],[-1,1,-1,2,'icon','star','#0a1810','#FFD700']];
-      const faceMap={};faceData.forEach(([x,y,z,f,type,data,bgc,col])=>{faceMap[x+','+y+','+z+','+f]={type,data,bg:bgc,col};});
-      const texCache={};
-      function getTex(key,x,y,z,f){
-        if(texCache[key])return texCache[key];
-        const fd=faceMap[x+','+y+','+z+','+f];if(!fd)return null;
-        const tex=makeTex(ctx=>{bg(ctx,fd.bg);if(fd.type==='icon')ico(ctx,icoFns[fd.data],fd.col);else if(fd.type==='patA')dots(ctx,fd.col);else if(fd.type==='patB')lines(ctx,fd.col);else if(fd.type==='patC')grid(ctx,fd.col);else if(fd.type==='patD')circles(ctx,fd.col);});
-        texCache[key]=tex;return tex;
-      }
-      const group=new THREE.Group();scene.add(group);
-      for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++){
-        if(x===0&&y===0&&z===0)continue;
-        const mats=[];const expMap=[x===1,x===-1,y===1,y===-1,z===1,z===-1];
-        for(let f=0;f<6;f++){
-          let color=0x080808,roughness=0.72,metalness=0.12,map=null;
-          if(expMap[f]){const key=x+','+y+','+z+','+f;const fd=faceMap[key];if(fd){map=getTex(key,x,y,z,f);color=0x0d1a10;roughness=0.4;metalness=0.08;}else{const dk=key+'_def';if(!texCache[dk]){texCache[dk]=makeTex(ctx=>{bg(ctx,'#080d08');dots(ctx,'rgba(0,196,106,0.1)');});}map=texCache[dk];color=0x0a1208;roughness=0.5;}}
-          mats.push(new THREE.MeshStandardMaterial({color,roughness,metalness,map}));
-        }
-        const geo=new THREE.BoxGeometry(0.93,0.93,0.93);const mesh=new THREE.Mesh(geo,mats);mesh.position.set(x*1.05,y*1.05,z*1.05);group.add(mesh);
-        mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:0x000000})));
-      }
-      const sh=new THREE.Mesh(new THREE.CircleGeometry(2.4,64),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.4}));sh.rotation.x=-Math.PI/2;sh.position.y=-2.6;scene.add(sh);
-      const ring=new THREE.Mesh(new THREE.RingGeometry(1.9,2.4,64),new THREE.MeshBasicMaterial({color:0x00C46A,transparent:true,opacity:0.07,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.y=-2.55;scene.add(ring);
-      let dragging=false,pvx=0,pvy=0,vx=0,vy=0;
-      canvas.addEventListener('mousedown',e=>{dragging=true;pvx=e.clientX;pvy=e.clientY;canvas.style.cursor='grabbing';});
-      window.addEventListener('mouseup',()=>{dragging=false;canvas.style.cursor='grab';});
-      window.addEventListener('mousemove',e=>{if(!dragging)return;vx=(e.clientY-pvy)*0.009;vy=(e.clientX-pvx)*0.009;pvx=e.clientX;pvy=e.clientY;});
-      let t=0,ph=0;
-      function animate(){animId=requestAnimationFrame(animate);t+=0.01;ph+=0.004;if(!dragging){group.rotation.y+=0.007+Math.sin(ph*0.7)*0.003;group.rotation.x+=0.0025+Math.cos(ph*0.5)*0.0015;group.rotation.z+=Math.sin(ph*0.35)*0.0012;}else{group.rotation.x+=vx;group.rotation.y+=vy;vx*=0.88;vy*=0.88;}group.position.y=Math.sin(t*0.55)*0.09;sh.material.opacity=0.32+Math.sin(t*0.55)*0.06;sh.scale.x=sh.scale.z=0.88+Math.sin(t*0.55)*0.06;ring.material.opacity=0.05+Math.sin(t*1.1)*0.03;ring.scale.x=ring.scale.z=1+Math.sin(t*0.75)*0.07;renderer.render(scene,camera);}
-      animate();
-    }
-    if(window.THREE){initCube();}else{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';s.onload=initCube;document.head.appendChild(s);}
-    return()=>{if(animId)cancelAnimationFrame(animId);if(renderer)renderer.dispose();};
-  },[]);
 
   useEffect(()=>{const h=()=>setSc(window.scrollY>10);window.addEventListener("scroll",h);return()=>window.removeEventListener("scroll",h)},[]);
   const fn=(prof?.name&&!prof.name.includes("@"))?prof.name.split(" ")[0]:"";
@@ -2336,10 +2432,9 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
             </div>
           </div>
 
-          {/* Colonne droite — Rubik's cube + Pub */}
-          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:20}}>
-            <canvas id="heroRubiks" width="380" height="380" style={{display:"block",cursor:"grab",width:"380px",height:"380px"}}></canvas>
-            <AdBanner/>
+          {/* Colonne droite — Comment ça marche */}
+          <div style={{display:"flex",flexDirection:"column",alignItems:"stretch",gap:0}}>
+            <DropExplainer/>
           </div>
 
         </div>
