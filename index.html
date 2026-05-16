@@ -2384,7 +2384,6 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
             </div>
             {user?(
               <>
-                <button onClick={()=>go("sell")} className="btn hm" style={{background:C.o,color:C.w,border:"none",borderRadius:100,padding:"8px 18px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}}><Ico.plus/> Vendre</button>
                 <button onClick={()=>go("dashboard")} className="btn" style={{width:36,height:36,borderRadius:"50%",background:"rgba(255,255,255,.2)",border:"2px solid rgba(255,255,255,.3)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",color:C.w,fontWeight:700,fontSize:14,position:"relative",overflow:"hidden"}}>
                   {prof?.avatar_url
                     ?<img src={prof.avatar_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover",borderRadius:"50%"}}/>
@@ -2429,7 +2428,10 @@ function Home({user,prof,ann,srch,setSrch,fcat,setFcat,fst,setFst,fpr,setFpr,go,
             </p>
             <div className="fu" style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:32}}>
               <button onClick={()=>{window.scrollTo({top:700,behavior:"smooth"})}} className="btn" style={{background:C.g,color:C.w,border:"none",borderRadius:100,padding:"13px 28px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:7}}>Voir les annonces <Ico.arr/></button>
-              {!user&&<button onClick={()=>go("auth",null,null,null,"register")} className="btn" style={{background:"transparent",color:C.g,border:`1.5px solid ${C.g}`,borderRadius:100,padding:"13px 28px",fontSize:14,fontWeight:600,cursor:"pointer"}}>S'inscrire gratuitement</button>}
+              {user
+                ?<button onClick={()=>go("sell")} className="btn" style={{background:C.o,color:C.w,border:"none",borderRadius:100,padding:"13px 28px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}><Ico.plus/> Vendre</button>
+                :<button onClick={()=>go("auth",null,null,null,"register")} className="btn" style={{background:"transparent",color:C.g,border:`1.5px solid ${C.g}`,borderRadius:100,padding:"13px 28px",fontSize:14,fontWeight:600,cursor:"pointer"}}>S'inscrire gratuitement</button>
+              }
             </div>
             <div className="fu" style={{display:"inline-flex",alignItems:"center",gap:8,background:C.gl,border:`1px solid rgba(0,196,106,.3)`,borderRadius:100,padding:"8px 18px"}}>
               <Ico.drop/><span style={{fontSize:13,color:C.gm,fontWeight:700}}>SMASHD Drop — Livraison gratuite & sécurisée</span>
